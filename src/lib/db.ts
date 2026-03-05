@@ -1,11 +1,10 @@
-import postgres from 'postgres';
+import { createClient } from '@supabase/supabase-js';
 
-const sql = postgres(process.env.DATABASE_URL!, {
-    ssl: 'require',
-    max: 10,
-    connection: {
-        options: '--search_path=public',
-    },
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { persistSession: false }
 });
 
-export default sql;
+export default supabase;
