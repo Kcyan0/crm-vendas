@@ -8,23 +8,36 @@ type Projeto = {
     descricao?: string;
 };
 
+type UserType = {
+    email: string;
+} | null;
+
 type ProjectContextType = {
     projetos: Projeto[];
     selectedProject: Projeto | null;
     setSelectedProject: (projeto: Projeto) => void;
     isLoading: boolean;
+    user: UserType;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+
+import { createClient } from '@/lib/supabase/browser';
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
     const [projetos, setProjetos] = useState<Projeto[]>([]);
     const [selectedProject, setSelectedProject] = useState<Projeto | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<UserType>(null);
 
     useEffect(() => {
-        const fetchProjetos = async () => {
+        const fetchUserDataAndProjects = async () => {
             try {
+                const supabase = createClient();
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                if (authUser && authUser.email) {
+                    setUser({ email: authUser.email });
+                }
                 const res = await fetch('/api/projetos');
                 const data = await res.json();
 
@@ -45,13 +58,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
                     }
                 }
             } catch (error) {
-                console.error("Erro ao carregar projetos", error);
+                console.error("Erro ao carregar sessão e projetos", error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchProjetos();
+        fetchUserDataAndProjects();
     }, []);
 
     const handleSelectProject = (projeto: Projeto) => {
@@ -66,7 +79,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             projetos,
             selectedProject,
             setSelectedProject: handleSelectProject,
-            isLoading
+            isLoading,
+            user
         }}>
             {children}
         </ProjectContext.Provider>

@@ -1,13 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
+import { createClient } from "@/lib/supabase/browser";
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const { projetos, selectedProject, setSelectedProject, isLoading } = useProject();
+    const router = useRouter();
+    const { projetos, selectedProject, setSelectedProject, isLoading, user } = useProject();
+
+    const handleLogout = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        router.push('/login');
+    };
 
     const NAV_ITEMS = [
         { name: "Painel de Leads", icon: KanbanSquare, path: "/" },
@@ -94,28 +102,23 @@ export default function Sidebar() {
 
             {/* Footer */}
             <div className="p-4" style={{ borderTop: '1px solid #1E1E1E' }}>
-                <div
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all"
-                    style={{ color: '#666666' }}
-                    onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.color = '#FFFFFF';
-                        (e.currentTarget as HTMLElement).style.background = '#1A1A1A';
-                    }}
-                    onMouseLeave={e => {
-                        (e.currentTarget as HTMLElement).style.color = '#666666';
-                        (e.currentTarget as HTMLElement).style.background = 'transparent';
-                    }}
-                >
-                    <LogOut size={17} />
-                    <span className="font-medium text-sm">Sair da Conta</span>
+                <div className="flex items-center gap-3 px-2 py-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center border border-[#2A2A2A] text-[#BEFF00] font-bold text-xs">
+                        {user?.email?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                    <div className="flex flex-col overflow-hidden">
+                        <span className="text-white text-sm font-semibold truncate">{user?.email?.split('@')[0] || 'Carregando...'}</span>
+                        <span className="text-[#666666] text-xs truncate">{user?.email}</span>
+                    </div>
                 </div>
 
-                <div className="mt-3 px-4 py-3 rounded-xl flex items-center gap-3" style={{ background: '#1A1A1A', border: '1px solid #2A2A2A' }}>
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Cassiano" alt="User" className="w-9 h-9 rounded-full" style={{ background: '#2A2A2A' }} />
-                    <div className="flex flex-col">
-                        <span className="text-sm font-bold text-white">Cassiano M.</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#BEFF00' }}>Admin</span>
-                    </div>
+                <div
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all hover:bg-red-500/10 hover:text-red-500"
+                    style={{ color: '#666666' }}
+                    onClick={handleLogout}
+                >
+                    <LogOut size={18} />
+                    <span className="font-semibold text-sm">Sair da Conta</span>
                 </div>
             </div>
         </div>
