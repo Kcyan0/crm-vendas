@@ -7,8 +7,8 @@ import { ProjectProvider } from "@/context/ProjectContext";
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "FERACRM",
-  description: "Sistema de Gestão de Vendas Premium para Closers e SDRs",
+  title: "H SALES CRM",
+  description: "Sistema de Gestão de Vendas para Closers e SDRs",
 };
 
 export default function RootLayout({
@@ -21,7 +21,7 @@ export default function RootLayout({
       <body className="flex h-screen overflow-hidden">
         <ProjectProvider>
           <Sidebar />
-          <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50">
+          <main className="flex-1 overflow-y-auto p-4 md:p-8" style={{ background: '#111111' }}>
             {children}
           </main>
         </ProjectProvider>

@@ -99,7 +99,7 @@ export default function ProjectsPage() {
     if (isLoading) {
         return (
             <div className="flex-1 flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
             </div>
         );
     }
@@ -109,18 +109,18 @@ export default function ProjectsPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
-                        <FolderKanban className="text-orange-500" size={32} />
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                        <FolderKanban className="text-green-500" size={32} />
                         Projetos
                     </h1>
-                    <p className="text-slate-500 mt-1 font-medium">
+                    <p className="text-[#888888] mt-1 font-medium">
                         Gerencie diferentes funis, equipes e dashboards separadamente.
                     </p>
                 </div>
             </div>
 
             {/* Aviso (Opcional baseado na imagem base) */}
-            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex gap-3 text-orange-800">
+            <div className="bg-[#111111] border border-green-200 rounded-2xl p-4 flex gap-3 text-green-800">
                 <LayoutDashboard className="shrink-0 mt-0.5" size={20} />
                 <div className="text-sm">
                     <strong className="block mb-1">Múltiplos Ambientes Isolados</strong>
@@ -130,17 +130,17 @@ export default function ProjectsPage() {
             </div>
 
             {/* Criar Novo Projeto */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-100">
-                    <h2 className="text-xl font-bold text-slate-800">Criar Novo Projeto</h2>
-                    <p className="text-sm text-slate-500 mt-1">
+            <div className="bg-[#1A1A1A] rounded-3xl border border-[#2A2A2A] shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-[#222222]">
+                    <h2 className="text-xl font-bold text-white">Criar Novo Projeto</h2>
+                    <p className="text-sm text-[#888888] mt-1">
                         Inicie um novo ambiente para separar operações de vendas.
                     </p>
                 </div>
-                <div className="p-6 bg-slate-50/50">
+                <div className="p-6 bg-[#111111]/50">
                     <form onSubmit={handleCreateProject} className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1 w-full relative">
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">
+                            <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2 ml-1">
                                 Nome do Projeto
                             </label>
                             <input
@@ -148,12 +148,12 @@ export default function ProjectsPage() {
                                 placeholder="ex: Campanha Enterprise US"
                                 value={newProjectName}
                                 onChange={(e) => setNewProjectName(e.target.value)}
-                                className="w-full bg-white border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 block p-3.5 transition-all shadow-sm"
+                                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 block p-3.5 transition-all shadow-sm"
                                 required
                             />
                         </div>
                         <div className="flex-1 w-full relative">
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">
+                            <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2 ml-1">
                                 Descrição (Opcional)
                             </label>
                             <input
@@ -161,13 +161,13 @@ export default function ProjectsPage() {
                                 placeholder="ex: Leads B2B Internacionais"
                                 value={newProjectDesc}
                                 onChange={(e) => setNewProjectDesc(e.target.value)}
-                                className="w-full bg-white border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 block p-3.5 transition-all shadow-sm"
+                                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 block p-3.5 transition-all shadow-sm"
                             />
                         </div>
                         <button
                             type="submit"
                             disabled={isCreating}
-                            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 px-6 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            className="bg-green-500 hover:bg-green-700 text-white font-bold py-3.5 px-6 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                             {isCreating ? (
                                 <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -183,13 +183,13 @@ export default function ProjectsPage() {
             {/* Lista de Projetos */}
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         Seus Projetos
-                        <span className="bg-slate-100 text-slate-600 text-xs py-1 px-2.5 rounded-full font-bold">
+                        <span className="bg-[#1A1A1A] text-[#AAAAAA] text-xs py-1 px-2.5 rounded-full font-bold">
                             {projetos.length}
                         </span>
                     </h2>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-[#888888] mt-1">
                         Selecione um projeto para torná-old o ambiente ativo no CRM.
                     </p>
                 </div>
@@ -201,27 +201,27 @@ export default function ProjectsPage() {
                         return (
                             <div
                                 key={projeto.id_projeto}
-                                className={`bg-white rounded-3xl border ${isSelected ? 'border-orange-500 ring-4 ring-orange-50' : 'border-slate-200 hover:border-slate-300'} p-6 shadow-sm transition-all relative overflow-visible flex flex-col h-full`}
+                                className={`bg-[#1A1A1A] rounded-3xl border ${isSelected ? 'border-green-500 ring-4 ring-green-50' : 'border-[#2A2A2A] hover:border-slate-300'} p-6 shadow-sm transition-all relative overflow-visible flex flex-col h-full`}
                             >
                                 <div className="absolute top-4 right-4 flex items-center gap-2">
                                     {isSelected && (
-                                        <div className="bg-orange-100 text-orange-600 p-1.5 rounded-full">
-                                            <CheckCircle2 size={16} className="fill-orange-100" />
+                                        <div className="bg-[#1A1A1A] text-green-700 p-1.5 rounded-full">
+                                            <CheckCircle2 size={16} className="fill-green-100" />
                                         </div>
                                     )}
                                     <div className="relative">
                                         <button
                                             onClick={() => setOpenMenuId(openMenuId === projeto.id_projeto ? null : projeto.id_projeto)}
-                                            className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"
+                                            className="p-1.5 text-[#666666] hover:bg-[#1A1A1A] rounded-full transition-colors"
                                         >
                                             <MoreVertical size={20} />
                                         </button>
 
                                         {openMenuId === projeto.id_projeto && (
-                                            <div className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-lg shadow-black/10 border border-slate-100 z-10 py-1 overflow-hidden">
+                                            <div className="absolute right-0 mt-2 w-32 bg-[#1A1A1A] rounded-xl shadow-lg shadow-black/10 border border-[#222222] z-10 py-1 overflow-hidden">
                                                 <button
                                                     onClick={() => handleOpenEdit(projeto)}
-                                                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors font-medium"
+                                                    className="w-full text-left px-4 py-2 text-sm text-white hover:bg-[#111111] transition-colors font-medium"
                                                 >
                                                     Editar
                                                 </button>
@@ -237,19 +237,19 @@ export default function ProjectsPage() {
                                 </div>
 
                                 <div className="mb-4 pr-16 mt-2">
-                                    <h3 className="text-lg font-bold text-slate-800 truncate" title={projeto.nome}>
+                                    <h3 className="text-lg font-bold text-white truncate" title={projeto.nome}>
                                         {projeto.nome}
                                     </h3>
-                                    <p className="text-sm text-slate-500 line-clamp-2 mt-1 min-h-[40px]">
+                                    <p className="text-sm text-[#888888] line-clamp-2 mt-1 min-h-[40px]">
                                         {projeto.descricao || "Sem descrição"}
                                     </p>
                                 </div>
 
-                                <div className="mt-auto pt-6 border-t border-slate-100">
+                                <div className="mt-auto pt-6 border-t border-[#222222]">
                                     {isSelected ? (
                                         <button
                                             disabled
-                                            className="w-full bg-slate-50 text-slate-500 font-bold py-3 px-4 rounded-xl flex justify-center items-center gap-2 cursor-default border border-slate-100"
+                                            className="w-full bg-[#111111] text-[#888888] font-bold py-3 px-4 rounded-xl flex justify-center items-center gap-2 cursor-default border border-[#222222]"
                                         >
                                             <CheckCircle2 size={18} />
                                             Projeto Ativo
@@ -272,12 +272,12 @@ export default function ProjectsPage() {
             {/* Edit Modal */}
             {isEditModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="font-bold text-slate-800 text-lg">Editar Projeto</h3>
+                    <div className="bg-[#1A1A1A] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-[#2A2A2A] animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-[#222222] flex justify-between items-center bg-[#111111]/50">
+                            <h3 className="font-bold text-white text-lg">Editar Projeto</h3>
                             <button
                                 onClick={() => setIsEditModalOpen(false)}
-                                className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition-colors"
+                                className="text-[#666666] hover:text-[#AAAAAA] p-1 rounded-full hover:bg-[#2A2A2A] transition-colors"
                             >
                                 &times;
                             </button>
@@ -285,26 +285,26 @@ export default function ProjectsPage() {
                         <div className="p-6">
                             <form onSubmit={handleEditSubmit} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">
+                                    <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2 ml-1">
                                         Nome do Projeto
                                     </label>
                                     <input
                                         type="text"
                                         value={editName}
                                         onChange={(e) => setEditName(e.target.value)}
-                                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 block p-3.5 transition-all outline-none"
+                                        className="w-full bg-[#111111] border border-[#2A2A2A] text-white text-sm rounded-xl focus:ring-2 focus:ring-green-500 block p-3.5 transition-all outline-none"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">
+                                    <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2 ml-1">
                                         Descrição
                                     </label>
                                     <input
                                         type="text"
                                         value={editDesc}
                                         onChange={(e) => setEditDesc(e.target.value)}
-                                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 block p-3.5 transition-all outline-none"
+                                        className="w-full bg-[#111111] border border-[#2A2A2A] text-white text-sm rounded-xl focus:ring-2 focus:ring-green-500 block p-3.5 transition-all outline-none"
                                     />
                                 </div>
 
@@ -312,13 +312,13 @@ export default function ProjectsPage() {
                                     <button
                                         type="button"
                                         onClick={() => setIsEditModalOpen(false)}
-                                        className="flex-1 px-4 py-3 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-bold transition-all text-sm"
+                                        className="flex-1 px-4 py-3 border border-[#2A2A2A] text-[#AAAAAA] rounded-xl hover:bg-[#111111] font-bold transition-all text-sm"
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 font-bold transition-all shadow-md shadow-orange-500/20 text-sm"
+                                        className="flex-1 px-4 py-3 bg-green-700 text-white rounded-xl hover:bg-green-800 font-bold transition-all shadow-md shadow-green-500/20 text-sm"
                                     >
                                         Salvar Alterações
                                     </button>
@@ -331,3 +331,4 @@ export default function ProjectsPage() {
         </div>
     );
 }
+

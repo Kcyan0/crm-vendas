@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Plus, User, Phone, Instagram, Clock } from "lucide-react";
+import { Search, Plus, Phone, Instagram, Clock, Download } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
+import { exportLeadsToCSV } from '@/lib/exportUtils';
 
 type Lead = {
   id_lead: number;
@@ -77,13 +78,28 @@ export default function KanbanBoard() {
     try {
       const res = await fetch("/api/gateways");
       const data = await res.json();
-      const ativos = data.filter((g: any) => g.ativo === 1);
+      // Supabase retorna boolean true/false; SQLite retornava 1/0
+      const ativos = data.filter((g: any) => g.ativo !== false && g.ativo !== 0);
       setGateways(ativos);
       if (ativos.length > 0) {
         setSaleFormData(prev => ({ ...prev, forma_pagamento: ativos[0].nome }));
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const url = selectedProject
+        ? `/api/export-leads?projectId=${selectedProject.id_projeto}`
+        : '/api/export-leads';
+      const res = await fetch(url);
+      const data = await res.json();
+      exportLeadsToCSV(data);
+    } catch (e) {
+      console.error('Erro ao exportar:', e);
+      alert('Erro ao exportar dados. Tente novamente.');
     }
   };
 
@@ -362,19 +378,29 @@ export default function KanbanBoard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Quadro de Leads</h2>
-          <p className="text-slate-500 mt-1">Arraste os cards para atualizar o status no pipeline.</p>
+          <h2 className="text-3xl font-black text-white tracking-tight">Quadro de Leads</h2>
+          <p className="text-[#888888] mt-1 text-sm">Arraste os cards para atualizar o status no pipeline.</p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
             <input
               type="text"
               placeholder="Buscar lead..."
-              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-orange-500/50 w-full md:w-64"
+              className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-white focus:outline-none w-full md:w-64"
+
             />
           </div>
+          <button
+            onClick={handleExportCSV}
+            title="Exportar leads para planilha CSV"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-colors"
+            style={{ background: '#BEFF00', color: '#0A0A0A', border: '1px solid transparent' }}
+          >
+            <Download size={16} />
+            <span>Exportar CSV</span>
+          </button>
           <button
             className="btn-primary flex items-center gap-2 whitespace-nowrap"
             onClick={handleOpenCreate}
@@ -393,13 +419,13 @@ export default function KanbanBoard() {
           return (
             <div
               key={col}
-              className="kanban-col min-w-[320px] w-[320px] flex flex-col h-full bg-slate-100/50"
+              className="kanban-col min-w-[320px] w-[320px] flex flex-col h-full"
               onDrop={(e) => handleDrop(e, col)}
               onDragOver={handleDragOver}
             >
-              <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-200/50 rounded-t-xl">
-                <h3 className="font-semibold text-slate-700">{col}</h3>
-                <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full font-bold shadow-sm">
+              <div className="p-4 border-b border-[#222222] flex justify-between items-center bg-[#1A1A1A]/80 rounded-t-xl">
+                <h3 className="font-bold text-white tracking-tight">{col}</h3>
+                <span className="text-xs px-2.5 py-1 rounded-full font-black" style={{ background: '#BEFF00', color: '#0A0A0A' }}>
                   {columnLeads.length}
                 </span>
               </div>
@@ -411,13 +437,13 @@ export default function KanbanBoard() {
                     draggable
                     onDragStart={(e) => handleDragStart(e, lead.id_lead)}
                     onDoubleClick={() => handleOpenEdit(lead)}
-                    className="glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 border-slate-200 hover:border-orange-300 transition-all select-none group relative bg-white"
+                    className="glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 border-[#2A2A2A] hover:border-orange-300 transition-all select-none group relative bg-[#1A1A1A]"
                   >
                     <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(lead); }} className="text-slate-500 hover:text-slate-800 px-2 py-1 text-xs bg-slate-100 rounded shadow-sm border border-slate-200">Editar</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(lead); }} className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]">Editar</button>
                     </div>
                     <div className="flex justify-between items-start mb-2 pr-12">
-                      <h4 className="font-bold text-slate-800 leading-tight">{lead.nome}</h4>
+                      <h4 className="font-bold text-white leading-tight">{lead.nome}</h4>
                       {lead.valor_proposta && (
                         <span className="text-emerald-700 font-bold text-sm bg-emerald-100 px-2 rounded-md border border-emerald-200">
                           R$ {lead.valor_proposta}
@@ -427,20 +453,20 @@ export default function KanbanBoard() {
 
                     <div className="space-y-2 mt-3">
                       {lead.telefone && (
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                          <Phone size={14} className="text-slate-500" />
+                        <div className="flex items-center gap-2 text-xs text-[#666666]">
+                          <Phone size={14} className="text-[#888888]" />
                           <span>{lead.telefone}</span>
                         </div>
                       )}
                       {lead.instagram && (
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                          <Instagram size={14} className="text-slate-500" />
+                        <div className="flex items-center gap-2 text-xs text-[#666666]">
+                          <Instagram size={14} className="text-[#888888]" />
                           <span>{lead.instagram}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
+                    <div className="mt-4 pt-3 border-t border-[#222222] flex justify-between items-center">
                       <div className="flex -space-x-2">
                         {lead.sdr_nome && (
                           <div
@@ -460,7 +486,7 @@ export default function KanbanBoard() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                      <div className="flex items-center gap-1 text-[10px] text-[#666666] font-medium">
                         <Clock size={12} />
                         <span>{formatDateBr(lead.data_entrada)}</span>
                       </div>
@@ -469,7 +495,7 @@ export default function KanbanBoard() {
                 ))}
 
                 {columnLeads.length === 0 && (
-                  <div className="h-24 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-400 text-sm font-medium">
+                  <div className="h-24 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-[#666666] text-sm font-medium">
                     Arraste leads para cá
                   </div>
                 )}
@@ -482,12 +508,12 @@ export default function KanbanBoard() {
       {/* Modal Novo Lead */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 text-left">
-          <div className="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative bg-white">
+          <div className="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative bg-[#1A1A1A]">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-slate-800">{editingLeadId ? "Editar Lead" : "Adicionar Novo Lead"}</h3>
+              <h3 className="text-xl font-bold text-white">{editingLeadId ? "Editar Lead" : "Adicionar Novo Lead"}</h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-800"
+                className="text-[#666666] hover:text-white"
               >
                 ✕
               </button>
@@ -496,7 +522,7 @@ export default function KanbanBoard() {
             <form onSubmit={handleSaveLead} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome *</label>
+                  <label className="block text-sm font-medium text-white mb-1">Nome *</label>
                   <input
                     required
                     type="text"
@@ -506,7 +532,7 @@ export default function KanbanBoard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
+                  <label className="block text-sm font-medium text-white mb-1">E-mail</label>
                   <input
                     type="email"
                     className="w-full"
@@ -515,16 +541,16 @@ export default function KanbanBoard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Data de Entrada</label>
+                  <label className="block text-sm font-medium text-white mb-1">Data de Entrada</label>
                   <input
                     type="datetime-local"
-                    className="w-full bg-white border border-slate-200"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A]"
                     value={formData.data_entrada}
                     onChange={(e) => setFormData({ ...formData, data_entrada: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
+                  <label className="block text-sm font-medium text-white mb-1">Telefone</label>
                   <input
                     type="text"
                     className="w-full"
@@ -533,7 +559,7 @@ export default function KanbanBoard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Instagram</label>
+                  <label className="block text-sm font-medium text-white mb-1">Instagram</label>
                   <input
                     type="text"
                     className="w-full"
@@ -543,9 +569,9 @@ export default function KanbanBoard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Origem</label>
+                  <label className="block text-sm font-medium text-white mb-1">Origem</label>
                   <select
-                    className="w-full bg-white border border-slate-200"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A]"
                     value={formData.origem}
                     onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
                   >
@@ -558,11 +584,11 @@ export default function KanbanBoard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-[#222222]">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">SDR Responsável</label>
+                  <label className="block text-sm font-medium text-white mb-1">SDR Responsável</label>
                   <select
-                    className="w-full bg-white border border-slate-200"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A]"
                     value={formData.id_sdr_responsavel}
                     onChange={(e) => setFormData({ ...formData, id_sdr_responsavel: e.target.value })}
                   >
@@ -573,9 +599,9 @@ export default function KanbanBoard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Closer Responsável</label>
+                  <label className="block text-sm font-medium text-white mb-1">Closer Responsável</label>
                   <select
-                    className="w-full bg-white border border-slate-200"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A]"
                     value={formData.id_closer_responsavel}
                     onChange={(e) => setFormData({ ...formData, id_closer_responsavel: e.target.value })}
                   >
@@ -588,7 +614,7 @@ export default function KanbanBoard() {
               </div>
 
               <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Observações Gerais</label>
+                <label className="block text-sm font-medium text-white mb-1">Observações Gerais</label>
                 <textarea
                   className="w-full min-h-[100px]"
                   value={formData.observacoes_gerais}
@@ -596,7 +622,7 @@ export default function KanbanBoard() {
                 ></textarea>
               </div>
 
-              <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
+              <div className="flex justify-between items-center mt-8 pt-4 border-t border-[#222222]">
                 {editingLeadId ? (
                   <button type="button" onClick={handleDeleteLead} className="px-4 py-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-2">
                     Excluir Lead
@@ -607,7 +633,7 @@ export default function KanbanBoard() {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 text-slate-500 hover:text-slate-800 transition-colors"
+                    className="px-4 py-2 text-[#888888] hover:text-white transition-colors"
                   >
                     Cancelar
                   </button>
@@ -624,15 +650,15 @@ export default function KanbanBoard() {
       {/* Modal Fechamento de Venda */}
       {isSaleModalOpen && saleLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 text-left">
-          <div className="glass-panel w-full max-w-lg p-6 relative border border-orange-200 shadow-[0_0_50px_rgba(249,115,22,0.1)] bg-white">
+          <div className="glass-panel w-full max-w-lg p-6 relative border border-orange-200 shadow-[0_0_50px_rgba(249,115,22,0.1)] bg-[#1A1A1A]">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="text-xl font-bold text-orange-500">Registrar Venda! 🎉</h3>
-                <p className="text-sm text-slate-500 mt-1">Preencha os detalhes financeiros para {saleLead.nome}</p>
+                <p className="text-sm text-[#888888] mt-1">Preencha os detalhes financeiros para {saleLead.nome}</p>
               </div>
               <button
                 onClick={() => setIsSaleModalOpen(false)}
-                className="text-slate-400 hover:text-slate-800"
+                className="text-[#666666] hover:text-white"
               >
                 ✕
               </button>
@@ -640,7 +666,7 @@ export default function KanbanBoard() {
 
             <form onSubmit={handleSaveSale} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Valor Bruto da Venda (R$) *</label>
+                <label className="block text-sm font-medium text-white mb-1">Valor Bruto da Venda (R$) *</label>
                 <input
                   required
                   type="number"
@@ -654,7 +680,7 @@ export default function KanbanBoard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Desconto Concedido (R$)</label>
+                  <label className="block text-sm font-medium text-white mb-1">Desconto Concedido (R$)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -665,7 +691,7 @@ export default function KanbanBoard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Taxa de Gateway (R$)</label>
+                  <label className="block text-sm font-medium text-white mb-1">Taxa de Gateway (R$)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -679,10 +705,10 @@ export default function KanbanBoard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Meio de Pagamento *</label>
+                  <label className="block text-sm font-medium text-white mb-1">Meio de Pagamento *</label>
                   <select
                     required
-                    className="w-full bg-white border border-slate-200 focus:border-orange-500"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] focus:border-orange-500"
                     value={saleFormData.forma_pagamento}
                     onChange={(e) => handleGatewaySelectionChange(e.target.value)}
                   >
@@ -696,10 +722,10 @@ export default function KanbanBoard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Parcelas *</label>
+                  <label className="block text-sm font-medium text-white mb-1">Parcelas *</label>
                   <select
                     required
-                    className="w-full bg-white border border-slate-200 focus:border-orange-500"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] focus:border-orange-500"
                     value={saleFormData.numero_parcelas}
                     onChange={(e) => setSaleFormData({ ...saleFormData, numero_parcelas: e.target.value })}
                   >
@@ -709,16 +735,16 @@ export default function KanbanBoard() {
                   </select>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-xs text-[#888888] mt-2">
                 * A taxa do Gateway foi auto-calculada pelas Configurações, mas você pode sobrescrevê-la.
                 O fluxo de caixa será dividido igualmente pelo número de parcelas informadas.
               </p>
 
-              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-[#222222]">
                 <button
                   type="button"
                   onClick={() => setIsSaleModalOpen(false)}
-                  className="px-4 py-2 text-slate-500 hover:text-slate-800 transition-colors"
+                  className="px-4 py-2 text-[#888888] hover:text-white transition-colors"
                 >
                   Cancelar
                 </button>
