@@ -1,6 +1,32 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 
+const DEFAULT_PASSWORD = '0000';
+
+/**
+ * Cria conta no Supabase Auth (auth.users) para um email se ainda não existir.
+ * Usa a Service Role Key para poder chamar auth.admin.
+ */
+async function ensureAuthUser(email: string) {
+    if (!email) return;
+    try {
+        // Listar todos os usuários para verificar se já existe
+        const { data: { users } } = await supabase.auth.admin.listUsers();
+        const exists = users?.some((u: any) => u.email === email.toLowerCase().trim());
+        if (!exists) {
+            await supabase.auth.admin.createUser({
+                email: email.toLowerCase().trim(),
+                password: DEFAULT_PASSWORD,
+                email_confirm: true
+            });
+            console.log(`[Auth] Conta criada para: ${email}`);
+        }
+    } catch (err) {
+        // Não devemos bloquear o cadastro se o Auth falhar
+        console.error('[Auth] Erro ao criar conta auth:', err);
+    }
+}
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -33,6 +59,10 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
+
+        // Criar conta Auth automaticamente para o novo membro
+        await ensureAuthUser(email);
+
         return NextResponse.json({ id: data.id_usuario, ...body });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
