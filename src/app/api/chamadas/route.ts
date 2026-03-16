@@ -51,10 +51,26 @@ export async function POST(request: Request) {
 
         // Tentar criar evento no Google Calendar (opcional, sem bloquear)
         try {
-            const supabaseAuth = await createClient();
-            const { data: { user } } = await supabaseAuth.auth.getUser();
-            if (user?.email) {
-                await createGoogleEvent(user.email, data);
+            let targetEmail = null;
+
+            // 1. Tentar pegar o token do Closer se houver um
+            if (id_closer) {
+                const { data: closerUser } = await supabase.from('usuarios').select('email').eq('id_usuario', id_closer).single();
+                if (closerUser?.email) {
+                    const { data: hasToken } = await supabase.from('google_tokens').select('id').eq('user_email', closerUser.email).single();
+                    if (hasToken) targetEmail = closerUser.email;
+                }
+            }
+
+            // 2. Fallback para quem está criando logado (Admin)
+            if (!targetEmail) {
+                const supabaseAuth = await createClient();
+                const { data: { user } } = await supabaseAuth.auth.getUser();
+                if (user?.email) targetEmail = user.email;
+            }
+
+            if (targetEmail) {
+                await createGoogleEvent(targetEmail, data);
             }
         } catch (gcErr) {
             console.warn('[Google Calendar] Erro ao criar evento (ignorado):', gcErr);
@@ -83,10 +99,26 @@ export async function PUT(request: Request) {
 
         // Atualizar evento no Google Calendar (opcional, sem bloquear)
         try {
-            const supabaseAuth = await createClient();
-            const { data: { user } } = await supabaseAuth.auth.getUser();
-            if (user?.email && data?.google_event_id) {
-                await updateGoogleEvent(user.email, data.google_event_id, data);
+            if (data?.google_event_id) {
+                let targetEmail = null;
+
+                if (id_closer) {
+                    const { data: closerUser } = await supabase.from('usuarios').select('email').eq('id_usuario', id_closer).single();
+                    if (closerUser?.email) {
+                        const { data: hasToken } = await supabase.from('google_tokens').select('id').eq('user_email', closerUser.email).single();
+                        if (hasToken) targetEmail = closerUser.email;
+                    }
+                }
+
+                if (!targetEmail) {
+                    const supabaseAuth = await createClient();
+                    const { data: { user } } = await supabaseAuth.auth.getUser();
+                    if (user?.email) targetEmail = user.email;
+                }
+
+                if (targetEmail) {
+                    await updateGoogleEvent(targetEmail, data.google_event_id, data);
+                }
             }
         } catch (gcErr) {
             console.warn('[Google Calendar] Erro ao atualizar evento (ignorado):', gcErr);
@@ -104,8 +136,8 @@ export async function DELETE(request: Request) {
         const id_chamada = searchParams.get('id');
         if (!id_chamada) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
-        // Buscar google_event_id antes de deletar
-        const { data: chamada } = await supabase.from('chamadas').select('google_event_id').eq('id_chamada', id_chamada).single();
+        // Buscar evento e id_closer antes de deletar
+        const { data: chamada } = await supabase.from('chamadas').select('google_event_id, id_closer').eq('id_chamada', id_chamada).single();
 
         const { error } = await supabase.from('chamadas').delete().eq('id_chamada', id_chamada);
         if (error) throw error;
@@ -113,9 +145,22 @@ export async function DELETE(request: Request) {
         // Deletar evento no Google (opcional, sem bloquear)
         try {
             if (chamada?.google_event_id) {
-                const supabaseAuth = await createClient();
-                const { data: { user } } = await supabaseAuth.auth.getUser();
-                if (user?.email) await deleteGoogleEvent(user.email, chamada.google_event_id);
+                let targetEmail = null;
+
+                if (chamada.id_closer) {
+                    const { data: closerUser } = await supabase.from('usuarios').select('email').eq('id_usuario', chamada.id_closer).single();
+                    if (closerUser?.email) targetEmail = closerUser.email;
+                }
+
+                if (!targetEmail) {
+                    const supabaseAuth = await createClient();
+                    const { data: { user } } = await supabaseAuth.auth.getUser();
+                    if (user?.email) targetEmail = user.email;
+                }
+                
+                if (targetEmail) {
+                    await deleteGoogleEvent(targetEmail, chamada.google_event_id);
+                }
             }
         } catch (gcErr) {
             console.warn('[Google Calendar] Erro ao deletar evento (ignorado):', gcErr);

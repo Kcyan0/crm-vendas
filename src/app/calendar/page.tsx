@@ -58,6 +58,7 @@ function CalendarContent() {
   const [loading, setLoading] = useState(false);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [filterMemberId, setFilterMemberId] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -146,8 +147,14 @@ function CalendarContent() {
     return days;
   };
 
+  const displayedChamadas = chamadas.filter(c => {
+    if (filterMemberId === "all") return true;
+    const fId = parseInt(filterMemberId);
+    return c.id_closer === fId || c.id_sdr === fId;
+  });
+
   const getChamadasForDay = (day: Date) => {
-    return chamadas.filter((c) => {
+    return displayedChamadas.filter((c) => {
       if (!c.data_hora_inicio) return false;
       const d = new Date(c.data_hora_inicio);
       return d.getDate() === day.getDate() && d.getMonth() === day.getMonth() && d.getFullYear() === day.getFullYear();
@@ -226,7 +233,7 @@ function CalendarContent() {
   };
 
   const days = getDaysInMonth();
-  const upcomingChamadas = chamadas.filter(c => new Date(c.data_hora_inicio) >= today).slice(0, 5);
+  const upcomingChamadas = displayedChamadas.filter(c => new Date(c.data_hora_inicio) >= today).slice(0, 5);
 
   return (
     <div className="h-full flex flex-col gap-0">
@@ -236,7 +243,18 @@ function CalendarContent() {
           <h2 className="text-3xl font-bold text-white tracking-tight">Calendário</h2>
           <p className="text-[#888] mt-1">Agende e gerencie chamadas sincronizadas com o Google Calendar.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <select 
+            value={filterMemberId} 
+            onChange={(e) => setFilterMemberId(e.target.value)}
+            className="bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl px-3 py-2 outline-none"
+          >
+            <option value="all">Visão Geral (Todos)</option>
+            {team.map(m => (
+              <option key={m.id_usuario} value={m.id_usuario}>{m.nome} ({m.tipo})</option>
+            ))}
+          </select>
+
           {isGoogleConnected ? (
             <>
               <button
