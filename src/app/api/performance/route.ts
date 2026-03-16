@@ -12,7 +12,9 @@ export async function GET(request: Request) {
         const projectId = searchParams.get('projectId');
 
         // Fetch active users
-        const { data: users } = await supabase.from('usuarios').select('id_usuario, nome, tipo').eq('ativo', true).in('tipo', ['SDR', 'CLOSER']);
+        let usersQuery = supabase.from('usuarios').select('id_usuario, nome, tipo').eq('ativo', true).in('tipo', ['SDR', 'CLOSER']);
+        if (projectId) usersQuery = usersQuery.eq('id_projeto', projectId);
+        const { data: users } = await usersQuery;
 
         const performanceSDR: Record<number, any> = {};
         const performanceCloser: Record<number, any> = {};
