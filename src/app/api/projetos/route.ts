@@ -43,6 +43,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user || !user.email) {
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+        }
+
         const body = await request.json();
         const { nome, descricao } = body;
         if (!nome) return NextResponse.json({ error: 'O nome do projeto é obrigatório' }, { status: 400 });
@@ -54,6 +61,25 @@ export async function POST(request: Request) {
             .single();
 
         if (error) throw error;
+
+        const { error: userError } = await supabaseAdmin
+            .from('usuarios')
+            .insert({
+                nome: user.user_metadata?.full_name || user.email.split('@')[0],
+                email: user.email,
+                tipo: 'ADMIN',
+                id_projeto: data.id_projeto,
+                ativo: true,
+                salario_fixo_mensal: 0,
+                percentual_comissao_sdr: 0,
+                percentual_comissao_closer: 0
+            });
+
+        if (userError) {
+            console.error('Erro ao vincular usuário ao projeto:', userError);
+            return NextResponse.json({ error: 'Projeto criado, mas erro ao vincular usuário: ' + userError.message }, { status: 500 });
+        }
+
         return NextResponse.json({ success: true, projeto: data });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
