@@ -210,7 +210,7 @@ export default function TeamPage() {
                                         <option value="SDR">SDR</option>
                                         <option value="CLOSER">CLOSER</option>
                                         <option value="EXPERT">EXPERT</option>
-                                        <option value="ADM">ADMIN</option>
+                                        <option value="ADMIN">ADMIN</option>
                                     </select>
                                 </div>
                                 <div className="flex items-end pb-2">
