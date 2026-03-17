@@ -38,7 +38,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
             )}
             
             <div 
-                className={`fixed inset-y-0 left-0 z-50 w-64 h-full flex flex-col pt-6 pb-4 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`} 
+                className={`fixed inset-y-0 left-0 z-50 w-56 md:w-64 h-full flex flex-col pt-6 pb-4 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`} 
                 style={{ background: '#0A0A0A', borderRight: '1px solid #1E1E1E' }}
             >
                 {/* Mobile Close Button */}
@@ -46,7 +46,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                     onClick={() => setIsOpen && setIsOpen(false)}
                     className="md:hidden absolute top-4 right-4 text-[#888888] hover:text-white"
                 >
-                    <X size={24} />
+                    <X size={20} />
                 </button>
 
                 {/* Logo */}
