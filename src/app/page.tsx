@@ -382,37 +382,36 @@ export default function KanbanBoard() {
           <p className="text-[#888888] mt-1 text-sm">Arraste os cards para atualizar o status no pipeline.</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
             <input
               type="text"
               placeholder="Buscar lead..."
-              className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-white focus:outline-none w-full md:w-64"
-
+              className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-white focus:outline-none w-full"
             />
           </div>
           <button
             onClick={handleExportCSV}
             title="Exportar leads para planilha CSV"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-colors"
+            className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-colors"
             style={{ background: '#BEFF00', color: '#0A0A0A', border: '1px solid transparent' }}
           >
             <Download size={16} />
-            <span>Exportar CSV</span>
+            <span>Exportar</span>
           </button>
           <button
-            className="btn-primary flex items-center gap-2 whitespace-nowrap"
+            className="btn-primary flex-1 md:flex-none justify-center flex items-center gap-2 whitespace-nowrap"
             onClick={handleOpenCreate}
           >
             <Plus size={18} />
-            <span>Novo Lead</span>
+            <span>Novo</span>
           </button>
         </div>
       </div>
 
       {/* Kanban Board Area */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 pb-4">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 pb-4 px-1 md:px-0">
         {KANBAN_COLUMNS.map((col) => {
           const columnLeads = leads.filter((l) => l.status_atual === col || (col === 'Loss' && l.status_atual === 'Nao prosseguiu'));
 
@@ -507,8 +506,8 @@ export default function KanbanBoard() {
 
       {/* Modal Novo Lead */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 text-left">
-          <div className="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative bg-[#1A1A1A]">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-0 md:p-4 text-left">
+          <div className="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 md:p-6 relative bg-[#1A1A1A] rounded-t-2xl md:rounded-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-white">{editingLeadId ? "Editar Lead" : "Adicionar Novo Lead"}</h3>
               <button
@@ -622,23 +621,23 @@ export default function KanbanBoard() {
                 ></textarea>
               </div>
 
-              <div className="flex justify-between items-center mt-8 pt-4 border-t border-[#222222]">
+              <div className="flex justify-between items-center mt-8 pt-4 border-t border-[#222222] flex-col-reverse md:flex-row gap-4">
                 {editingLeadId ? (
-                  <button type="button" onClick={handleDeleteLead} className="px-4 py-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-2">
+                  <button type="button" onClick={handleDeleteLead} className="w-full md:w-auto px-4 py-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center gap-2">
                     Excluir Lead
                   </button>
-                ) : <div></div>}
+                ) : <div className="hidden md:block"></div>}
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 w-full md:w-auto">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 text-[#888888] hover:text-white transition-colors"
+                    className="flex-1 md:flex-none px-4 py-2 text-[#888888] hover:text-white transition-colors"
                   >
                     Cancelar
                   </button>
-                  <button type="submit" className="btn-primary">
-                    {editingLeadId ? "Salvar Alterações" : "Criar Lead"}
+                  <button type="submit" className="flex-1 md:flex-none btn-primary justify-center">
+                    {editingLeadId ? "Salvar" : "Criar Lead"}
                   </button>
                 </div>
               </div>
@@ -649,8 +648,8 @@ export default function KanbanBoard() {
 
       {/* Modal Fechamento de Venda */}
       {isSaleModalOpen && saleLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 text-left">
-          <div className="glass-panel w-full max-w-lg p-6 relative border border-orange-200 shadow-[0_0_50px_rgba(249,115,22,0.1)] bg-[#1A1A1A]">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-md p-0 md:p-4 text-left">
+          <div className="glass-panel w-full max-w-lg p-4 md:p-6 relative border border-orange-200 shadow-[0_0_50px_rgba(249,115,22,0.1)] bg-[#1A1A1A] rounded-t-2xl md:rounded-2xl">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="text-xl font-bold text-orange-500">Registrar Venda! 🎉</h3>
@@ -744,11 +743,11 @@ export default function KanbanBoard() {
                 <button
                   type="button"
                   onClick={() => setIsSaleModalOpen(false)}
-                  className="px-4 py-2 text-[#888888] hover:text-white transition-colors"
+                  className="flex-1 md:flex-none px-4 py-2 text-[#888888] hover:text-white transition-colors"
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="flex-1 md:flex-none btn-primary justify-center">
                   Confirmar Venda
                 </button>
               </div>

@@ -101,12 +101,12 @@ export default function TeamPage() {
 
     return (
         <div className="pt-4 h-full flex flex-col">
-            <div className="flex justify-between items-end mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-white tracking-tight">Gestão do Time</h2>
                     <p className="text-[#888888] mt-1">Configure permissões, comissionamentos e salários.</p>
                 </div>
-                <button onClick={handleOpenCreate} className="btn-primary flex items-center gap-2">
+                <button onClick={handleOpenCreate} className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2">
                     <UserPlus size={18} />
                     <span>Novo Membro</span>
                 </button>
@@ -184,8 +184,8 @@ export default function TeamPage() {
 
             {/* Modal de Membro */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                    <div className="glass-panel w-full max-w-lg p-6 relative bg-[#1A1A1A]">
+                <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 md:p-4">
+                    <div className="glass-panel w-full max-w-lg p-4 md:p-6 relative bg-[#1A1A1A] max-h-[90vh] overflow-y-auto rounded-t-2xl md:rounded-2xl">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold text-white">
                                 {editingUserId ? "Editar Membro" : "Novo Membro"}
@@ -203,7 +203,7 @@ export default function TeamPage() {
                                 <input required type="email" className="w-full" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-white mb-1">Cargo *</label>
                                     <select className="w-full bg-[#1A1A1A] border border-[#2A2A2A]" value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}>
@@ -221,7 +221,7 @@ export default function TeamPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-[#222222]">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-[#222222]">
                                 <div>
                                     <label className="block text-sm font-medium text-white mb-1">Salário (R$)</label>
                                     <input type="number" step="0.01" className="w-full bg-[#1A1A1A]" value={formData.salario} onChange={(e) => setFormData({ ...formData, salario: e.target.value })} />
@@ -236,16 +236,16 @@ export default function TeamPage() {
                                 </div>
                             </div>
 
-                            <div className="flex justify-between items-center mt-8 pt-4 border-t border-[#222222]">
+                            <div className="flex justify-between items-center mt-8 pt-4 border-t border-[#222222] flex-col-reverse md:flex-row gap-4">
                                 {editingUserId ? (
-                                    <button type="button" onClick={handleDeleteUser} className="px-4 py-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors font-bold">
+                                    <button type="button" onClick={handleDeleteUser} className="w-full md:w-auto px-4 py-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors font-bold justify-center flex items-center">
                                         Excluir Membro
                                     </button>
-                                ) : <div></div>}
+                                ) : <div className="hidden md:block"></div>}
 
-                                <div className="flex gap-3">
-                                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-[#888888] hover:text-white transition-colors">Cancelar</button>
-                                    <button type="submit" className="btn-primary">{editingUserId ? "Salvar Alterações" : "Criar Membro"}</button>
+                                <div className="flex gap-3 w-full md:w-auto">
+                                    <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 md:flex-none px-4 py-2 text-[#888888] hover:text-white transition-colors">Cancelar</button>
+                                    <button type="submit" className="flex-1 md:flex-none btn-primary justify-center">{editingUserId ? "Salvar" : "Criar Membro"}</button>
                                 </div>
                             </div>
                         </form>

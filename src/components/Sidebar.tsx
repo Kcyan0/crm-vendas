@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { createClient } from "@/lib/supabase/browser";
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {
     const pathname = usePathname();
     const router = useRouter();
     const { projetos, selectedProject, setSelectedProject, isLoading, user } = useProject();
@@ -28,8 +28,28 @@ export default function Sidebar() {
     ];
 
     return (
-        <div className="w-64 h-full flex flex-col pt-6 pb-4" style={{ background: '#0A0A0A', borderRight: '1px solid #1E1E1E' }}>
-            {/* Logo */}
+        <>
+            {/* Overlay Mobile */}
+            {isOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/60 z-40 md:hidden" 
+                    onClick={() => setIsOpen && setIsOpen(false)}
+                />
+            )}
+            
+            <div 
+                className={`fixed inset-y-0 left-0 z-50 w-64 h-full flex flex-col pt-6 pb-4 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`} 
+                style={{ background: '#0A0A0A', borderRight: '1px solid #1E1E1E' }}
+            >
+                {/* Mobile Close Button */}
+                <button 
+                    onClick={() => setIsOpen && setIsOpen(false)}
+                    className="md:hidden absolute top-4 right-4 text-[#888888] hover:text-white"
+                >
+                    <X size={24} />
+                </button>
+
+                {/* Logo */}
             <div className="px-6 mb-8">
                 <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0" style={{ border: '2px solid rgba(190,255,0,0.3)' }}>
@@ -122,5 +142,6 @@ export default function Sidebar() {
                 </div>
             </div>
         </div>
+        </>
     );
 }

@@ -114,24 +114,24 @@ export default function Dashboard() {
                     <p className="mt-1 text-sm" style={{ color: TEXT_SEC }}>Visão geral financeira e de performance da operação.</p>
                 </div>
 
-                <div className="flex items-center gap-3 p-2 rounded-xl" style={{ background: DARK, border: `1px solid ${BORDER}` }}>
-                    <div className="flex flex-col">
+                <div className="flex flex-col sm:flex-row items-center gap-3 p-2 rounded-xl" style={{ background: DARK, border: `1px solid ${BORDER}` }}>
+                    <div className="flex flex-col w-full sm:w-auto">
                         <span className="text-[10px] uppercase font-bold px-2" style={{ color: TEXT_SEC }}>Data Inicial</span>
                         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-transparent border-none text-sm font-medium text-white outline-none focus:ring-0 p-1" />
+                            className="bg-transparent border-none text-sm font-medium text-white outline-none focus:ring-0 p-1 w-full" />
                     </div>
-                    <span style={{ color: '#333' }}>–</span>
-                    <div className="flex flex-col">
+                    <span className="hidden sm:inline" style={{ color: '#333' }}>–</span>
+                    <div className="flex flex-col w-full sm:w-auto">
                         <span className="text-[10px] uppercase font-bold px-2" style={{ color: TEXT_SEC }}>Data Final</span>
                         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-                            className="bg-transparent border-none text-sm font-medium text-white outline-none focus:ring-0 p-1" />
+                            className="bg-transparent border-none text-sm font-medium text-white outline-none focus:ring-0 p-1 w-full" />
                     </div>
-                    <button onClick={() => fetchMetrics(startDate, endDate)} className="btn-primary py-2 px-4 text-sm whitespace-nowrap ml-2">Filtrar</button>
+                    <button onClick={() => fetchMetrics(startDate, endDate)} className="w-full sm:w-auto btn-primary py-2 px-4 text-sm whitespace-nowrap sm:ml-2">Filtrar</button>
                 </div>
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
                 {cards.map((card, idx) => {
                     const Icon = card.icon;
                     return (
@@ -160,7 +160,7 @@ export default function Dashboard() {
             </div>
 
             {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 mb-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 flex-1 mb-8">
                 {/* SDRs */}
                 <div className="glass-panel p-6 flex flex-col">
                     <h3 className="text-base font-bold text-white mb-4">Performance SDRs (Hoje)</h3>
@@ -217,7 +217,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div className="glass-panel p-6 flex flex-col">
                     <h3 className="text-base font-bold text-white mb-4">Receita por Forma de Pagamento</h3>
-                    <div className="flex-1 w-full min-h-[280px] flex items-center justify-center">
+                    <div className="flex-1 w-full min-h-[280px] flex items-center justify-center overflow-hidden">
                         {metrics?.receitaPorPagamento && metrics.receitaPorPagamento.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
