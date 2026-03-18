@@ -33,7 +33,7 @@ export default function PerformancePage() {
     const [sdrs, setSdrs] = useState<SDRPerformance[]>([]);
     const [closers, setClosers] = useState<CloserPerformance[]>([]);
     const [loading, setLoading] = useState(true);
-    const [date, setDate] = useState("");
+    const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
     const { selectedProject } = useProject();
 
     const fetchPerformance = async (filterDate?: string) => {
