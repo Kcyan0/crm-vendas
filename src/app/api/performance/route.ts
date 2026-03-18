@@ -8,7 +8,8 @@ export async function GET(request: Request) {
         nowLocal.setMinutes(nowLocal.getMinutes() - nowLocal.getTimezoneOffset());
         const todayStr = nowLocal.toISOString().split('T')[0];
 
-        const dateParam = searchParams.get('date') || todayStr;
+        const startDate = searchParams.get('startDate') || searchParams.get('date') || todayStr;
+        const endDate = searchParams.get('endDate') || searchParams.get('date') || todayStr;
         const projectId = searchParams.get('projectId');
 
         // Fetch active users
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
 
         // Leads created on this date
         let leadsQuery = supabase.from('leads').select('id_sdr_responsavel, id_closer_responsavel, status_atual')
-            .gte('data_entrada', `${dateParam}T00:00:00`).lte('data_entrada', `${dateParam}T23:59:59`);
+            .gte('data_entrada', `${startDate}T00:00:00`).lte('data_entrada', `${endDate}T23:59:59`);
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
         const { data: leads } = await leadsQuery;
 
@@ -58,12 +59,12 @@ export async function GET(request: Request) {
         let leadsWithId: any[] = [];
         if (projectId) {
             const { data } = await supabase.from('leads').select('id_lead, id_closer_responsavel')
-                .gte('data_entrada', `${dateParam}T00:00:00`).lte('data_entrada', `${dateParam}T23:59:59`)
+                .gte('data_entrada', `${startDate}T00:00:00`).lte('data_entrada', `${endDate}T23:59:59`)
                 .eq('id_projeto', projectId).not('id_closer_responsavel', 'is', null);
             leadsWithId = data || [];
         } else {
             const { data } = await supabase.from('leads').select('id_lead, id_closer_responsavel')
-                .gte('data_entrada', `${dateParam}T00:00:00`).lte('data_entrada', `${dateParam}T23:59:59`)
+                .gte('data_entrada', `${startDate}T00:00:00`).lte('data_entrada', `${endDate}T23:59:59`)
                 .not('id_closer_responsavel', 'is', null);
             leadsWithId = data || [];
         }
@@ -86,19 +87,41 @@ export async function GET(request: Request) {
 
         // Manual overrides
         const { data: overrides } = await supabase.from('metricas_performance')
-            .select('*').eq('data_referencia', dateParam);
+            .select('*').gte('data_referencia', startDate).lte('data_referencia', endDate);
 
         (overrides || []).forEach((ov: any) => {
             const uid = ov.id_usuario;
             if (performanceSDR[uid]) {
-                performanceSDR[uid] = { ...performanceSDR[uid], conversasIniciadas: ov.sdr_conversas_iniciadas, primeiraResposta: ov.sdr_primeira_resposta, convitesEnviados: ov.sdr_convites_enviados, callMarcada: ov.sdr_calls_marcadas, leadsQualificados: ov.sdr_leads_qualificados, isManual: true };
+                if (!performanceSDR[uid].isManual) {
+                    performanceSDR[uid].conversasIniciadas = 0;
+                    performanceSDR[uid].primeiraResposta = 0;
+                    performanceSDR[uid].convitesEnviados = 0;
+                    performanceSDR[uid].callMarcada = 0;
+                    performanceSDR[uid].leadsQualificados = 0;
+                    performanceSDR[uid].isManual = true;
+                }
+                performanceSDR[uid].conversasIniciadas += ov.sdr_conversas_iniciadas || 0;
+                performanceSDR[uid].primeiraResposta += ov.sdr_primeira_resposta || 0;
+                performanceSDR[uid].convitesEnviados += ov.sdr_convites_enviados || 0;
+                performanceSDR[uid].callMarcada += ov.sdr_calls_marcadas || 0;
+                performanceSDR[uid].leadsQualificados += ov.sdr_leads_qualificados || 0;
             }
             if (performanceCloser[uid]) {
-                performanceCloser[uid] = { ...performanceCloser[uid], callsAgendadas: ov.closer_calls_agendadas, reagendamentos: ov.closer_reagendamentos, noShows: ov.closer_no_shows, totalCalls: ov.closer_total_calls, isManual: true };
+                if (!performanceCloser[uid].isManual) {
+                    performanceCloser[uid].callsAgendadas = 0;
+                    performanceCloser[uid].reagendamentos = 0;
+                    performanceCloser[uid].noShows = 0;
+                    performanceCloser[uid].totalCalls = 0;
+                    performanceCloser[uid].isManual = true;
+                }
+                performanceCloser[uid].callsAgendadas += ov.closer_calls_agendadas || 0;
+                performanceCloser[uid].reagendamentos += ov.closer_reagendamentos || 0;
+                performanceCloser[uid].noShows += ov.closer_no_shows || 0;
+                performanceCloser[uid].totalCalls += ov.closer_total_calls || 0;
             }
         });
 
-        return NextResponse.json({ sdr: Object.values(performanceSDR), closer: Object.values(performanceCloser), period: { date: dateParam } });
+        return NextResponse.json({ sdr: Object.values(performanceSDR), closer: Object.values(performanceCloser), period: { startDate, endDate } });
 
     } catch (error: any) {
         console.error('Performance error:', error);

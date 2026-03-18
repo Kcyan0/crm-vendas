@@ -54,9 +54,19 @@ export default function Dashboard() {
             if (start) query.set('startDate', start);
             if (end) query.set('endDate', end);
             if (selectedProject?.id_projeto) query.set('projectId', selectedProject.id_projeto.toString());
-            const res = await fetch(`/api/metrics?${query.toString()}`);
-            const data = await res.json();
+            
+            const [metricsRes, perfRes] = await Promise.all([
+                fetch(`/api/metrics?${query.toString()}`),
+                fetch(`/api/performance?${query.toString()}`)
+            ]);
+            
+            const data = await metricsRes.json();
+            const perfData = await perfRes.json();
+
             setMetrics(data);
+            setSdrs(perfData.sdr || []);
+            setClosers(perfData.closer || []);
+
             if (data.period) {
                 if (!start) setStartDate(data.period.startDate);
                 if (!end) setEndDate(data.period.endDate);
@@ -71,14 +81,6 @@ export default function Dashboard() {
     useEffect(() => {
         if (!selectedProject) return;
         fetchMetrics(startDate, endDate);
-        const perfQuery = new URLSearchParams();
-        perfQuery.set('projectId', selectedProject.id_projeto.toString());
-        fetch(`/api/performance?${perfQuery.toString()}`)
-            .then(res => res.json())
-            .then(data => {
-                setSdrs(data.sdr || []);
-                setClosers(data.closer || []);
-            });
     }, [selectedProject]);
 
     const formatBRL = (val: number) =>
@@ -163,7 +165,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 flex-1 mb-8">
                 {/* SDRs */}
                 <div className="glass-panel p-6 flex flex-col">
-                    <h3 className="text-base font-bold text-white mb-4">Performance SDRs (Hoje)</h3>
+                    <h3 className="text-base font-bold text-white mb-4">Performance SDRs</h3>
                     <div className="flex-1 w-full min-h-[280px]">
                         {sdrs.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -181,7 +183,7 @@ export default function Dashboard() {
                         ) : (
                             <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
                                 style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                Sem dados para hoje.
+                                Sem dados no período selecionado.
                             </div>
                         )}
                     </div>
@@ -189,7 +191,7 @@ export default function Dashboard() {
 
                 {/* Closers */}
                 <div className="glass-panel p-6 flex flex-col">
-                    <h3 className="text-base font-bold text-white mb-4">Performance Closers (Hoje)</h3>
+                    <h3 className="text-base font-bold text-white mb-4">Performance Closers</h3>
                     <div className="flex-1 w-full min-h-[280px]">
                         {closers.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -206,7 +208,7 @@ export default function Dashboard() {
                         ) : (
                             <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
                                 style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                Sem dados para hoje.
+                                Sem dados no período selecionado.
                             </div>
                         )}
                     </div>
