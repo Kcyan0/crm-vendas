@@ -52,8 +52,8 @@ export default function Dashboard() {
     const [closers, setClosers] = useState<any[]>([]);
     const [sdrsToday, setSdrsToday] = useState<any[]>([]);
     const [closersToday, setClosersToday] = useState<any[]>([]);
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
+    const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchMetrics = async (start?: string, end?: string) => {
