@@ -193,7 +193,7 @@ function CalendarContent() {
     if (!selectedProject) return;
     setSaving(true);
     try {
-      const data_hora_inicio = `${formData.data}T${formData.hora}:00`;
+      const data_hora_inicio = `${formData.data}T${formData.hora}:00-03:00`;
       const body = {
         id_chamada: editingId,
         titulo: formData.titulo,
