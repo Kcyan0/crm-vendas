@@ -121,219 +121,12 @@ export default function Dashboard() {
 
     const [zoomedSection, setZoomedSection] = useState<string | null>(null);
 
-    // If a section is zoomed, render it in a full-screen overlay mode
-    if (zoomedSection) {
-        return (
-            <div className="fixed inset-0 z-50 p-6 flex flex-col" style={{ background: DARK }}>
-                {/* Header do Zoom */}
-                <div className="flex items-center justify-between mb-6 pb-4 border-b" style={{ borderColor: BORDER }}>
-                    <div className="flex items-center gap-3">
-                        {zoomedSection === 'performance' ? (
-                            <Activity size={28} style={{ color: LIME }} />
-                        ) : (
-                            <DollarSign size={28} style={{ color: LIME }} />
-                        )}
-                        <h2 className="text-2xl font-black text-white">
-                            {zoomedSection === 'performance' ? 'Performance Comercial (Zoom)' : 'Receita e Pagamentos (Zoom)'}
-                        </h2>
-                    </div>
-                    <button 
-                        onClick={() => setZoomedSection(null)} 
-                        className="p-3 rounded-full hover:bg-white/10 transition-colors text-white flex items-center gap-2 font-bold text-sm bg-white/5"
-                    >
-                        Fechar Zoom
-                    </button>
-                </div>
-
-                {/* Área de Conteúdo Scrollável do Zoom */}
-                <div className="flex-1 overflow-y-auto pr-2 pb-8">
-                    {zoomedSection === 'performance' && (
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-full min-h-[800px]">
-                            {/* SDRs Período */}
-                            <div className="glass-panel p-6 flex flex-col">
-                                <h3 className="text-base font-bold text-white mb-4">Performance SDRs (Período Selecionado)</h3>
-                                <div className="flex-1 w-full min-h-[300px]">
-                                    {sdrs.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={sdrs} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                                <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <Tooltip {...tooltipStyle} />
-                                                <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
-                                                <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                                <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
-                                                <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Closers Período */}
-                            <div className="glass-panel p-6 flex flex-col">
-                                <h3 className="text-base font-bold text-white mb-4">Performance Closers (Período Selecionado)</h3>
-                                <div className="flex-1 w-full min-h-[300px]">
-                                    {closers.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={closers} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                                <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <Tooltip {...tooltipStyle} />
-                                                <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
-                                                <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
-                                                <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* SDRs Hoje */}
-                            <div className="glass-panel p-6 flex flex-col">
-                                <h3 className="text-base font-bold text-white mb-4">Performance SDRs (Hoje)</h3>
-                                <div className="flex-1 w-full min-h-[300px]">
-                                    {sdrsToday.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={sdrsToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                                <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <Tooltip {...tooltipStyle} />
-                                                <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
-                                                <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                                <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
-                                                <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Closers Hoje */}
-                            <div className="glass-panel p-6 flex flex-col">
-                                <h3 className="text-base font-bold text-white mb-4">Performance Closers (Hoje)</h3>
-                                <div className="flex-1 w-full min-h-[300px]">
-                                    {closersToday.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={closersToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                                <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <Tooltip {...tooltipStyle} />
-                                                <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
-                                                <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
-                                                <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {zoomedSection === 'receita' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full min-h-[800px]">
-                            {/* Receita por Forma de Pagamento */}
-                            <div className="glass-panel p-6 flex flex-col">
-                                <h3 className="text-base font-bold text-white mb-4">Receita por Forma de Pagamento</h3>
-                                <div className="flex-1 w-full min-h-[300px] flex items-center justify-center overflow-hidden">
-                                    {metrics?.receitaPorPagamento && metrics.receitaPorPagamento.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={metrics.receitaPorPagamento}
-                                                    cx="50%" cy="50%"
-                                                    innerRadius={80} outerRadius={130}
-                                                    paddingAngle={5} dataKey="value"
-                                                    label={({ name, percent }: any) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
-                                                    labelLine={{ stroke: '#555' }}
-                                                >
-                                                    {metrics.receitaPorPagamento.map((_, index) => (
-                                                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(value: any) => formatBRL(value)} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem pagamentos</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Ticket Médio */}
-                            <div className="glass-panel p-6 flex flex-col align-center justify-center">
-                                <h3 className="text-base font-bold text-white mb-4 text-center">Ticket Médio (Período)</h3>
-                                <div className="flex w-full items-center justify-center my-auto">
-                                    <div className="text-center">
-                                        <div className="p-6 rounded-full inline-flex mb-6" style={{ background: 'rgba(190,255,0,0.1)' }}>
-                                            <DollarSign size={48} style={{ color: LIME }} />
-                                        </div>
-                                        <div className="text-6xl font-black text-white">{formatBRL(metrics?.ticketMedio || 0)}</div>
-                                        <div className="text-lg mt-4" style={{ color: TEXT_SEC }}>Média de receita por venda aprovada</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Receita por Closer */}
-                            <div className="glass-panel p-6 flex flex-col">
-                                <h3 className="text-base font-bold text-white mb-4">Receita por Closer</h3>
-                                <div className="flex-1 w-full min-h-[300px]">
-                                    {metrics?.receitaPorCloser && metrics.receitaPorCloser.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={metrics.receitaPorCloser} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} tickFormatter={(val) => `R$${val/1000}k`} />
-                                                <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
-                                                <Bar dataKey="value" name="Receita" fill="#A78BFA" radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem vendas</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Receita por SDR */}
-                            <div className="glass-panel p-6 flex flex-col">
-                                <h3 className="text-base font-bold text-white mb-4">Receita por SDR (Origem)</h3>
-                                <div className="flex-1 w-full min-h-[300px]">
-                                    {metrics?.receitaPorSdr && metrics.receitaPorSdr.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={metrics.receitaPorSdr} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} tickFormatter={(val) => `R$${val/1000}k`} />
-                                                <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
-                                                <Bar dataKey="value" name="Receita" fill="#22D3EE" radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem vendas</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    }
-
-    // Default Non-Zoomed Layout
     return (
-        <div className="pt-4 h-full flex flex-col">
+        <div className="pt-4 h-full flex flex-col relative" style={{ minHeight: '100vh' }}>
+            {/* Overlay backdrop */}
+            {zoomedSection && (
+                <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setZoomedSection(null)} />
+            )}
             {/* Header e Filtros (mantidos iguais) */}
             <div className="mb-8 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
                 <div>
@@ -386,46 +179,244 @@ export default function Dashboard() {
                 })}
             </div>
 
-            {/* Non-Zoomed Chart Box Triggers */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-8">
-                {/* Performance Comercial Trigger */}
-                <div 
-                    onClick={() => setZoomedSection('performance')}
-                    className="glass-panel p-8 rounded-xl cursor-pointer hover:bg-white/5 transition flex items-center justify-between border-2 border-transparent hover:border-lime-400 group"
-                >
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-3 rounded-lg" style={{ background: 'rgba(190,255,0,0.1)' }}>
-                                <Activity size={24} style={{ color: LIME }} />
-                            </div>
-                            <h3 className="text-xl font-black text-white">Performance Comercial</h3>
-                        </div>
-                        <p className="text-sm" style={{ color: TEXT_SEC }}>Clique para expandir os gráficos de SDRs e Closers</p>
+            {/* Zoomable Box: Performance Comercial */}
+            <div className={`mb-4 transition-all duration-300 ${zoomedSection === 'performance' ? 'fixed inset-4 lg:inset-x-12 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group'}`}>
+                <div className="p-5 flex items-center justify-between font-bold text-lg text-white select-none border-b border-white/10 bg-white/5">
+                    <div className="flex items-center gap-2">
+                        <Activity size={20} style={{ color: LIME }} />
+                        Performance Comercial
                     </div>
-                    <div className="p-3 bg-white/5 rounded-full group-hover:bg-lime-400 group-hover:text-black transition">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
-                    </div>
+                    {zoomedSection === 'performance' ? (
+                        <button onClick={() => setZoomedSection(null)} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition">
+                            <span className="hidden sm:inline">Fechar Zoom</span>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    ) : (
+                        <button onClick={() => setZoomedSection('performance')} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-transparent hover:bg-white/10 rounded-lg transition opacity-0 group-hover:opacity-100 ring-1 ring-white/10">
+                            <span className="hidden sm:inline">Expandir</span>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                        </button>
+                    )}
                 </div>
-
-                {/* Receita Trigger */}
-                <div 
-                    onClick={() => setZoomedSection('receita')}
-                    className="glass-panel p-8 rounded-xl cursor-pointer hover:bg-white/5 transition flex items-center justify-between border-2 border-transparent hover:border-lime-400 group"
-                >
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-3 rounded-lg" style={{ background: 'rgba(190,255,0,0.1)' }}>
-                                <DollarSign size={24} style={{ color: LIME }} />
+                
+                <div className={`p-5 overflow-y-auto ${zoomedSection === 'performance' ? 'flex-1' : ''}`}>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-full">
+                        {/* SDRs Período */}
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-bold text-white mb-4">Performance SDRs (Período Selecionado)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {sdrs.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={sdrs} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                            <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados no período selecionado.
+                                    </div>
+                                )}
                             </div>
-                            <h3 className="text-xl font-black text-white">Receita e Pagamentos</h3>
                         </div>
-                        <p className="text-sm" style={{ color: TEXT_SEC }}>Clique para expandir Ticket Médio, Receita por SDR/Closer</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-full group-hover:bg-lime-400 group-hover:text-black transition">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+
+                        {/* Closers Período */}
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-bold text-white mb-4">Performance Closers (Período Selecionado)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {closers.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={closers} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                            <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados no período selecionado.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* SDRs Hoje */}
+                        <div className="flex flex-col pt-4 border-t border-white/5">
+                            <h3 className="text-sm font-bold text-white mb-4">Performance SDRs (Hoje)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {sdrsToday.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={sdrsToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                            <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados para hoje.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Closers Hoje */}
+                        <div className="flex flex-col pt-4 border-t border-white/5">
+                            <h3 className="text-sm font-bold text-white mb-4">Performance Closers (Hoje)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {closersToday.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={closersToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                            <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados para hoje.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {/* Zoomable Box: Receita */}
+            <div className={`mb-8 transition-all duration-300 ${zoomedSection === 'receita' ? 'fixed inset-4 lg:inset-x-12 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group'}`}>
+                <div className="p-5 flex items-center justify-between font-bold text-lg text-white select-none border-b border-white/10 bg-white/5">
+                    <div className="flex items-center gap-2">
+                        <DollarSign size={20} style={{ color: LIME }} />
+                        Receita e Pagamentos
+                    </div>
+                    {zoomedSection === 'receita' ? (
+                        <button onClick={() => setZoomedSection(null)} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition">
+                            <span className="hidden sm:inline">Fechar Zoom</span>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    ) : (
+                        <button onClick={() => setZoomedSection('receita')} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-transparent hover:bg-white/10 rounded-lg transition opacity-0 group-hover:opacity-100 ring-1 ring-white/10">
+                            <span className="hidden sm:inline">Expandir</span>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                        </button>
+                    )}
+                </div>
+                
+                <div className={`p-5 overflow-y-auto ${zoomedSection === 'receita' ? 'flex-1' : ''}`}>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+
+                        {/* Receita por Forma de Pagamento */}
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-bold text-white mb-4">Receita por Forma de Pagamento</h3>
+                            <div className="flex-1 w-full min-h-[250px] flex items-center justify-center overflow-hidden">
+                                {metrics?.receitaPorPagamento && metrics.receitaPorPagamento.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={metrics.receitaPorPagamento}
+                                                cx="50%" cy="50%"
+                                                innerRadius={60} outerRadius={100}
+                                                paddingAngle={5} dataKey="value"
+                                                label={({ name, percent }: any) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                                                labelLine={{ stroke: '#555' }}
+                                            >
+                                                {metrics.receitaPorPagamento.map((_, index) => (
+                                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(value: any) => formatBRL(value)} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Nenhum pagamento registrado.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Ticket Médio */}
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-bold text-white mb-4">Ticket Médio (Período)</h3>
+                            <div className="flex-1 w-full min-h-[250px] flex items-center justify-center">
+                                <div className="text-center">
+                                    <div className="p-4 rounded-full inline-flex mb-4" style={{ background: 'rgba(190,255,0,0.1)' }}>
+                                        <DollarSign size={32} style={{ color: LIME }} />
+                                    </div>
+                                    <div className="text-4xl font-black text-white">{formatBRL(metrics?.ticketMedio || 0)}</div>
+                                    <div className="text-sm mt-2" style={{ color: TEXT_SEC }}>Média de receita por venda aprovada</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Receita por Closer */}
+                        <div className="flex flex-col pt-4 border-t border-white/5">
+                            <h3 className="text-sm font-bold text-white mb-4">Receita por Closer</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {metrics?.receitaPorCloser && metrics.receitaPorCloser.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={metrics.receitaPorCloser} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} tickFormatter={(val) => `R$${val/1000}k`} />
+                                            <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
+                                            <Bar dataKey="value" name="Receita" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem vendas no período.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Receita por SDR */}
+                        <div className="flex flex-col pt-4 border-t border-white/5">
+                            <h3 className="text-sm font-bold text-white mb-4">Receita por SDR (Origem)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {metrics?.receitaPorSdr && metrics.receitaPorSdr.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={metrics.receitaPorSdr} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} tickFormatter={(val) => `R$${val/1000}k`} />
+                                            <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
+                                            <Bar dataKey="value" name="Receita" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem vendas no período.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 }
