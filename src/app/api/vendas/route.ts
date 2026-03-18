@@ -18,9 +18,11 @@ export async function POST(request: Request) {
 
         const valorBruto = parseFloat(valor_bruto);
         const desconto = parseFloat(desconto_concedido) || 0;
-        const taxaGw = parseFloat(taxa_gateway) || 0;
+        const taxaGw = parseFloat(taxa_gateway) || 0; // Absolute value in R$, e.g., 76.84
         const parcelas = parseInt(numero_parcelas) || 1;
-        const valorLiquido = valorBruto * (1 - taxaGw / 100) - desconto;
+        
+        // Fix: backend was treating taxaGw as percentage, dropping the net cash
+        const valorLiquido = valorBruto - taxaGw - desconto;
 
         if (existing) {
             await supabase.from('oportunidades').update({ valor_proposta: valorBruto }).eq('id_oportunidade', existing.id_oportunidade);
