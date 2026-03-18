@@ -52,13 +52,33 @@ export async function POST(request: Request) {
         // Tentar criar evento no Google Calendar (opcional, sem bloquear)
         try {
             let targetEmail = null;
+            let closerEmail = null;
+            let sdrEmail = null;
 
-            // 1. Tentar pegar o token do Closer se houver um
+            // 1. Pegar email do Closer e ver se ele tem token
             if (id_closer) {
                 const { data: closerUser } = await supabase.from('usuarios').select('email').eq('id_usuario', id_closer).single();
                 if (closerUser?.email) {
-                    const { data: hasToken } = await supabase.from('google_tokens').select('id').eq('user_email', closerUser.email).single();
-                    if (hasToken) targetEmail = closerUser.email;
+                    closerEmail = closerUser.email;
+                    const { data: hasToken } = await supabase.from('google_tokens').select('id').eq('user_email', closerEmail).single();
+                    if (hasToken) targetEmail = closerEmail;
+                }
+            }
+
+            // Pegar email do SDR para adicionar como convidado
+            if (id_sdr) {
+                const { data: sdrUser } = await supabase.from('usuarios').select('email').eq('id_usuario', id_sdr).single();
+                if (sdrUser?.email) {
+                    sdrEmail = sdrUser.email;
+                }
+            }
+
+            // Pegar email do lead para adicionar como convidado
+            let leadEmail = null;
+            if (id_lead) {
+                const { data: leadInfo } = await supabase.from('leads').select('email').eq('id_lead', id_lead).single();
+                if (leadInfo?.email) {
+                    leadEmail = leadInfo.email;
                 }
             }
 
@@ -70,7 +90,7 @@ export async function POST(request: Request) {
             }
 
             if (targetEmail) {
-                await createGoogleEvent(targetEmail, data);
+                await createGoogleEvent(targetEmail, data, closerEmail, sdrEmail, leadEmail);
             }
         } catch (gcErr) {
             console.warn('[Google Calendar] Erro ao criar evento (ignorado):', gcErr);
@@ -101,13 +121,27 @@ export async function PUT(request: Request) {
         try {
             if (data?.google_event_id) {
                 let targetEmail = null;
+                let closerEmail = null;
+                let sdrEmail = null;
 
                 if (id_closer) {
                     const { data: closerUser } = await supabase.from('usuarios').select('email').eq('id_usuario', id_closer).single();
                     if (closerUser?.email) {
-                        const { data: hasToken } = await supabase.from('google_tokens').select('id').eq('user_email', closerUser.email).single();
-                        if (hasToken) targetEmail = closerUser.email;
+                        closerEmail = closerUser.email;
+                        const { data: hasToken } = await supabase.from('google_tokens').select('id').eq('user_email', closerEmail).single();
+                        if (hasToken) targetEmail = closerEmail;
                     }
+                }
+
+                if (id_sdr) {
+                    const { data: sdrUser } = await supabase.from('usuarios').select('email').eq('id_usuario', id_sdr).single();
+                    if (sdrUser?.email) sdrEmail = sdrUser.email;
+                }
+
+                let leadEmail = null;
+                if (id_lead) {
+                    const { data: leadInfo } = await supabase.from('leads').select('email').eq('id_lead', id_lead).single();
+                    if (leadInfo?.email) leadEmail = leadInfo.email;
                 }
 
                 if (!targetEmail) {
@@ -117,7 +151,7 @@ export async function PUT(request: Request) {
                 }
 
                 if (targetEmail) {
-                    await updateGoogleEvent(targetEmail, data.google_event_id, data);
+                    await updateGoogleEvent(targetEmail, data.google_event_id, data, closerEmail, sdrEmail, leadEmail);
                 }
             }
         } catch (gcErr) {
@@ -212,21 +246,30 @@ async function getAccessToken(userEmail: string): Promise<string | null> {
     return tokenData.access_token;
 }
 
-async function createGoogleEvent(userEmail: string, chamada: any) {
+async function createGoogleEvent(userEmail: string, chamada: any, closerEmail?: string | null, sdrEmail?: string | null, leadEmail?: string | null) {
     const token = await getAccessToken(userEmail);
     if (!token) return;
 
     const startDt = new Date(chamada.data_hora_inicio);
     const endDt = new Date(startDt.getTime() + (chamada.duracao_minutos || 60) * 60000);
 
-    const event = {
+    const attendees: any[] = [];
+    if (closerEmail && closerEmail !== userEmail) attendees.push({ email: closerEmail });
+    if (sdrEmail && sdrEmail !== userEmail) attendees.push({ email: sdrEmail });
+    if (leadEmail && leadEmail !== userEmail) attendees.push({ email: leadEmail });
+
+    const event: any = {
         summary: chamada.titulo || 'Chamada CRM',
         description: chamada.observacoes || '',
         start: { dateTime: startDt.toISOString(), timeZone: 'America/Sao_Paulo' },
         end: { dateTime: endDt.toISOString(), timeZone: 'America/Sao_Paulo' }
     };
 
-    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    if (attendees.length > 0) {
+        event.attendees = attendees;
+    }
+
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(event)
@@ -238,22 +281,33 @@ async function createGoogleEvent(userEmail: string, chamada: any) {
     }
 }
 
-async function updateGoogleEvent(userEmail: string, eventId: string, chamada: any) {
+async function updateGoogleEvent(userEmail: string, eventId: string, chamada: any, closerEmail?: string | null, sdrEmail?: string | null, leadEmail?: string | null) {
     const token = await getAccessToken(userEmail);
     if (!token) return;
 
     const startDt = new Date(chamada.data_hora_inicio);
     const endDt = new Date(startDt.getTime() + (chamada.duracao_minutos || 60) * 60000);
 
-    await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
+    const attendees: any[] = [];
+    if (closerEmail && closerEmail !== userEmail) attendees.push({ email: closerEmail });
+    if (sdrEmail && sdrEmail !== userEmail) attendees.push({ email: sdrEmail });
+    if (leadEmail && leadEmail !== userEmail) attendees.push({ email: leadEmail });
+
+    const event: any = {
+        summary: chamada.titulo || 'Chamada CRM',
+        description: chamada.observacoes || '',
+        start: { dateTime: startDt.toISOString(), timeZone: 'America/Sao_Paulo' },
+        end: { dateTime: endDt.toISOString(), timeZone: 'America/Sao_Paulo' }
+    };
+
+    if (attendees.length > 0) {
+        event.attendees = attendees;
+    }
+
+    await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}?sendUpdates=all`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            summary: chamada.titulo || 'Chamada CRM',
-            description: chamada.observacoes || '',
-            start: { dateTime: startDt.toISOString(), timeZone: 'America/Sao_Paulo' },
-            end: { dateTime: endDt.toISOString(), timeZone: 'America/Sao_Paulo' }
-        })
+        body: JSON.stringify(event)
     });
 }
 
