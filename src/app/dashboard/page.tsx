@@ -31,6 +31,9 @@ type Metrics = {
     vendasTotais: number;
     conversaoAproximada: string;
     receitaPorPagamento?: { name: string; value: number }[];
+    ticketMedio: number;
+    receitaPorCloser?: { name: string; value: number }[];
+    receitaPorSdr?: { name: string; value: number }[];
 };
 
 const DARK = '#1A1A1A';
@@ -118,7 +121,7 @@ export default function Dashboard() {
 
     return (
         <div className="pt-4 h-full flex flex-col">
-            {/* Header */}
+            {/* Header e Filtros (mantidos iguais) */}
             <div className="mb-8 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
                 <div>
                     <h2 className="text-3xl font-black text-white tracking-tight">Dashboard Executivo</h2>
@@ -141,7 +144,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* KPI Cards */}
+            {/* KPI Cards (mantidos iguais) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
                 {cards.map((card, idx) => {
                     const Icon = card.icon;
@@ -170,143 +173,228 @@ export default function Dashboard() {
                 })}
             </div>
 
-            {/* Charts */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 flex-1 mb-8">
-                {/* SDRs Período */}
-                <div className="glass-panel p-6 flex flex-col">
-                    <h3 className="text-base font-bold text-white mb-4">Performance SDRs (Período Selecionado)</h3>
-                    <div className="flex-1 w-full min-h-[280px]">
-                        {sdrs.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={sdrs} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                    <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                    <Tooltip {...tooltipStyle} />
-                                    <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
-                                    <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
-                                style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                Sem dados no período selecionado.
-                            </div>
-                        )}
+            {/* Expandable Box: Performance Comercial */}
+            <details className="group mb-4 glass-panel rounded-xl overflow-hidden [&_summary::-webkit-details-marker]:hidden cursor-pointer" open>
+                <summary className="p-5 flex items-center justify-between font-bold text-lg text-white select-none transition-colors hover:bg-white/5">
+                    <div className="flex items-center gap-2">
+                        <Activity size={20} style={{ color: LIME }} />
+                        Performance Comercial
                     </div>
-                </div>
+                    <span className="transition group-open:rotate-180">
+                        <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
+                    </span>
+                </summary>
+                
+                <div className="p-5 border-t border-white/10 cursor-default">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        {/* SDRs Período */}
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-bold text-white mb-4">Performance SDRs (Período Selecionado)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {sdrs.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={sdrs} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                            <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados no período selecionado.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-                {/* Closers Período */}
-                <div className="glass-panel p-6 flex flex-col">
-                    <h3 className="text-base font-bold text-white mb-4">Performance Closers (Período Selecionado)</h3>
-                    <div className="flex-1 w-full min-h-[280px]">
-                        {closers.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={closers} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                    <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                    <Tooltip {...tooltipStyle} />
-                                    <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
-                                    <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
-                                style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                Sem dados no período selecionado.
+                        {/* Closers Período */}
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-bold text-white mb-4">Performance Closers (Período Selecionado)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {closers.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={closers} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                            <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados no período selecionado.
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </div>
+                        </div>
 
-                {/* SDRs Hoje */}
-                <div className="glass-panel p-6 flex flex-col">
-                    <h3 className="text-base font-bold text-white mb-4">Performance SDRs (Hoje)</h3>
-                    <div className="flex-1 w-full min-h-[280px]">
-                        {sdrsToday.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={sdrsToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                    <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                    <Tooltip {...tooltipStyle} />
-                                    <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
-                                    <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
-                                style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                Sem dados para hoje.
+                        {/* SDRs Hoje */}
+                        <div className="flex flex-col pt-4 border-t border-white/5">
+                            <h3 className="text-sm font-bold text-white mb-4">Performance SDRs (Hoje)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {sdrsToday.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={sdrsToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                            <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados para hoje.
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </div>
+                        </div>
 
-                {/* Closers Hoje */}
-                <div className="glass-panel p-6 flex flex-col">
-                    <h3 className="text-base font-bold text-white mb-4">Performance Closers (Hoje)</h3>
-                    <div className="flex-1 w-full min-h-[280px]">
-                        {closersToday.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={closersToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                    <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
-                                    <Tooltip {...tooltipStyle} />
-                                    <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
-                                    <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
-                                style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                Sem dados para hoje.
+                        {/* Closers Hoje */}
+                        <div className="flex flex-col pt-4 border-t border-white/5">
+                            <h3 className="text-sm font-bold text-white mb-4">Performance Closers (Hoje)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {closersToday.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={closersToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                            <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados para hoje.
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </details>
 
-            {/* Pie Chart */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div className="glass-panel p-6 flex flex-col">
-                    <h3 className="text-base font-bold text-white mb-4">Receita por Forma de Pagamento</h3>
-                    <div className="flex-1 w-full min-h-[280px] flex items-center justify-center overflow-hidden">
-                        {metrics?.receitaPorPagamento && metrics.receitaPorPagamento.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={metrics.receitaPorPagamento}
-                                        cx="50%" cy="50%"
-                                        innerRadius={60} outerRadius={100}
-                                        paddingAngle={5} dataKey="value"
-                                        label={({ name, percent }: any) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
-                                        labelLine={{ stroke: '#555' }}
-                                    >
-                                        {metrics.receitaPorPagamento.map((_, index) => (
-                                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(value: any) => formatBRL(value)} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
-                                style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                Nenhum pagamento registrado no período.
+            {/* Expandable Box: Receita */}
+            <details className="group mb-8 glass-panel rounded-xl overflow-hidden [&_summary::-webkit-details-marker]:hidden cursor-pointer" open>
+                <summary className="p-5 flex items-center justify-between font-bold text-lg text-white select-none transition-colors hover:bg-white/5">
+                    <div className="flex items-center gap-2">
+                        <DollarSign size={20} style={{ color: LIME }} />
+                        Receita e Pagamentos
+                    </div>
+                    <span className="transition group-open:rotate-180">
+                        <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
+                    </span>
+                </summary>
+                
+                <div className="p-5 border-t border-white/10 cursor-default">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                        {/* Receita por Forma de Pagamento */}
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-bold text-white mb-4">Receita por Forma de Pagamento</h3>
+                            <div className="flex-1 w-full min-h-[250px] flex items-center justify-center overflow-hidden">
+                                {metrics?.receitaPorPagamento && metrics.receitaPorPagamento.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={metrics.receitaPorPagamento}
+                                                cx="50%" cy="50%"
+                                                innerRadius={60} outerRadius={100}
+                                                paddingAngle={5} dataKey="value"
+                                                label={({ name, percent }: any) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                                                labelLine={{ stroke: '#555' }}
+                                            >
+                                                {metrics.receitaPorPagamento.map((_, index) => (
+                                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(value: any) => formatBRL(value)} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Nenhum pagamento registrado.
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
+
+                        {/* Ticket Médio */}
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-bold text-white mb-4">Ticket Médio (Período)</h3>
+                            <div className="flex-1 w-full min-h-[250px] flex items-center justify-center">
+                                <div className="text-center">
+                                    <div className="p-4 rounded-full inline-flex mb-4" style={{ background: 'rgba(190,255,0,0.1)' }}>
+                                        <DollarSign size={32} style={{ color: LIME }} />
+                                    </div>
+                                    <div className="text-4xl font-black text-white">{formatBRL(metrics?.ticketMedio || 0)}</div>
+                                    <div className="text-sm mt-2" style={{ color: TEXT_SEC }}>Média de receita por venda aprovada</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Receita por Closer */}
+                        <div className="flex flex-col pt-4 border-t border-white/5">
+                            <h3 className="text-sm font-bold text-white mb-4">Receita por Closer</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {metrics?.receitaPorCloser && metrics.receitaPorCloser.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={metrics.receitaPorCloser} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} tickFormatter={(val) => `R$${val/1000}k`} />
+                                            <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
+                                            <Bar dataKey="value" name="Receita" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem vendas no período.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Receita por SDR */}
+                        <div className="flex flex-col pt-4 border-t border-white/5">
+                            <h3 className="text-sm font-bold text-white mb-4">Receita por SDR (Origem)</h3>
+                            <div className="flex-1 w-full min-h-[250px]">
+                                {metrics?.receitaPorSdr && metrics.receitaPorSdr.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={metrics.receitaPorSdr} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} tickFormatter={(val) => `R$${val/1000}k`} />
+                                            <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
+                                            <Bar dataKey="value" name="Receita" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem vendas no período.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-            </div>
+            </details>
+
         </div>
     );
 }

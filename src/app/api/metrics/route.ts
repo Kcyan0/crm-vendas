@@ -72,7 +72,56 @@ export async function GET(request: Request) {
         });
         const receitaPorPagamento = Object.entries(byPayment).map(([name, value]) => ({ name, value }));
 
-        return NextResponse.json({ receita, caixaLiquido, leadsTotais, vendasTotais, conversaoAproximada, receitaPorPagamento, period: { startDate, endDate } });
+        // Ticket Médio
+        const ticketMedio = vendasTotais > 0 ? receita / vendasTotais : 0;
+
+        // Fetch User details for naming
+        let usersQuery = supabase.from('usuarios').select('id_usuario, nome').in('tipo', ['SDR', 'CLOSER']);
+        const { data: usersData } = await usersQuery;
+        const usersMap: Record<number, string> = {};
+        (usersData || []).forEach((u: any) => { usersMap[u.id_usuario] = u.nome; });
+
+        // Map lead owners for the filtered sales
+        let leadsInfoQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel').in('id_lead', Array.from(validLeadIds!));
+        const { data: leadsInfoData } = await leadsInfoQuery;
+        const leadOwnerMap: Record<number, { sdr: number, closer: number }> = {};
+        (leadsInfoData || []).forEach((l: any) => {
+            leadOwnerMap[l.id_lead] = { sdr: l.id_sdr_responsavel, closer: l.id_closer_responsavel };
+        });
+
+        const byCloser: Record<string, number> = {};
+        const bySdr: Record<string, number> = {};
+
+        filteredVendas.forEach((v: any) => {
+            const val = parseFloat(v.valor_bruto) || 0;
+            const owners = leadOwnerMap[v.id_lead];
+            if (owners) {
+                if (owners.closer) {
+                    const cName = usersMap[owners.closer] || 'Desconhecido';
+                    byCloser[cName] = (byCloser[cName] || 0) + val;
+                }
+                if (owners.sdr) {
+                    const sName = usersMap[owners.sdr] || 'Desconhecido';
+                    bySdr[sName] = (bySdr[sName] || 0) + val;
+                }
+            }
+        });
+
+        const receitaPorCloser = Object.entries(byCloser).map(([name, value]) => ({ name, value }));
+        const receitaPorSdr = Object.entries(bySdr).map(([name, value]) => ({ name, value }));
+
+        return NextResponse.json({ 
+            receita, 
+            caixaLiquido, 
+            leadsTotais, 
+            vendasTotais, 
+            conversaoAproximada, 
+            ticketMedio,
+            receitaPorPagamento, 
+            receitaPorCloser,
+            receitaPorSdr,
+            period: { startDate, endDate } 
+        });
     } catch (error: any) {
         console.error('Metrics error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
