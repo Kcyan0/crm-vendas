@@ -48,7 +48,7 @@ export default function PerformancePage() {
             setSdrs(data.sdr || []);
             setClosers(data.closer || []);
             if (data.period && !filterDate) {
-                setDate(data.period.date);
+                setDate(data.period.startDate);
             }
         } catch (error) {
             console.error("Failed to fetch performance metrics:", error);
@@ -59,7 +59,7 @@ export default function PerformancePage() {
 
     useEffect(() => {
         if (!selectedProject) return;
-        fetchPerformance();
+        fetchPerformance(date);
     }, [selectedProject]);
 
     const handleDateChange = () => {
