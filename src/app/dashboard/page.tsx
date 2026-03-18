@@ -43,6 +43,8 @@ export default function Dashboard() {
     const [metrics, setMetrics] = useState<Metrics | null>(null);
     const [sdrs, setSdrs] = useState<any[]>([]);
     const [closers, setClosers] = useState<any[]>([]);
+    const [sdrsToday, setSdrsToday] = useState<any[]>([]);
+    const [closersToday, setClosersToday] = useState<any[]>([]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [isLoading, setIsLoading] = useState(true);
@@ -55,17 +57,24 @@ export default function Dashboard() {
             if (end) query.set('endDate', end);
             if (selectedProject?.id_projeto) query.set('projectId', selectedProject.id_projeto.toString());
             
-            const [metricsRes, perfRes] = await Promise.all([
+            const paramsToday = new URLSearchParams();
+            if (selectedProject?.id_projeto) paramsToday.set('projectId', selectedProject.id_projeto.toString());
+
+            const [metricsRes, perfRes, perfTodayRes] = await Promise.all([
                 fetch(`/api/metrics?${query.toString()}`),
-                fetch(`/api/performance?${query.toString()}`)
+                fetch(`/api/performance?${query.toString()}`),
+                fetch(`/api/performance?${paramsToday.toString()}`)
             ]);
             
             const data = await metricsRes.json();
             const perfData = await perfRes.json();
+            const perfTodayData = await perfTodayRes.json();
 
             setMetrics(data);
             setSdrs(perfData.sdr || []);
             setClosers(perfData.closer || []);
+            setSdrsToday(perfTodayData.sdr || []);
+            setClosersToday(perfTodayData.closer || []);
 
             if (data.period) {
                 if (!start) setStartDate(data.period.startDate);
@@ -163,9 +172,9 @@ export default function Dashboard() {
 
             {/* Charts */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 flex-1 mb-8">
-                {/* SDRs */}
+                {/* SDRs Período */}
                 <div className="glass-panel p-6 flex flex-col">
-                    <h3 className="text-base font-bold text-white mb-4">Performance SDRs</h3>
+                    <h3 className="text-base font-bold text-white mb-4">Performance SDRs (Período Selecionado)</h3>
                     <div className="flex-1 w-full min-h-[280px]">
                         {sdrs.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -189,9 +198,9 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Closers */}
+                {/* Closers Período */}
                 <div className="glass-panel p-6 flex flex-col">
-                    <h3 className="text-base font-bold text-white mb-4">Performance Closers</h3>
+                    <h3 className="text-base font-bold text-white mb-4">Performance Closers (Período Selecionado)</h3>
                     <div className="flex-1 w-full min-h-[280px]">
                         {closers.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -209,6 +218,57 @@ export default function Dashboard() {
                             <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
                                 style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
                                 Sem dados no período selecionado.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* SDRs Hoje */}
+                <div className="glass-panel p-6 flex flex-col">
+                    <h3 className="text-base font-bold text-white mb-4">Performance SDRs (Hoje)</h3>
+                    <div className="flex-1 w-full min-h-[280px]">
+                        {sdrsToday.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={sdrsToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                    <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                    <Tooltip {...tooltipStyle} />
+                                    <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                    <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
+                                style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                Sem dados para hoje.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Closers Hoje */}
+                <div className="glass-panel p-6 flex flex-col">
+                    <h3 className="text-base font-bold text-white mb-4">Performance Closers (Hoje)</h3>
+                    <div className="flex-1 w-full min-h-[280px]">
+                        {closersToday.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={closersToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                    <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 12 }} />
+                                    <Tooltip {...tooltipStyle} />
+                                    <Legend wrapperStyle={{ paddingTop: '16px', color: TEXT_SEC }} />
+                                    <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-sm"
+                                style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                Sem dados para hoje.
                             </div>
                         )}
                     </div>
