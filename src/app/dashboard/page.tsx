@@ -179,8 +179,11 @@ export default function Dashboard() {
                 })}
             </div>
 
+            {/* Grid Container for Dashboard Boxes */}
+            <div className={`grid grid-cols-1 xl:grid-cols-2 gap-6 pb-8 ${zoomedSection ? 'flex-1' : ''}`}>
+
             {/* Zoomable Box: Performance Comercial */}
-            <div className={`mb-4 transition-all duration-300 ${zoomedSection === 'performance' ? 'fixed inset-4 lg:inset-x-12 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group'}`}>
+            <div className={`transition-all duration-300 ${zoomedSection === 'performance' ? 'fixed inset-6 md:inset-12 lg:inset-20 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group flex flex-col h-[650px]'}`}>
                 <div className="p-5 flex items-center justify-between font-bold text-lg text-white select-none border-b border-white/10 bg-white/5">
                     <div className="flex items-center gap-2">
                         <Activity size={20} style={{ color: LIME }} />
@@ -199,8 +202,8 @@ export default function Dashboard() {
                     )}
                 </div>
                 
-                <div className={`p-5 overflow-y-auto ${zoomedSection === 'performance' ? 'flex-1' : ''}`}>
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-full">
+                <div className="p-4 overflow-y-auto flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
                         {/* SDRs Período */}
                         <div className="flex flex-col">
                             <h3 className="text-sm font-bold text-white mb-4">Performance SDRs (Período Selecionado)</h3>
@@ -303,7 +306,7 @@ export default function Dashboard() {
             </div>
 
             {/* Zoomable Box: Receita */}
-            <div className={`mb-8 transition-all duration-300 ${zoomedSection === 'receita' ? 'fixed inset-4 lg:inset-x-12 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group'}`}>
+            <div className={`transition-all duration-300 ${zoomedSection === 'receita' ? 'fixed inset-6 md:inset-12 lg:inset-20 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group flex flex-col h-[650px]'}`}>
                 <div className="p-5 flex items-center justify-between font-bold text-lg text-white select-none border-b border-white/10 bg-white/5">
                     <div className="flex items-center gap-2">
                         <DollarSign size={20} style={{ color: LIME }} />
@@ -322,8 +325,8 @@ export default function Dashboard() {
                     )}
                 </div>
                 
-                <div className={`p-5 overflow-y-auto ${zoomedSection === 'receita' ? 'flex-1' : ''}`}>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                <div className="p-4 overflow-y-auto flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
 
                         {/* Receita por Forma de Pagamento */}
                         <div className="flex flex-col">
@@ -417,6 +420,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            </div> {/* End of grid container */}
         </div>
     );
 }
