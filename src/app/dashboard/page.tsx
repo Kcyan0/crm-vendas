@@ -34,6 +34,10 @@ type Metrics = {
     ticketMedio: number;
     receitaPorCloser?: { name: string; value: number }[];
     receitaPorSdr?: { name: string; value: number }[];
+    tmFaturamentoCloser?: { name: string; value: number }[];
+    tmCaixaCloser?: { name: string; value: number }[];
+    tmFaturamentoSdr?: { name: string; value: number }[];
+    tmCaixaSdr?: { name: string; value: number }[];
 };
 
 const DARK = '#1A1A1A';
@@ -121,6 +125,55 @@ export default function Dashboard() {
 
     const [zoomedSection, setZoomedSection] = useState<string | null>(null);
 
+    const renderTicketDonut = (title: string, data: any[] | undefined, isZoomed: boolean) => {
+        const total = data?.reduce((acc, curr) => acc + curr.value, 0) || 0;
+        return (
+            <div className="flex flex-col">
+                <h3 className={`${isZoomed ? 'text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-1 whitespace-nowrap overflow-hidden text-ellipsis`} title={title}>{title}</h3>
+                <div className={`flex-1 w-full flex flex-col ${isZoomed ? 'lg:flex-row min-h-[250px]' : 'items-center justify-center min-h-[120px]'} overflow-hidden`}>
+                    {data && data.length > 0 ? (
+                        <>
+                            <div className={`w-full ${isZoomed ? 'lg:w-1/2' : 'h-full flex-1'}`}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={data}
+                                            cx="50%" cy="50%"
+                                            innerRadius={isZoomed ? 60 : 30} outerRadius={isZoomed ? 90 : 50}
+                                            paddingAngle={5} dataKey="value"
+                                            label={isZoomed ? ({ name, percent }: any) => `${(percent * 100).toFixed(0)}%` : undefined}
+                                            labelLine={false}
+                                        >
+                                            {data.map((_, index) => (
+                                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(value: any) => formatBRL(value)} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            {isZoomed && (
+                                <div className="w-full lg:w-1/2 flex flex-col justify-center text-[10px] sm:text-xs mt-4 lg:mt-0 pl-0 lg:pl-4 overflow-y-auto max-h-[200px]">
+                                    <table className="w-full text-left">
+                                        <thead><tr className="border-b border-white/10"><th className="pb-2">Responsável</th><th className="pb-2 text-right">Valor</th></tr></thead>
+                                        <tbody>
+                                            {data.map((d, i) => (
+                                                <tr key={i} className="border-b border-white/5"><td className="py-2 flex items-center gap-2"><div className="w-2 h-2 rounded-full shrink-0" style={{background: CHART_COLORS[i % CHART_COLORS.length]}}></div><span className="truncate max-w-[80px] sm:max-w-[120px]">{d.name}</span></td><td className="py-2 text-right whitespace-nowrap">{formatBRL(d.value)}</td></tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot><tr><td className="pt-2 font-bold">SUM</td><td className="pt-2 font-bold text-right">{formatBRL(total)}</td></tr></tfoot>
+                                    </table>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados</div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="pt-4 h-full flex flex-col relative" style={{ minHeight: '100vh' }}>
             {/* Overlay backdrop */}
@@ -203,11 +256,11 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="p-4 overflow-hidden flex-1 flex flex-col">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full flex-1">
+                    <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6' : 'grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4'} h-full flex-1`}>
                         {/* SDRs Período */}
                         <div className="flex flex-col">
-                            <h3 className="text-xs sm:text-sm font-bold text-white mb-2">SDRs (Período)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[140px]'}`}>
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>SDRs (Período)</h3>
+                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
                                 {sdrs.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={sdrs} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
@@ -231,8 +284,8 @@ export default function Dashboard() {
 
                         {/* Closers Período */}
                         <div className="flex flex-col">
-                            <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Closers (Período)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[140px]'}`}>
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>Closers (Período)</h3>
+                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
                                 {closers.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={closers} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
@@ -255,8 +308,8 @@ export default function Dashboard() {
 
                         {/* SDRs Hoje */}
                         <div className="flex flex-col">
-                            <h3 className="text-xs sm:text-sm font-bold text-white mb-2">SDRs (Hoje)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[140px]'}`}>
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>SDRs (Hoje)</h3>
+                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
                                 {sdrsToday.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={sdrsToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
@@ -280,8 +333,8 @@ export default function Dashboard() {
 
                         {/* Closers Hoje */}
                         <div className="flex flex-col">
-                            <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Closers (Hoje)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[140px]'}`}>
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>Closers (Hoje)</h3>
+                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
                                 {closersToday.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={closersToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
@@ -301,6 +354,12 @@ export default function Dashboard() {
                                 )}
                             </div>
                         </div>
+
+                        {renderTicketDonut("Ticket Médio (Faturamento) por Closer", metrics?.tmFaturamentoCloser, zoomedSection === 'performance')}
+                        {renderTicketDonut("Ticket Médio (Caixa) por Closer", metrics?.tmCaixaCloser, zoomedSection === 'performance')}
+                        {renderTicketDonut("Ticket Médio (Faturamento) por SDR", metrics?.tmFaturamentoSdr, zoomedSection === 'performance')}
+                        {renderTicketDonut("Ticket Médio (Caixa) por SDR", metrics?.tmCaixaSdr, zoomedSection === 'performance')}
+
                     </div>
                 </div>
             </div>

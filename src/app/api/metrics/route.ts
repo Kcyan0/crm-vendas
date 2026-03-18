@@ -91,24 +91,56 @@ export async function GET(request: Request) {
 
         const byCloser: Record<string, number> = {};
         const bySdr: Record<string, number> = {};
+        
+        const closerStats: Record<string, { faturamento: number, caixa: number, count: number }> = {};
+        const sdrStats: Record<string, { faturamento: number, caixa: number, count: number }> = {};
 
         filteredVendas.forEach((v: any) => {
-            const val = parseFloat(v.valor_bruto) || 0;
+            const valBruto = parseFloat(v.valor_bruto) || 0;
+            
+            // Calculate this sale's caixa contribution in the period
+            const parcelas = v.numero_parcelas || 1;
+            const valorParcela = (parseFloat(v.valor_liquido_caixa) || parseFloat(v.valor_bruto) || 0) / parcelas;
+            const dataBase = new Date(v.data_recebimento || v.data_venda);
+            let valCaixa = 0;
+            for (let i = 0; i < parcelas; i++) {
+                const dataParcela = new Date(dataBase);
+                dataParcela.setMonth(dataParcela.getMonth() + i);
+                if (dataParcela >= start && dataParcela <= end) {
+                    valCaixa += valorParcela;
+                }
+            }
+
             const owners = leadOwnerMap[v.id_lead];
             if (owners) {
                 if (owners.closer) {
                     const cName = usersMap[owners.closer] || 'Desconhecido';
-                    byCloser[cName] = (byCloser[cName] || 0) + val;
+                    byCloser[cName] = (byCloser[cName] || 0) + valBruto;
+                    
+                    if (!closerStats[cName]) closerStats[cName] = { faturamento: 0, caixa: 0, count: 0 };
+                    closerStats[cName].faturamento += valBruto;
+                    closerStats[cName].caixa += valCaixa;
+                    closerStats[cName].count += 1;
                 }
                 if (owners.sdr) {
                     const sName = usersMap[owners.sdr] || 'Desconhecido';
-                    bySdr[sName] = (bySdr[sName] || 0) + val;
+                    bySdr[sName] = (bySdr[sName] || 0) + valBruto;
+                    
+                    if (!sdrStats[sName]) sdrStats[sName] = { faturamento: 0, caixa: 0, count: 0 };
+                    sdrStats[sName].faturamento += valBruto;
+                    sdrStats[sName].caixa += valCaixa;
+                    sdrStats[sName].count += 1;
                 }
             }
         });
 
         const receitaPorCloser = Object.entries(byCloser).map(([name, value]) => ({ name, value }));
         const receitaPorSdr = Object.entries(bySdr).map(([name, value]) => ({ name, value }));
+        
+        const tmFaturamentoCloser = Object.entries(closerStats).map(([name, stats]) => ({ name, value: stats.count > 0 ? stats.faturamento / stats.count : 0 })).sort((a, b) => b.value - a.value);
+        const tmCaixaCloser = Object.entries(closerStats).map(([name, stats]) => ({ name, value: stats.count > 0 ? stats.caixa / stats.count : 0 })).sort((a, b) => b.value - a.value);
+        const tmFaturamentoSdr = Object.entries(sdrStats).map(([name, stats]) => ({ name, value: stats.count > 0 ? stats.faturamento / stats.count : 0 })).sort((a, b) => b.value - a.value);
+        const tmCaixaSdr = Object.entries(sdrStats).map(([name, stats]) => ({ name, value: stats.count > 0 ? stats.caixa / stats.count : 0 })).sort((a, b) => b.value - a.value);
 
         return NextResponse.json({ 
             receita, 
@@ -120,6 +152,10 @@ export async function GET(request: Request) {
             receitaPorPagamento, 
             receitaPorCloser,
             receitaPorSdr,
+            tmFaturamentoCloser,
+            tmCaixaCloser,
+            tmFaturamentoSdr,
+            tmCaixaSdr,
             period: { startDate, endDate } 
         });
     } catch (error: any) {
