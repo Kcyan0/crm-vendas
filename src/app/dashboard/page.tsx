@@ -255,7 +255,7 @@ export default function Dashboard() {
                     )}
                 </div>
                 
-                <div className="p-4 overflow-hidden flex-1 flex flex-col">
+                <div className={`p-4 ${zoomedSection === 'performance' ? 'overflow-y-auto overflow-x-hidden' : 'overflow-hidden'} flex-1 flex flex-col`}>
                     <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6' : 'grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4'} h-full flex-1`}>
                         {/* SDRs Período */}
                         <div className="flex flex-col">
@@ -384,7 +384,7 @@ export default function Dashboard() {
                     )}
                 </div>
                 
-                <div className="p-4 overflow-hidden flex-1 flex flex-col">
+                <div className={`p-4 ${zoomedSection === 'receita' ? 'overflow-y-auto overflow-x-hidden' : 'overflow-hidden'} flex-1 flex flex-col`}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full flex-1">
 
                         {/* Receita por Forma de Pagamento */}
