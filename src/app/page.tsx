@@ -54,13 +54,17 @@ export default function KanbanBoard() {
   // Sales Modal State
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
   const [saleLead, setSaleLead] = useState<Lead | null>(null);
-  const [saleFormData, setSaleFormData] = useState({
-    valor_bruto: "",
-    desconto_concedido: "0",
-    forma_pagamento: "",
+  const [saleObservacoes, setSaleObservacoes] = useState("");
+
+  type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; };
+  const newPagamento = (defaultGateway = ""): Pagamento => ({
+    id: Math.random().toString(36).slice(2),
+    forma_pagamento: defaultGateway,
+    valor: "",
     numero_parcelas: "1",
     taxa_gateway: "0"
   });
+  const [pagamentos, setPagamentos] = useState<Pagamento[]>([newPagamento()]);
 
   const [gateways, setGateways] = useState<any[]>([]);
 
@@ -78,16 +82,53 @@ export default function KanbanBoard() {
     try {
       const res = await fetch("/api/gateways");
       const data = await res.json();
-      // Supabase retorna boolean true/false; SQLite retornava 1/0
       const ativos = data.filter((g: any) => g.ativo !== false && g.ativo !== 0);
       setGateways(ativos);
       if (ativos.length > 0) {
-        setSaleFormData(prev => ({ ...prev, forma_pagamento: ativos[0].nome }));
+        setPagamentos([newPagamento(ativos[0].nome)]);
       }
     } catch (e) {
       console.error(e);
     }
   };
+
+  const calcFee = (gatewayName: string, valor: string) => {
+    const gw = gateways.find(g => g.nome === gatewayName);
+    if (!gw) return "0";
+    const v = parseFloat(valor) || 0;
+    if (v <= 0) return "0";
+    return ((v * (gw.taxa_percentual / 100)) + gw.taxa_fixa).toFixed(2);
+  };
+
+  const handlePagamentoChange = (id: string, field: keyof Pagamento, value: string) => {
+    setPagamentos(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      const updated = { ...p, [field]: value };
+      if (field === 'forma_pagamento' || field === 'valor') {
+        updated.taxa_gateway = calcFee(
+          field === 'forma_pagamento' ? value : p.forma_pagamento,
+          field === 'valor' ? value : p.valor
+        );
+      }
+      return updated;
+    }));
+  };
+
+  const addPagamento = () => {
+    setPagamentos(prev => [...prev, newPagamento(gateways[0]?.nome || "")]);
+  };
+
+  const removePagamento = (id: string) => {
+    setPagamentos(prev => prev.length > 1 ? prev.filter(p => p.id !== id) : prev);
+  };
+
+  const saleTotals = pagamentos.reduce((acc, p) => {
+    const v = parseFloat(p.valor) || 0;
+    const taxa = parseFloat(p.taxa_gateway) || 0;
+    acc.bruto += v;
+    acc.liquido += v - taxa;
+    return acc;
+  }, { bruto: 0, liquido: 0 });
 
   const handleExportCSV = async () => {
     try {
@@ -141,34 +182,18 @@ export default function KanbanBoard() {
     if (status_novo === "Venda") {
       const leadInfo = leads.find((l) => l.id_lead === id_lead);
       if (leadInfo && leadInfo.status_atual !== "Venda") {
-        setSaleLead(leadInfo);
-
-        // Setup initial default gateway fee if exists and total prop value is present
+        const defaultGw = gateways[0]?.nome || "PIX";
         const propValue = leadInfo.valor_proposta ? leadInfo.valor_proposta.toString() : "";
-        if (propValue && gateways.length > 0) {
-          const gw = gateways[0];
-          const val = parseFloat(propValue);
-          let calculatedTax = 0;
-          if (!isNaN(val)) {
-            calculatedTax = (val * (gw.taxa_percentual / 100)) + gw.taxa_fixa;
-          }
-          setSaleFormData({
-            valor_bruto: propValue,
-            desconto_concedido: "0",
-            forma_pagamento: gw.nome,
-            numero_parcelas: "1",
-            taxa_gateway: calculatedTax.toFixed(2)
-          });
-        } else {
-          setSaleFormData({
-            valor_bruto: propValue,
-            desconto_concedido: "0",
-            forma_pagamento: gateways.length > 0 ? gateways[0].nome : "PIX",
-            numero_parcelas: "1",
-            taxa_gateway: "0"
-          });
-        }
-
+        const initialPagamento = {
+          id: Math.random().toString(36).slice(2),
+          forma_pagamento: defaultGw,
+          valor: propValue,
+          numero_parcelas: "1",
+          taxa_gateway: propValue ? calcFee(defaultGw, propValue) : "0"
+        };
+        setPagamentos([initialPagamento]);
+        setSaleObservacoes("");
+        setSaleLead(leadInfo);
         setIsSaleModalOpen(true);
       }
       return; // Stop the standard status logic update because it's a financial action
@@ -273,11 +298,8 @@ export default function KanbanBoard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id_lead: saleLead.id_lead,
-          valor_bruto: saleFormData.valor_bruto,
-          desconto_concedido: saleFormData.desconto_concedido,
-          forma_pagamento: saleFormData.forma_pagamento,
-          numero_parcelas: saleFormData.numero_parcelas,
-          taxa_gateway: saleFormData.taxa_gateway,
+          pagamentos,
+          observacoes: saleObservacoes,
           id_sdr: saleLead.id_sdr_responsavel,
           id_closer: saleLead.id_closer_responsavel
         }),
@@ -285,8 +307,9 @@ export default function KanbanBoard() {
 
       setIsSaleModalOpen(false);
       setSaleLead(null);
-      setSaleFormData({ valor_bruto: "", desconto_concedido: "0", forma_pagamento: "PIX", numero_parcelas: "1", taxa_gateway: "0" });
-      fetchLeads(); // Refresh board so card jumps to 'Venda' with Value displayed
+      setSaleObservacoes("");
+      setPagamentos([newPagamento(gateways[0]?.nome || "")]);
+      fetchLeads();
     } catch (err) {
       console.error(err);
     }
@@ -319,51 +342,7 @@ export default function KanbanBoard() {
     }
   };
 
-  const handleGatewaySelectionChange = (gatewayName: string) => {
-    const gw = gateways.find(g => g.nome === gatewayName);
-    if (!gw) {
-      setSaleFormData(prev => ({ ...prev, forma_pagamento: gatewayName, taxa_gateway: "0" }));
-      return;
-    }
 
-    // Auto-calculate fee based on currently typed value
-    const valBruto = parseFloat(saleFormData.valor_bruto) || 0;
-    const desconto = parseFloat(saleFormData.desconto_concedido) || 0;
-    const base = valBruto - desconto;
-
-    let calculatedTax = 0;
-    if (base > 0) {
-      calculatedTax = (base * (gw.taxa_percentual / 100)) + gw.taxa_fixa;
-    }
-
-    setSaleFormData(prev => ({
-      ...prev,
-      forma_pagamento: gatewayName,
-      taxa_gateway: calculatedTax.toFixed(2)
-    }));
-  };
-
-  const handleValueChangeForFeeCalculation = (e: React.ChangeEvent<HTMLInputElement>, field: 'valor_bruto' | 'desconto_concedido') => {
-    const newVal = e.target.value;
-
-    setSaleFormData(prev => {
-      const updatedState = { ...prev, [field]: newVal };
-
-      const gw = gateways.find(g => g.nome === updatedState.forma_pagamento);
-      if (gw) {
-        const valBruto = parseFloat(updatedState.valor_bruto) || 0;
-        const desconto = parseFloat(updatedState.desconto_concedido) || 0;
-        const base = valBruto - desconto;
-
-        if (base > 0) {
-          updatedState.taxa_gateway = ((base * (gw.taxa_percentual / 100)) + gw.taxa_fixa).toFixed(2);
-        } else {
-          updatedState.taxa_gateway = "0";
-        }
-      }
-      return updatedState;
-    });
-  };
 
   if (loading) {
     return (
@@ -648,113 +627,145 @@ export default function KanbanBoard() {
 
       {/* Modal Fechamento de Venda */}
       {isSaleModalOpen && saleLead && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-md p-0 md:p-4 text-left">
-          <div className="glass-panel w-full max-w-lg p-4 md:p-6 relative border border-orange-200 shadow-[0_0_50px_rgba(249,115,22,0.1)] bg-[#1A1A1A] rounded-t-2xl md:rounded-2xl">
-            <div className="flex justify-between items-center mb-6">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-md p-0 md:p-4 text-left">
+          <div className="glass-panel w-full max-w-lg p-4 md:p-6 relative border border-orange-400/30 shadow-[0_0_60px_rgba(249,115,22,0.12)] bg-[#141414] rounded-t-2xl md:rounded-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-5">
               <div>
-                <h3 className="text-xl font-bold text-orange-500">Registrar Venda! 🎉</h3>
-                <p className="text-sm text-[#888888] mt-1">Preencha os detalhes financeiros para {saleLead.nome}</p>
+                <h3 className="text-xl font-bold text-white">Registrar Venda para {saleLead.nome}</h3>
+                <p className="text-sm text-[#888888] mt-1">Adicione uma ou mais formas de pagamento para compor o valor total da venda.</p>
               </div>
-              <button
-                onClick={() => setIsSaleModalOpen(false)}
-                className="text-[#666666] hover:text-white"
-              >
-                ✕
-              </button>
+              <button onClick={() => setIsSaleModalOpen(false)} className="text-[#666666] hover:text-white text-xl ml-4 mt-1">✕</button>
             </div>
 
-            <form onSubmit={handleSaveSale} className="space-y-5">
+            <form onSubmit={handleSaveSale} className="space-y-4">
+              {/* Payment Rows */}
+              <div className="space-y-3">
+                {pagamentos.map((p, idx) => (
+                  <div key={p.id} className="p-3 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase text-[#888888]">Pagamento {idx + 1}</span>
+                      {pagamentos.length > 1 && (
+                        <button type="button" onClick={() => removePagamento(p.id)} className="text-red-500 hover:text-red-400 text-lg leading-none">🗑</button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-[#888888] mb-1">Forma de Pagamento</label>
+                        <select
+                          required
+                          className="w-full bg-[#111] border border-[#2A2A2A] text-white rounded-lg p-2 text-sm focus:border-orange-500 focus:outline-none"
+                          value={p.forma_pagamento}
+                          onChange={e => handlePagamentoChange(p.id, 'forma_pagamento', e.target.value)}
+                        >
+                          {gateways.length === 0
+                            ? <option value="PIX">PIX</option>
+                            : gateways.map(gw => <option key={gw.id_gateway} value={gw.nome}>{gw.nome}</option>)
+                          }
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[#888888] mb-1">Valor Total do Pagamento</label>
+                        <div className="flex items-center gap-1 bg-[#111] border border-[#2A2A2A] rounded-lg px-2">
+                          <span className="text-[#888888] text-sm">R$</span>
+                          <input
+                            required
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0"
+                            className="flex-1 bg-transparent border-none text-white text-sm py-2 focus:outline-none"
+                            value={p.valor}
+                            onChange={e => handlePagamentoChange(p.id, 'valor', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-[#888888] mb-1">Parcelas</label>
+                        <select
+                          className="w-full bg-[#111] border border-[#2A2A2A] text-white rounded-lg p-2 text-sm focus:border-orange-500 focus:outline-none"
+                          value={p.numero_parcelas}
+                          onChange={e => handlePagamentoChange(p.id, 'numero_parcelas', e.target.value)}
+                        >
+                          {[...Array(12)].map((_, i) => <option key={i+1} value={i+1}>{i+1}x</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[#888888] mb-1">Taxa Gateway (R$)</label>
+                        <div className="flex items-center gap-1 bg-[#111] border border-[#2A2A2A] rounded-lg px-2">
+                          <span className="text-[#888888] text-sm">R$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="flex-1 bg-transparent border-none text-[#888888] text-sm py-2 focus:outline-none"
+                            value={p.taxa_gateway}
+                            onChange={e => handlePagamentoChange(p.id, 'taxa_gateway', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Payment Button */}
+              <button
+                type="button"
+                onClick={addPagamento}
+                className="w-full py-2.5 rounded-xl border border-dashed border-[#3A3A3A] text-[#888888] hover:text-white hover:border-orange-400 transition text-sm flex items-center justify-center gap-2"
+              >
+                <span className="text-lg">⊕</span> Adicionar Pagamento
+              </button>
+
+              {/* Observacoes */}
               <div>
-                <label className="block text-sm font-medium text-white mb-1">Valor Bruto da Venda (R$) *</label>
-                <input
-                  required
-                  type="number"
-                  step="0.01"
-                  className="w-full text-lg font-bold text-orange-600 focus:border-orange-500 bg-orange-50"
-                  placeholder="Ex: 1500.00"
-                  value={saleFormData.valor_bruto}
-                  onChange={(e) => handleValueChangeForFeeCalculation(e, 'valor_bruto')}
+                <label className="block text-sm font-medium text-[#888888] mb-1">Observações sobre a Venda</label>
+                <textarea
+                  rows={3}
+                  placeholder="Ex: Cliente pediu desconto, condição especial de pagamento..."
+                  className="w-full bg-[#111] border border-[#2A2A2A] text-white rounded-xl p-3 text-sm focus:border-orange-400 focus:outline-none resize-none"
+                  value={saleObservacoes}
+                  onChange={e => setSaleObservacoes(e.target.value)}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Desconto Concedido (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="w-full"
-                    placeholder="Ex: 100.00"
-                    value={saleFormData.desconto_concedido}
-                    onChange={(e) => handleValueChangeForFeeCalculation(e, 'desconto_concedido')}
-                  />
+              {/* Totals */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A]">
+                  <div className="flex items-center gap-2 text-xs text-[#888888] mb-1">
+                    <span>💳</span> Valor Total da Venda
+                  </div>
+                  <div className="text-base font-black text-white">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(saleTotals.bruto)}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Taxa de Gateway (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="w-full"
-                    placeholder="Custos de transação"
-                    value={saleFormData.taxa_gateway}
-                    onChange={(e) => setSaleFormData({ ...saleFormData, taxa_gateway: e.target.value })}
-                  />
+                <div className="p-3 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A]">
+                  <div className="flex items-center gap-2 text-xs text-[#888888] mb-1">
+                    <span>💵</span> Caixa Gerado (Líquido)
+                  </div>
+                  <div className="text-base font-black text-orange-400">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(saleTotals.liquido)}
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Meio de Pagamento *</label>
-                  <select
-                    required
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] focus:border-orange-500"
-                    value={saleFormData.forma_pagamento}
-                    onChange={(e) => handleGatewaySelectionChange(e.target.value)}
-                  >
-                    {gateways.length === 0 ? (
-                      <option value="PIX">PIX</option>
-                    ) : (
-                      gateways.map(gw => (
-                        <option key={gw.id_gateway} value={gw.nome}>{gw.nome}</option>
-                      ))
-                    )}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Parcelas *</label>
-                  <select
-                    required
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] focus:border-orange-500"
-                    value={saleFormData.numero_parcelas}
-                    onChange={(e) => setSaleFormData({ ...saleFormData, numero_parcelas: e.target.value })}
-                  >
-                    {[...Array(12)].map((_, i) => (
-                      <option key={i + 1} value={i + 1}>{i + 1}x</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <p className="text-xs text-[#888888] mt-2">
-                * A taxa do Gateway foi auto-calculada pelas Configurações, mas você pode sobrescrevê-la.
-                O fluxo de caixa será dividido igualmente pelo número de parcelas informadas.
-              </p>
-
-              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-[#222222]">
-                <button
-                  type="button"
-                  onClick={() => setIsSaleModalOpen(false)}
-                  className="flex-1 md:flex-none px-4 py-2 text-[#888888] hover:text-white transition-colors"
-                >
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-2 border-t border-[#222222]">
+                <button type="button" onClick={() => setIsSaleModalOpen(false)} className="px-4 py-2 text-[#888888] hover:text-white transition-colors text-sm">
                   Cancelar
                 </button>
-                <button type="submit" className="flex-1 md:flex-none btn-primary justify-center">
-                  Confirmar Venda
+                <button type="submit" className="btn-primary px-6 py-2 justify-center">
+                  Salvar Venda
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 }
