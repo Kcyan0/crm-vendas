@@ -476,15 +476,8 @@ export default function KanbanBoard() {
                     onDoubleClick={() => handleOpenEdit(lead)}
                     className="glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 border-[#2A2A2A] hover:border-orange-300 transition-all select-none group relative bg-[#1A1A1A]"
                   >
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      {lead.status_atual === 'Venda' ? (
-                        <button
-                          onClick={(e) => handleOpenEditSale(e, lead)}
-                          className="text-orange-400 hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-orange-400/40"
-                        >Editar Venda</button>
-                      ) : (
-                        <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(lead); }} className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]">Editar</button>
-                      )}
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(lead); }} className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]">Editar</button>
                     </div>
                     <div className="flex justify-between items-start mb-2 pr-12">
                       <h4 className="font-bold text-white leading-tight">{lead.nome}</h4>
@@ -534,6 +527,12 @@ export default function KanbanBoard() {
                         <Clock size={12} />
                         <span>{formatDateBr(lead.data_entrada)}</span>
                       </div>
+                      {lead.status_atual === 'Venda' && (
+                        <button
+                          onClick={(e) => handleOpenEditSale(e, lead)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-orange-400 hover:text-white border border-orange-400/40 px-2 py-0.5 rounded bg-[#1A1A1A]"
+                        >Editar Venda</button>
+                      )}
                     </div>
                   </div>
                 ))}
