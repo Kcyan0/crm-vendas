@@ -95,9 +95,11 @@ export async function POST(request: Request) {
                     data_venda: new Date().toISOString(),
                     data_recebimento: new Date().toISOString().split('T')[0]
                 });
-                // Installments row (remainder)
+                // Installments row (remainder) — first installment 30 days after today
                 const restante = valorTotal - entrada;
                 const taxaResto = taxaGw - taxaEntrada;
+                const primeiraParcelaDate = new Date();
+                primeiraParcelaDate.setDate(primeiraParcelaDate.getDate() + 30);
                 vendasToInsert.push({
                     id_oportunidade,
                     id_lead,
@@ -111,7 +113,7 @@ export async function POST(request: Request) {
                     valor_liquido_caixa: restante - taxaResto - desconto,
                     status_pagamento: 'pago',
                     data_venda: new Date().toISOString(),
-                    data_recebimento: new Date().toISOString().split('T')[0]
+                    data_recebimento: primeiraParcelaDate.toISOString().split('T')[0]
                 });
             } else {
                 // Regular row (no entrada)
