@@ -1,7 +1,27 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 
+export async function GET(request: Request) {
+    try {
+        const url = new URL(request.url);
+        const leadId = url.searchParams.get('leadId');
+        if (!leadId) return NextResponse.json({ error: 'leadId required' }, { status: 400 });
+
+        const { data, error } = await supabase
+            .from('vendas')
+            .select('*')
+            .eq('id_lead', leadId)
+            .order('data_venda', { ascending: true });
+
+        if (error) throw error;
+        return NextResponse.json(data || []);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
 export async function POST(request: Request) {
+
     try {
         const body = await request.json();
         const { id_lead, pagamentos, observacoes, id_sdr, id_closer } = body;

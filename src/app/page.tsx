@@ -318,6 +318,62 @@ export default function KanbanBoard() {
     }
   };
 
+  const handleOpenEditSale = async (e: React.MouseEvent, lead: Lead) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/vendas?leadId=${lead.id_lead}`);
+      const rows: any[] = await res.json();
+
+      if (rows.length === 0) {
+        // No existing rows? Open as a fresh sale
+        const defaultGw = gateways[0]?.nome || "PIX";
+        setPagamentos([newPagamento(defaultGw)]);
+        setSaleObservacoes(lead.observacoes_gerais || "");
+      } else {
+        // Merge rows that share the same gateway (e.g. "Boleto (Entrada)" + "Boleto (Parcelas)")
+        const mergedMap: Record<string, any> = {};
+        for (const row of rows) {
+          const baseGw = row.forma_pagamento.replace(/ \(Entrada\)| \(Parcelas\)/g, '');
+          if (!mergedMap[baseGw]) {
+            mergedMap[baseGw] = {
+              id: Math.random().toString(36).slice(2),
+              forma_pagamento: baseGw,
+              valor: 0,
+              numero_parcelas: row.numero_parcelas.toString(),
+              taxa_gateway: 0,
+              valor_entrada: ""
+            };
+          }
+          if (row.forma_pagamento.includes('(Entrada)')) {
+            mergedMap[baseGw].valor_entrada = row.valor_bruto.toString();
+            mergedMap[baseGw].taxa_gateway += row.taxa_gateway;
+          } else {
+            mergedMap[baseGw].valor += row.valor_bruto;
+            mergedMap[baseGw].numero_parcelas = row.numero_parcelas.toString();
+            mergedMap[baseGw].taxa_gateway += row.taxa_gateway;
+          }
+          if (!row.forma_pagamento.includes('(Entrada)') && !row.forma_pagamento.includes('(Parcelas)')) {
+            // Simple row (no entrada)
+            mergedMap[baseGw].valor = row.valor_bruto;
+            mergedMap[baseGw].taxa_gateway = row.taxa_gateway;
+          }
+        }
+        const reconstructed = Object.values(mergedMap).map((m: any) => ({
+          ...m,
+          valor: m.valor.toString(),
+          taxa_gateway: m.taxa_gateway.toFixed(2)
+        }));
+        setPagamentos(reconstructed);
+        setSaleObservacoes(lead.observacoes_gerais || "");
+      }
+
+      setSaleLead(lead);
+      setIsSaleModalOpen(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const formatDateBr = (dStr: string | null | undefined) => {
     if (!dStr) return "Sem data";
     try {
@@ -420,8 +476,15 @@ export default function KanbanBoard() {
                     onDoubleClick={() => handleOpenEdit(lead)}
                     className="glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 border-[#2A2A2A] hover:border-orange-300 transition-all select-none group relative bg-[#1A1A1A]"
                   >
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(lead); }} className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]">Editar</button>
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      {lead.status_atual === 'Venda' ? (
+                        <button
+                          onClick={(e) => handleOpenEditSale(e, lead)}
+                          className="text-orange-400 hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-orange-400/40"
+                        >Editar Venda</button>
+                      ) : (
+                        <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(lead); }} className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]">Editar</button>
+                      )}
                     </div>
                     <div className="flex justify-between items-start mb-2 pr-12">
                       <h4 className="font-bold text-white leading-tight">{lead.nome}</h4>
