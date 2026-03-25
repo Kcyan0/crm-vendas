@@ -664,17 +664,17 @@ export default function KanbanBoard() {
                           }
                         </select>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <label className="block text-xs text-[#888888] mb-1">Valor Total do Pagamento</label>
-                        <div className="flex items-center gap-1 bg-[#111] border border-[#2A2A2A] rounded-lg px-2">
-                          <span className="text-[#888888] text-sm">R$</span>
+                        <div className="flex items-center gap-1 bg-[#111] border border-[#2A2A2A] rounded-lg px-2 overflow-hidden">
+                          <span className="text-[#888888] text-sm shrink-0">R$</span>
                           <input
                             required
                             type="number"
                             step="0.01"
                             min="0"
                             placeholder="0"
-                            className="flex-1 bg-transparent border-none text-white text-sm py-2 focus:outline-none"
+                            className="min-w-0 w-full bg-transparent border-none text-white text-sm py-2 focus:outline-none"
                             value={p.valor}
                             onChange={e => handlePagamentoChange(p.id, 'valor', e.target.value)}
                           />
@@ -692,15 +692,15 @@ export default function KanbanBoard() {
                           {[...Array(12)].map((_, i) => <option key={i+1} value={i+1}>{i+1}x</option>)}
                         </select>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <label className="block text-xs text-[#888888] mb-1">Taxa Gateway (R$)</label>
-                        <div className="flex items-center gap-1 bg-[#111] border border-[#2A2A2A] rounded-lg px-2">
-                          <span className="text-[#888888] text-sm">R$</span>
+                        <div className="flex items-center gap-1 bg-[#111] border border-[#2A2A2A] rounded-lg px-2 overflow-hidden">
+                          <span className="text-[#888888] text-sm shrink-0">R$</span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            className="flex-1 bg-transparent border-none text-[#888888] text-sm py-2 focus:outline-none"
+                            className="min-w-0 w-full bg-transparent border-none text-[#888888] text-sm py-2 focus:outline-none"
                             value={p.taxa_gateway}
                             onChange={e => handlePagamentoChange(p.id, 'taxa_gateway', e.target.value)}
                           />
