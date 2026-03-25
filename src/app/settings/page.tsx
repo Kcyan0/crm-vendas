@@ -9,6 +9,7 @@ type Gateway = {
     taxa_percentual: number;
     taxa_fixa: number;
     ativo: number;
+    tem_entrada: boolean;
 };
 
 export default function SettingsPage() {
@@ -19,7 +20,8 @@ export default function SettingsPage() {
         nome: "",
         taxa_percentual: "0",
         taxa_fixa: "0",
-        ativo: true
+        ativo: true,
+        tem_entrada: false
     });
 
     const fetchGateways = async () => {
@@ -38,7 +40,7 @@ export default function SettingsPage() {
 
     const handleOpenCreate = () => {
         setEditingGatewayId(null);
-        setFormData({ nome: "", taxa_percentual: "0", taxa_fixa: "0", ativo: true });
+        setFormData({ nome: "", taxa_percentual: "0", taxa_fixa: "0", ativo: true, tem_entrada: false });
         setIsModalOpen(true);
     };
 
@@ -48,7 +50,8 @@ export default function SettingsPage() {
             nome: gateway.nome,
             taxa_percentual: gateway.taxa_percentual.toString(),
             taxa_fixa: gateway.taxa_fixa.toString(),
-            ativo: gateway.ativo === 1
+            ativo: gateway.ativo === 1 || gateway.ativo === true as any,
+            tem_entrada: !!gateway.tem_entrada
         });
         setIsModalOpen(true);
     };
@@ -126,6 +129,11 @@ export default function SettingsPage() {
                                                 <span className="text-[#888888] block text-xs font-semibold uppercase">Taxa Fixa (R$)</span>
                                                 <span className="text-white font-bold">R$ {gw.taxa_fixa.toFixed(2)}</span>
                                             </div>
+                                            {gw.tem_entrada && (
+                                                <div className="text-sm">
+                                                    <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded mt-1">Aceita Entrada</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
@@ -173,10 +181,17 @@ export default function SettingsPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-4 pt-4 border-t border-[#222222]">
+                            <div className="mt-4 pt-4 border-t border-[#222222] space-y-3">
                                 <label className="flex items-center gap-2 cursor-pointer text-white">
                                     <input type="checkbox" className="w-4 h-4 rounded border-slate-300 focus:ring-green-500" checked={formData.ativo} onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })} />
                                     Disponível para uso nas Vendas
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer text-white">
+                                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 focus:ring-blue-500" checked={formData.tem_entrada} onChange={(e) => setFormData({ ...formData, tem_entrada: e.target.checked })} />
+                                    <div>
+                                        <span className="font-medium">Aceita Entrada</span>
+                                        <p className="text-xs text-[#888888] mt-0.5">Permite informar um valor de entrada + parcelas ao registrar uma venda</p>
+                                    </div>
                                 </label>
                             </div>
 

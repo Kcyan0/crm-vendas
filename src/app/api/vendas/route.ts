@@ -47,28 +47,73 @@ export async function POST(request: Request) {
             id_oportunidade = oport!.id_oportunidade;
         }
 
-        // Insert one venda row per payment method
-        const vendasToInsert = pagamentos.map((p: any) => {
-            const valorBruto = parseFloat(p.valor) || 0;
+        // Build one or two venda rows per payment method
+        const vendasToInsert: any[] = [];
+        for (const p of pagamentos) {
+            const valorTotal = parseFloat(p.valor) || 0;
             const taxaGw = parseFloat(p.taxa_gateway) || 0;
             const desconto = parseFloat(p.desconto) || 0;
-            const valorLiquido = valorBruto - taxaGw - desconto;
-            return {
-                id_oportunidade,
-                id_lead,
-                id_sdr: id_sdr || null,
-                id_closer: id_closer || null,
-                valor_bruto: valorBruto,
-                desconto_concedido: desconto,
-                forma_pagamento: p.forma_pagamento || 'PIX',
-                numero_parcelas: parseInt(p.numero_parcelas) || 1,
-                taxa_gateway: taxaGw,
-                valor_liquido_caixa: valorLiquido,
-                status_pagamento: 'pago',
-                data_venda: new Date().toISOString(),
-                data_recebimento: new Date().toISOString().split('T')[0]
-            };
-        });
+            const entrada = parseFloat(p.valor_entrada) || 0;
+            const formaPgto = p.forma_pagamento || 'PIX';
+            const parcelas = parseInt(p.numero_parcelas) || 1;
+
+            if (entrada > 0 && entrada < valorTotal) {
+                // Down payment row (immediate, 1x)
+                const taxaEntrada = taxaGw > 0 ? (entrada / valorTotal) * taxaGw : 0;
+                vendasToInsert.push({
+                    id_oportunidade,
+                    id_lead,
+                    id_sdr: id_sdr || null,
+                    id_closer: id_closer || null,
+                    valor_bruto: entrada,
+                    desconto_concedido: 0,
+                    forma_pagamento: `${formaPgto} (Entrada)`,
+                    numero_parcelas: 1,
+                    taxa_gateway: parseFloat(taxaEntrada.toFixed(2)),
+                    valor_liquido_caixa: entrada - taxaEntrada,
+                    status_pagamento: 'pago',
+                    data_venda: new Date().toISOString(),
+                    data_recebimento: new Date().toISOString().split('T')[0]
+                });
+                // Installments row (remainder)
+                const restante = valorTotal - entrada;
+                const taxaResto = taxaGw - taxaEntrada;
+                vendasToInsert.push({
+                    id_oportunidade,
+                    id_lead,
+                    id_sdr: id_sdr || null,
+                    id_closer: id_closer || null,
+                    valor_bruto: restante,
+                    desconto_concedido: desconto,
+                    forma_pagamento: `${formaPgto} (Parcelas)`,
+                    numero_parcelas: parcelas,
+                    taxa_gateway: parseFloat(taxaResto.toFixed(2)),
+                    valor_liquido_caixa: restante - taxaResto - desconto,
+                    status_pagamento: 'pago',
+                    data_venda: new Date().toISOString(),
+                    data_recebimento: new Date().toISOString().split('T')[0]
+                });
+            } else {
+                // Regular row (no entrada)
+                const valorLiquido = valorTotal - taxaGw - desconto;
+                vendasToInsert.push({
+                    id_oportunidade,
+                    id_lead,
+                    id_sdr: id_sdr || null,
+                    id_closer: id_closer || null,
+                    valor_bruto: valorTotal,
+                    desconto_concedido: desconto,
+                    forma_pagamento: formaPgto,
+                    numero_parcelas: parcelas,
+                    taxa_gateway: taxaGw,
+                    valor_liquido_caixa: valorLiquido,
+                    status_pagamento: 'pago',
+                    data_venda: new Date().toISOString(),
+                    data_recebimento: new Date().toISOString().split('T')[0]
+                });
+            }
+        }
+
 
         const { error: vendasErr } = await supabase.from('vendas').insert(vendasToInsert);
         if (vendasErr) throw vendasErr;

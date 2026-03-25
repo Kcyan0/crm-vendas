@@ -56,13 +56,14 @@ export default function KanbanBoard() {
   const [saleLead, setSaleLead] = useState<Lead | null>(null);
   const [saleObservacoes, setSaleObservacoes] = useState("");
 
-  type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; };
+  type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; valor_entrada: string; };
   const newPagamento = (defaultGateway = ""): Pagamento => ({
     id: Math.random().toString(36).slice(2),
     forma_pagamento: defaultGateway,
     valor: "",
     numero_parcelas: "1",
-    taxa_gateway: "0"
+    taxa_gateway: "0",
+    valor_entrada: ""
   });
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([newPagamento()]);
 
@@ -104,6 +105,7 @@ export default function KanbanBoard() {
     setPagamentos(prev => prev.map(p => {
       if (p.id !== id) return p;
       const updated = { ...p, [field]: value };
+      // Recalculate the gateway fee on value or gateway changes (only on the full valor)
       if (field === 'forma_pagamento' || field === 'valor') {
         updated.taxa_gateway = calcFee(
           field === 'forma_pagamento' ? value : p.forma_pagamento,
@@ -189,7 +191,8 @@ export default function KanbanBoard() {
           forma_pagamento: defaultGw,
           valor: propValue,
           numero_parcelas: "1",
-          taxa_gateway: propValue ? calcFee(defaultGw, propValue) : "0"
+          taxa_gateway: propValue ? calcFee(defaultGw, propValue) : "0",
+          valor_entrada: ""
         };
         setPagamentos([initialPagamento]);
         setSaleObservacoes("");
@@ -707,7 +710,38 @@ export default function KanbanBoard() {
                         </div>
                       </div>
                     </div>
+                    {/* Entrada field — shown only when gateway accepts down payment */}
+                    {gateways.find(gw => gw.nome === p.forma_pagamento)?.tem_entrada && (
+                      <div className="pt-3 border-t border-[#2A2A2A]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] uppercase font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded">Entrada</span>
+                          <span className="text-xs text-[#888888]">Valor pago na entrada (à vista)</span>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1 bg-[#111] border border-blue-400/30 rounded-lg px-2 overflow-hidden">
+                            <span className="text-blue-400 text-sm shrink-0">R$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0"
+                              className="min-w-0 w-full bg-transparent border-none text-blue-300 text-sm py-2 focus:outline-none"
+                              value={p.valor_entrada}
+                              onChange={e => handlePagamentoChange(p.id, 'valor_entrada', e.target.value)}
+                            />
+                          </div>
+                          {p.valor_entrada && parseFloat(p.valor) > 0 && (
+                            <p className="text-xs text-[#888888] mt-1">
+                              Restante a parcelar: <span className="text-white font-medium">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.max(0, parseFloat(p.valor) - parseFloat(p.valor_entrada)))}
+                              </span> em {p.numero_parcelas}x
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
+
                 ))}
               </div>
 
