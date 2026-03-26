@@ -39,6 +39,13 @@ export default function KanbanBoard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
   const [users, setUsers] = useState<any[]>([]);
+  // Kanban filter state
+  const [filterSdr, setFilterSdr] = useState("");
+  const [filterCloser, setFilterCloser] = useState("");
+  // Refund modal state
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [refundLeadId, setRefundLeadId] = useState<number | null>(null);
+  const [refundMotivo, setRefundMotivo] = useState("");
   const [formData, setFormData] = useState({
     nome: "",
     telefone: "",
@@ -146,6 +153,17 @@ export default function KanbanBoard() {
     }
   };
 
+  // Activity log helper
+  const logActivity = async (id_lead: number, acao: string) => {
+    try {
+      await fetch('/api/lead-historico', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_lead, acao })
+      });
+    } catch (e) { console.error('log failed', e); }
+  };
+
   const fetchUsers = async () => {
     if (!selectedProject) return;
     try {
@@ -202,6 +220,14 @@ export default function KanbanBoard() {
       return; // Stop the standard status logic update because it's a financial action
     }
 
+    // Intercept when dropping on "Reembolsado"
+    if (status_novo === "Reembolsado") {
+      setRefundLeadId(id_lead);
+      setRefundMotivo("");
+      setIsRefundModalOpen(true);
+      return;
+    }
+
     // Optimistic Update for standard columns
     setLeads((prev) =>
       prev.map((lead) =>
@@ -209,16 +235,17 @@ export default function KanbanBoard() {
       )
     );
 
-    // Persist to DB
+    // Persist to DB + log activity
     try {
       await fetch("/api/leads", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_lead, status_atual: status_novo }),
       });
+      await logActivity(id_lead, `Status alterado para "${status_novo}"`);
     } catch (err) {
       console.error("Failed to update status", err);
-      fetchLeads(); // Revert on failure
+      fetchLeads();
     }
   };
 
@@ -312,6 +339,8 @@ export default function KanbanBoard() {
       setSaleLead(null);
       setSaleObservacoes("");
       setPagamentos([newPagamento(gateways[0]?.nome || "")]);
+      const isEdit = !!(saleLead && leads.find(l => l.id_lead === saleLead.id_lead && l.status_atual === 'Venda'));
+      await logActivity(saleLead!.id_lead, isEdit ? 'Venda editada' : 'Venda registrada');
       fetchLeads();
     } catch (err) {
       console.error(err);
@@ -372,6 +401,24 @@ export default function KanbanBoard() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleSaveRefund = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!refundLeadId) return;
+    const motivo = refundMotivo.trim() || 'Sem motivo informado';
+    try {
+      await fetch('/api/leads', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_lead: refundLeadId, status_atual: 'Reembolsado', motivo_reembolso: motivo })
+      });
+      await logActivity(refundLeadId, `Reembolsado — motivo: "${motivo}"`);
+      setLeads(prev => prev.map(l => l.id_lead === refundLeadId ? { ...l, status_atual: 'Reembolsado' } : l));
+      setIsRefundModalOpen(false);
+      setRefundLeadId(null);
+      setRefundMotivo('');
+    } catch (err) { console.error(err); }
   };
 
   const formatDateBr = (dStr: string | null | undefined) => {
@@ -438,6 +485,26 @@ export default function KanbanBoard() {
             <Download size={16} />
             <span>Exportar</span>
           </button>
+          <select
+            className="bg-[#1A1A1A] border border-[#2A2A2A] text-[#888888] text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400"
+            value={filterSdr}
+            onChange={e => setFilterSdr(e.target.value)}
+          >
+            <option value="">Todos SDRs</option>
+            {users.filter((u: any) => u.tipo === 'SDR' || u.tipo === 'ADM').map((u: any) => (
+              <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
+            ))}
+          </select>
+          <select
+            className="bg-[#1A1A1A] border border-[#2A2A2A] text-[#888888] text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400"
+            value={filterCloser}
+            onChange={e => setFilterCloser(e.target.value)}
+          >
+            <option value="">Todos Closers</option>
+            {users.filter((u: any) => u.tipo === 'CLOSER' || u.tipo === 'ADM').map((u: any) => (
+              <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
+            ))}
+          </select>
           <button
             className="btn-primary flex-1 md:flex-none justify-center flex items-center gap-2 whitespace-nowrap"
             onClick={handleOpenCreate}
@@ -451,7 +518,12 @@ export default function KanbanBoard() {
       {/* Kanban Board Area */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 pb-4 px-1 md:px-0">
         {KANBAN_COLUMNS.map((col) => {
-          const columnLeads = leads.filter((l) => l.status_atual === col || (col === 'Loss' && l.status_atual === 'Nao prosseguiu'));
+          const columnLeads = leads.filter((l) => {
+            if (l.status_atual !== col && !(col === 'Loss' && l.status_atual === 'Nao prosseguiu')) return false;
+            if (filterSdr && String(l.id_sdr_responsavel) !== filterSdr) return false;
+            if (filterCloser && String(l.id_closer_responsavel) !== filterCloser) return false;
+            return true;
+          });
 
           return (
             <div
@@ -856,6 +928,39 @@ export default function KanbanBoard() {
                 <button type="submit" className="btn-primary px-6 py-2 justify-center">
                   Salvar Venda
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Refund reason modal */}
+      {isRefundModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="glass-panel w-full max-w-md p-6 bg-[#141414] border border-red-400/30 rounded-2xl shadow-[0_0_60px_rgba(239,68,68,0.12)]">
+            <div className="flex justify-between items-start mb-5">
+              <div>
+                <h3 className="text-xl font-bold text-white">Registrar Reembolso</h3>
+                <p className="text-sm text-[#888888] mt-1">Informe o motivo para o registro histórico.</p>
+              </div>
+              <button onClick={() => setIsRefundModalOpen(false)} className="text-[#666] hover:text-white text-xl">✕</button>
+            </div>
+            <form onSubmit={handleSaveRefund} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#888888] mb-1">Motivo do Reembolso</label>
+                <textarea
+                  rows={4}
+                  required
+                  autoFocus
+                  placeholder="Ex: Cliente desistiu por problema financeiro, produto não atendeu expectativas..."
+                  className="w-full bg-[#111] border border-[#2A2A2A] text-white rounded-xl p-3 text-sm focus:border-red-400 focus:outline-none resize-none"
+                  value={refundMotivo}
+                  onChange={e => setRefundMotivo(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-[#222]">
+                <button type="button" onClick={() => setIsRefundModalOpen(false)} className="px-4 py-2 text-[#888] hover:text-white text-sm">Cancelar</button>
+                <button type="submit" className="px-6 py-2 rounded-xl font-bold text-sm" style={{ background: '#ef4444', color: '#fff' }}>Confirmar Reembolso</button>
               </div>
             </form>
           </div>

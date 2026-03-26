@@ -61,7 +61,9 @@ export async function PUT(request: Request) {
             return NextResponse.json({ success: true, id_lead });
         } else {
             if (!status_atual) return NextResponse.json({ error: 'Missing status' }, { status: 400 });
-            const { error } = await supabase.from('leads').update({ status_atual }).eq('id_lead', id_lead);
+            const updatePayload: any = { status_atual };
+            if (body.motivo_reembolso !== undefined) updatePayload.motivo_reembolso = body.motivo_reembolso;
+            const { error } = await supabase.from('leads').update(updatePayload).eq('id_lead', id_lead);
             if (error) throw error;
             return NextResponse.json({ success: true, id_lead, status_atual });
         }

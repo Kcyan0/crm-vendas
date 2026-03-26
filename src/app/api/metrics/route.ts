@@ -181,7 +181,28 @@ export async function GET(request: Request) {
         const tmFaturamentoSdr = Object.entries(sdrStats).map(([name, stats]) => ({ name, value: stats.count > 0 ? stats.faturamento / stats.count : 0 })).sort((a, b) => b.value - a.value);
         const tmCaixaSdr = Object.entries(sdrStats).map(([name, stats]) => ({ name, value: stats.count > 0 ? stats.caixa / stats.count : 0 })).sort((a, b) => b.value - a.value);
 
+        // Funnel data — lead counts by Kanban stage (all time for the project)
+        const funnelStages = ['Novo', 'Follow-up', 'Agendado', 'Negociação', 'Venda', 'Reembolsado', 'Loss'];
+        let allLeadsQuery = supabase.from('leads').select('status_atual, motivo_reembolso');
+        if (projectId) allLeadsQuery = (allLeadsQuery as any).eq('id_projeto', projectId);
+        const { data: allLeads } = await allLeadsQuery;
+        const funnelData = funnelStages.map(stage => ({
+            name: stage,
+            value: (allLeads || []).filter((l: any) => l.status_atual === stage || (stage === 'Loss' && l.status_atual === 'Nao prosseguiu')).length
+        })).filter(s => s.value > 0);
+
+        // Chargeback stats
+        const reembolsados = (allLeads || []).filter((l: any) => l.status_atual === 'Reembolsado');
+        const chargebackRate = (groupedSales.length + reembolsados.length) > 0
+            ? ((reembolsados.length / (groupedSales.length + reembolsados.length)) * 100).toFixed(1)
+            : '0.0';
+        const recentRefundReasons = reembolsados
+            .filter((l: any) => l.motivo_reembolso)
+            .slice(0, 5)
+            .map((l: any) => l.motivo_reembolso);
+
         return NextResponse.json({
+
             receita,
             caixaLiquido,
             leadsTotais,
@@ -195,6 +216,9 @@ export async function GET(request: Request) {
             tmCaixaCloser,
             tmFaturamentoSdr,
             tmCaixaSdr,
+            funnelData,
+            chargebackRate,
+            recentRefundReasons,
             period: { startDate, endDate }
         });
     } catch (error: any) {
