@@ -478,70 +478,64 @@ export default function Dashboard() {
                             </div>
                         </div>
 
+                        {/* Reembolsos & Chargeback — inside Receita e Pagamentos */}
+                        <div className="flex flex-col">
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-xs sm:text-sm font-bold text-white">Reembolsos &amp; Chargeback</h3>
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-lg" style={{ background: '#ef4444', color: '#fff' }}>
+                                    {metrics?.chargebackRate || '0.0'}% taxa
+                                </span>
+                            </div>
+                            <div className={`flex-1 w-full ${zoomedSection === 'receita' ? 'min-h-[250px]' : 'min-h-[140px]'} overflow-y-auto space-y-2`}>
+                                {metrics?.recentRefundReasons && metrics.recentRefundReasons.length > 0 ? (
+                                    metrics.recentRefundReasons.map((reason, i) => (
+                                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-[#111] border border-[#2A2A2A]">
+                                            <span className="text-red-400 mt-0.5 shrink-0">⚠</span>
+                                            <p className="text-xs text-[#cccccc]">{reason}</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Nenhum reembolso 🎉
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
 
-            {/* Funnel + Chargeback row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-
-                {/* Conversion Funnel */}
-                <div className="glass-panel p-6 bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl">
-                    <h3 className="text-sm font-bold text-white mb-4">Funil de Conversão</h3>
-                    {metrics?.funnelData && metrics.funnelData.length > 0 ? (
-                        <div className="space-y-2">
-                            {metrics.funnelData.map((stage, i) => {
-                                const max = metrics.funnelData![0].value || 1;
-                                const pct = Math.round((stage.value / max) * 100);
-                                const FUNNEL_COLORS = [LIME, '#22D3EE', '#A78BFA', '#FB923C', '#F472B6', '#ef4444', '#888888'];
-                                return (
-                                    <div key={stage.name}>
-                                        <div className="flex justify-between text-xs mb-1">
-                                            <span className="text-[#888888] font-medium">{stage.name}</span>
-                                            <span className="text-white font-bold">{stage.value} leads ({pct}%)</span>
-                                        </div>
-                                        <div className="h-6 bg-[#111] rounded-lg overflow-hidden">
-                                            <div
-                                                className="h-full rounded-lg transition-all duration-700 flex items-center justify-end pr-2"
-                                                style={{ width: `${pct}%`, background: FUNNEL_COLORS[i % FUNNEL_COLORS.length] }}
-                                            />
-                                        </div>
+            {/* Funil de Conversão — full width */}
+            <div className="glass-panel p-6 bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl mt-6">
+                <h3 className="text-sm font-bold text-white mb-4">Funil de Conversão</h3>
+                {metrics?.funnelData && metrics.funnelData.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
+                        {metrics.funnelData.map((stage, i) => {
+                            const max = metrics.funnelData![0].value || 1;
+                            const pct = Math.round((stage.value / max) * 100);
+                            const FUNNEL_COLORS = [LIME, '#22D3EE', '#A78BFA', '#FB923C', '#F472B6', '#ef4444', '#888888'];
+                            return (
+                                <div key={stage.name}>
+                                    <div className="flex justify-between text-xs mb-1">
+                                        <span className="text-[#888888] font-medium">{stage.name}</span>
+                                        <span className="text-white font-bold">{stage.value} leads ({pct}%)</span>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="h-32 flex items-center justify-center text-[#888888] text-sm border-2 border-dashed rounded-xl" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                            Sem dados de leads
-                        </div>
-                    )}
-                </div>
-
-                {/* Chargeback / Refund */}
-                <div className="glass-panel p-6 bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl">
-                    <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-sm font-bold text-white">Reembolsos & Chargeback</h3>
-                        <span className="text-xs font-black px-2 py-1 rounded-lg" style={{ background: '#ef4444', color: '#fff' }}>
-                            {metrics?.chargebackRate || '0.0'}% taxa
-                        </span>
-                    </div>
-                    {metrics?.recentRefundReasons && metrics.recentRefundReasons.length > 0 ? (
-                        <div className="space-y-2">
-                            <p className="text-xs text-[#888888] mb-2">Motivos recentes:</p>
-                            {metrics.recentRefundReasons.map((reason, i) => (
-                                <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-[#111] border border-[#2A2A2A]">
-                                    <span className="text-red-400 mt-0.5">⚠</span>
-                                    <p className="text-xs text-[#cccccc]">{reason}</p>
+                                    <div className="h-5 bg-[#111] rounded-lg overflow-hidden">
+                                        <div
+                                            className="h-full rounded-lg transition-all duration-700"
+                                            style={{ width: `${pct}%`, background: FUNNEL_COLORS[i % FUNNEL_COLORS.length] }}
+                                        />
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="h-32 flex items-center justify-center text-[#888888] text-sm border-2 border-dashed rounded-xl" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                            Nenhum reembolso registrado 🎉
-                        </div>
-                    )}
-                </div>
-
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="h-20 flex items-center justify-center text-[#888888] text-sm border-2 border-dashed rounded-xl" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                        Sem dados de leads
+                    </div>
+                )}
             </div>
 
             </div> {/* End of grid container */}
