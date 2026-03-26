@@ -258,8 +258,8 @@ export default function Dashboard() {
                     )}
                 </div>
                 
-                <div className={`p-4 ${zoomedSection === 'performance' ? 'overflow-y-auto overflow-x-hidden' : 'overflow-hidden'} flex-1 flex flex-col`}>
-                    <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6' : 'grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4'} h-full flex-1`}>
+                <div className={`p-4 ${zoomedSection === 'performance' ? 'overflow-y-auto overflow-x-hidden' : 'overflow-hidden'} flex-1 flex flex-col gap-4`}>
+                    <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6' : 'grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4'}`}>
                         {/* SDRs Período */}
                         <div className="flex flex-col">
                             <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>SDRs (Período)</h3>
@@ -309,12 +309,63 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Funil de Conversão */}
-                        <div className={`flex flex-col ${zoomedSection === 'performance' ? 'col-span-1 md:col-span-2' : 'col-span-2'}`}>
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2`}>Funil de Conversão</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'} flex flex-col justify-around gap-1`}>
-                                {metrics?.funnelData && metrics.funnelData.length > 0 ? (
-                                    metrics.funnelData.map((stage, i) => {
+                        {/* SDRs Hoje */}
+                        <div className="flex flex-col">
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>SDRs (Hoje)</h3>
+                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
+                                {sdrsToday.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={sdrsToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 11 }} />
+                                            <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados hoje
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Closers Hoje */}
+                        <div className="flex flex-col">
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>Closers (Hoje)</h3>
+                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
+                                {closersToday.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={closersToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                            <Tooltip {...tooltipStyle} />
+                                            <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 11 }} />
+                                            <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados hoje
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Funil de Conversão — abaixo dos 4 gráficos */}
+                    <div className="flex flex-col">
+                        <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2`}>Funil de Conversão</h3>
+                        <div className={`w-full ${zoomedSection === 'performance' ? 'min-h-[180px]' : 'min-h-[80px]'} flex flex-col justify-around gap-1`}>
+                            {metrics?.funnelData && metrics.funnelData.length > 0 ? (
+                                <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-x-8 gap-y-1`}>
+                                    {metrics.funnelData.map((stage, i) => {
                                         const max = metrics.funnelData![0].value || 1;
                                         const pct = Math.round((stage.value / max) * 100);
                                         const FUNNEL_COLORS = [LIME, '#22D3EE', '#A78BFA', '#FB923C', '#F472B6', '#ef4444', '#888888'];
@@ -324,23 +375,31 @@ export default function Dashboard() {
                                                     <span style={{ color: TEXT_SEC }}>{stage.name}</span>
                                                     <span className="text-white font-bold">{stage.value} ({pct}%)</span>
                                                 </div>
-                                                <div className="h-4 bg-[#111] rounded-full overflow-hidden">
+                                                <div className="h-3 bg-[#111] rounded-full overflow-hidden">
                                                     <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: FUNNEL_COLORS[i % FUNNEL_COLORS.length] }} />
                                                 </div>
                                             </div>
                                         );
-                                    })
-                                ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Sem dados de leads
-                                    </div>
-                                )}
-                            </div>
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                    Sem dados de leads
+                                </div>
+                            )}
                         </div>
+                    </div>
 
+                    {/* Ticket Médio donuts */}
+                    <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6' : 'grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4'} flex-1`}>
+                        {renderTicketDonut("Ticket Médio (Faturamento) por Closer", metrics?.tmFaturamentoCloser, zoomedSection === 'performance')}
+                        {renderTicketDonut("Ticket Médio (Caixa) por Closer", metrics?.tmCaixaCloser, zoomedSection === 'performance')}
+                        {renderTicketDonut("Ticket Médio (Faturamento) por SDR", metrics?.tmFaturamentoSdr, zoomedSection === 'performance')}
+                        {renderTicketDonut("Ticket Médio (Caixa) por SDR", metrics?.tmCaixaSdr, zoomedSection === 'performance')}
                     </div>
                 </div>
             </div>
+
 
             {/* Zoomable Box: Receita */}
             <div className={`transition-all duration-300 ${zoomedSection === 'receita' ? 'fixed inset-6 md:inset-12 lg:inset-20 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group flex flex-col'}`}>
