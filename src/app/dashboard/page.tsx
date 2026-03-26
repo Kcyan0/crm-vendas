@@ -309,59 +309,34 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* SDRs Hoje */}
-                        <div className="flex flex-col">
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>SDRs (Hoje)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
-                                {sdrsToday.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={sdrsToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <Tooltip {...tooltipStyle} />
-                                            <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 11 }} />
-                                            <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                        {/* Funil de Conversão */}
+                        <div className={`flex flex-col ${zoomedSection === 'performance' ? 'col-span-1 md:col-span-2' : 'col-span-2'}`}>
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2`}>Funil de Conversão</h3>
+                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'} flex flex-col justify-around gap-1`}>
+                                {metrics?.funnelData && metrics.funnelData.length > 0 ? (
+                                    metrics.funnelData.map((stage, i) => {
+                                        const max = metrics.funnelData![0].value || 1;
+                                        const pct = Math.round((stage.value / max) * 100);
+                                        const FUNNEL_COLORS = [LIME, '#22D3EE', '#A78BFA', '#FB923C', '#F472B6', '#ef4444', '#888888'];
+                                        return (
+                                            <div key={stage.name}>
+                                                <div className="flex justify-between text-[10px] mb-0.5">
+                                                    <span style={{ color: TEXT_SEC }}>{stage.name}</span>
+                                                    <span className="text-white font-bold">{stage.value} ({pct}%)</span>
+                                                </div>
+                                                <div className="h-4 bg-[#111] rounded-full overflow-hidden">
+                                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: FUNNEL_COLORS[i % FUNNEL_COLORS.length] }} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })
                                 ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Sem dados hoje
+                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                        Sem dados de leads
                                     </div>
                                 )}
                             </div>
                         </div>
-
-                        {/* Closers Hoje */}
-                        <div className="flex flex-col">
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>Closers (Hoje)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
-                                {closersToday.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={closersToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <Tooltip {...tooltipStyle} />
-                                            <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 11 }} />
-                                            <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Sem dados hoje
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {renderTicketDonut("Ticket Médio (Faturamento) por Closer", metrics?.tmFaturamentoCloser, zoomedSection === 'performance')}
-                        {renderTicketDonut("Ticket Médio (Caixa) por Closer", metrics?.tmCaixaCloser, zoomedSection === 'performance')}
-                        {renderTicketDonut("Ticket Médio (Faturamento) por SDR", metrics?.tmFaturamentoSdr, zoomedSection === 'performance')}
-                        {renderTicketDonut("Ticket Médio (Caixa) por SDR", metrics?.tmCaixaSdr, zoomedSection === 'performance')}
 
                     </div>
                 </div>
@@ -504,38 +479,6 @@ export default function Dashboard() {
 
                     </div>
                 </div>
-            </div>
-
-            {/* Funil de Conversão — full width */}
-            <div className="glass-panel p-6 bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl mt-6">
-                <h3 className="text-sm font-bold text-white mb-4">Funil de Conversão</h3>
-                {metrics?.funnelData && metrics.funnelData.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
-                        {metrics.funnelData.map((stage, i) => {
-                            const max = metrics.funnelData![0].value || 1;
-                            const pct = Math.round((stage.value / max) * 100);
-                            const FUNNEL_COLORS = [LIME, '#22D3EE', '#A78BFA', '#FB923C', '#F472B6', '#ef4444', '#888888'];
-                            return (
-                                <div key={stage.name}>
-                                    <div className="flex justify-between text-xs mb-1">
-                                        <span className="text-[#888888] font-medium">{stage.name}</span>
-                                        <span className="text-white font-bold">{stage.value} leads ({pct}%)</span>
-                                    </div>
-                                    <div className="h-5 bg-[#111] rounded-lg overflow-hidden">
-                                        <div
-                                            className="h-full rounded-lg transition-all duration-700"
-                                            style={{ width: `${pct}%`, background: FUNNEL_COLORS[i % FUNNEL_COLORS.length] }}
-                                        />
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <div className="h-20 flex items-center justify-center text-[#888888] text-sm border-2 border-dashed rounded-xl" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                        Sem dados de leads
-                    </div>
-                )}
             </div>
 
             </div> {/* End of grid container */}

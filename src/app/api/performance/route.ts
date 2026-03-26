@@ -49,41 +49,33 @@ export async function GET(request: Request) {
             }
         });
 
-        // Sales for closers from leads that entered today
-        const leadIds = (leads || []).filter((l: any) => !!l.id_closer_responsavel).map((l: any) => l.id_lead);
-        if (leadIds.length > 0) {
-            // We need id_lead on the leads query too, let's re-query with id_lead
-        }
+        // Sales for closers in the selected period — query vendas by data_venda directly
+        let vendasQuery = supabase
+            .from('vendas')
+            .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa, id_oportunidade, forma_pagamento')
+            .in('status_pagamento', ['pago', 'pendente'])
+            .gte('data_venda', `${startDate}T00:00:00`)
+            .lte('data_venda', `${endDate}T23:59:59`);
 
-        // Re-fetch leads with id_lead included
-        let leadsWithId: any[] = [];
-        if (projectId) {
-            const { data } = await supabase.from('leads').select('id_lead, id_closer_responsavel')
-                .gte('data_entrada', `${startDate}T00:00:00`).lte('data_entrada', `${endDate}T23:59:59`)
-                .eq('id_projeto', projectId).not('id_closer_responsavel', 'is', null);
-            leadsWithId = data || [];
-        } else {
-            const { data } = await supabase.from('leads').select('id_lead, id_closer_responsavel')
-                .gte('data_entrada', `${startDate}T00:00:00`).lte('data_entrada', `${endDate}T23:59:59`)
-                .not('id_closer_responsavel', 'is', null);
-            leadsWithId = data || [];
-        }
+        const { data: vendasPeriod } = await vendasQuery;
 
-        if (leadsWithId.length > 0) {
-            const ids = leadsWithId.map((l: any) => l.id_lead);
-            const { data: vendas } = await supabase.from('vendas')
-                .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa')
-                .in('id_lead', ids)
-                .in('status_pagamento', ['pago', 'pendente']);
+        // Group by oportunidade to avoid double-counting entrada+parcelas rows as 2 sales
+        const seenOport = new Set<number>();
+        (vendasPeriod || []).forEach((v: any) => {
+            const oportKey = v.id_oportunidade ?? v.id_lead;
+            const closerId = v.id_closer;
+            if (!closerId || !performanceCloser[closerId]) return;
 
-            (vendas || []).forEach((v: any) => {
-                if (v.id_closer && performanceCloser[v.id_closer]) {
-                    performanceCloser[v.id_closer].vendas += 1;
-                    performanceCloser[v.id_closer].vgv += parseFloat(v.valor_bruto) || 0;
-                    performanceCloser[v.id_closer].caixa += parseFloat(v.valor_liquido_caixa || v.valor_bruto) || 0;
-                }
-            });
-        }
+            // Count each distinct sale once
+            const saleKey = `${oportKey}-${closerId}`;
+            if (!seenOport.has(saleKey as any)) {
+                seenOport.add(saleKey as any);
+                performanceCloser[closerId].vendas += 1;
+            }
+
+            performanceCloser[closerId].vgv += parseFloat(v.valor_bruto) || 0;
+            performanceCloser[closerId].caixa += parseFloat(v.valor_liquido_caixa || v.valor_bruto) || 0;
+        });
 
         // Manual overrides
         const { data: overrides } = await supabase.from('metricas_performance')
