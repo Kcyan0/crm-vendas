@@ -359,34 +359,106 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Funil de Conversão — abaixo dos 4 gráficos */}
-                    <div className="flex flex-col">
-                        <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2`}>Funil de Conversão</h3>
-                        <div className={`w-full ${zoomedSection === 'performance' ? 'min-h-[180px]' : 'min-h-[80px]'} flex flex-col justify-around gap-1`}>
-                            {metrics?.funnelData && metrics.funnelData.length > 0 ? (
-                                <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-x-8 gap-y-1`}>
-                                    {metrics.funnelData.map((stage, i) => {
-                                        const max = metrics.funnelData![0].value || 1;
-                                        const pct = Math.round((stage.value / max) * 100);
-                                        const FUNNEL_COLORS = [LIME, '#22D3EE', '#A78BFA', '#FB923C', '#F472B6', '#ef4444', '#888888'];
-                                        return (
-                                            <div key={stage.name}>
-                                                <div className="flex justify-between text-[10px] mb-0.5">
-                                                    <span style={{ color: TEXT_SEC }}>{stage.name}</span>
-                                                    <span className="text-white font-bold">{stage.value} ({pct}%)</span>
-                                                </div>
-                                                <div className="h-3 bg-[#111] rounded-full overflow-hidden">
-                                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: FUNNEL_COLORS[i % FUNNEL_COLORS.length] }} />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                    Sem dados de leads
-                                </div>
-                            )}
+                    {/* Conversões Side-by-Side */}
+                    <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 lg:grid-cols-2'} gap-6 mt-2 mb-2`}>
+                        {/* Conversão SDR */}
+                        <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col relative overflow-hidden">
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-sm' : 'text-xs xl:text-sm'} font-bold text-white mb-1`}>Conversão SDR</h3>
+                            <p className="text-[10px] text-[#888888] mb-4">Performance de cada membro do time de prospecção.</p>
+                            
+                            <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
+                                <table className="w-full text-left text-xs text-[#888888] min-w-[280px]">
+                                    <thead>
+                                        <tr className="border-b border-white/10 pb-2">
+                                            <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
+                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Leads</th>
+                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Vendas</th>
+                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Taxa de Conv.</th>
+                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Taxa de Reemb.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {sdrs.map((sdr, index) => {
+                                            const leads = sdr.conversasIniciadas || 0;
+                                            const vendas = sdr.vendasFechadas || 0;
+                                            const reembolsos = sdr.reembolsos || 0;
+                                            const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
+                                            const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
+                                            const avatarColors = ['#fff', '#BEFF00', '#22D3EE', '#A78BFA', '#F472B6'];
+                                            
+                                            return (
+                                                <tr key={index} className="hover:bg-white/[0.02] transition-colors">
+                                                    <td className="py-2.5 flex items-center gap-2 text-white">
+                                                        <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: avatarColors[index % avatarColors.length] }}>
+                                                            {sdr.nome.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <span className="truncate max-w-[80px] xl:max-w-[120px] text-[10px] xl:text-xs" title={sdr.nome}>{sdr.nome}</span>
+                                                    </td>
+                                                    <td className="py-2.5 text-center text-white text-[10px] xl:text-xs font-medium">{leads}</td>
+                                                    <td className="py-2.5 text-center text-white text-[10px] xl:text-xs font-medium">{vendas}</td>
+                                                    <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{taxaConv}%</td>
+                                                    <td className="py-2.5 text-center text-red-500 font-bold text-[10px] xl:text-xs">{taxaReemb}%</td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {sdrs.length === 0 && (
+                                            <tr>
+                                                <td colSpan={5} className="py-4 text-center text-xs">Sem dados no período</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Conversão Closer */}
+                        <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col relative overflow-hidden">
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-sm' : 'text-xs xl:text-sm'} font-bold text-white mb-1`}>Conversão Closer</h3>
+                            <p className="text-[10px] text-[#888888] mb-4">Performance de cada membro do time de vendas.</p>
+                            
+                            <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
+                                <table className="w-full text-left text-xs text-[#888888] min-w-[280px]">
+                                    <thead>
+                                        <tr className="border-b border-white/10 pb-2">
+                                            <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
+                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Leads</th>
+                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Vendas</th>
+                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Taxa de Conv.</th>
+                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Taxa de Reemb.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {closers.map((closer, index) => {
+                                            const leads = closer.totalCalls || 0;
+                                            const vendas = closer.vendas || 0;
+                                            const reembolsos = closer.reembolsos || 0;
+                                            const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
+                                            const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
+                                            const avatarColors = ['#A78BFA', '#22D3EE', '#BEFF00', '#F472B6', '#fff'];
+                                            
+                                            return (
+                                                <tr key={index} className="hover:bg-white/[0.02] transition-colors">
+                                                    <td className="py-2.5 flex items-center gap-2 text-white">
+                                                        <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: avatarColors[index % avatarColors.length] }}>
+                                                            {closer.nome.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <span className="truncate max-w-[80px] xl:max-w-[120px] text-[10px] xl:text-xs" title={closer.nome}>{closer.nome}</span>
+                                                    </td>
+                                                    <td className="py-2.5 text-center text-white text-[10px] xl:text-xs font-medium">{leads}</td>
+                                                    <td className="py-2.5 text-center text-white text-[10px] xl:text-xs font-medium">{vendas}</td>
+                                                    <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{taxaConv}%</td>
+                                                    <td className="py-2.5 text-center text-red-500 font-bold text-[10px] xl:text-xs">{taxaReemb}%</td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {closers.length === 0 && (
+                                            <tr>
+                                                <td colSpan={5} className="py-4 text-center text-xs">Sem dados no período</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 

@@ -77,6 +77,28 @@ export async function GET(request: Request) {
             performanceCloser[closerId].caixa += parseFloat(v.valor_liquido_caixa || v.valor_bruto) || 0;
         });
 
+        // SDR vendas count — leads created in period that are now "Venda"
+        // Already available from the leads query (status_atual === 'Venda')
+        (leads || []).forEach((l: any) => {
+            const sdrId = l.id_sdr_responsavel;
+            if (sdrId && performanceSDR[sdrId] && l.status_atual === 'Venda') {
+                performanceSDR[sdrId].vendasFechadas = (performanceSDR[sdrId].vendasFechadas || 0) + 1;
+            }
+        });
+
+        // Reembolsos per user (all-time for conversation rate context)
+        let reembolsadosQuery = supabase.from('leads').select('id_sdr_responsavel, id_closer_responsavel').eq('status_atual', 'Reembolsado');
+        if (projectId) reembolsadosQuery = reembolsadosQuery.eq('id_projeto', projectId);
+        const { data: reembolsados } = await reembolsadosQuery;
+        (reembolsados || []).forEach((l: any) => {
+            if (l.id_sdr_responsavel && performanceSDR[l.id_sdr_responsavel]) {
+                performanceSDR[l.id_sdr_responsavel].reembolsos = (performanceSDR[l.id_sdr_responsavel].reembolsos || 0) + 1;
+            }
+            if (l.id_closer_responsavel && performanceCloser[l.id_closer_responsavel]) {
+                performanceCloser[l.id_closer_responsavel].reembolsos = (performanceCloser[l.id_closer_responsavel].reembolsos || 0) + 1;
+            }
+        });
+
         // Manual overrides
         const { data: overrides } = await supabase.from('metricas_performance')
             .select('*').gte('data_referencia', startDate).lte('data_referencia', endDate);
