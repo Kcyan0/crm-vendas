@@ -80,17 +80,26 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
 
     if (!metaProjeto) return null;
 
-    const pctFat = metaProjeto.meta_faturamento > 0 ? Math.min(100, Math.round((receitaBruta / metaProjeto.meta_faturamento) * 100)) : 0;
-    const pctCaixa = metaProjeto.meta_caixa > 0 ? Math.min(100, Math.round((caixaLiquido / metaProjeto.meta_caixa) * 100)) : 0;
+    const pctFat = metaProjeto.meta_faturamento > 0 ? Math.round((receitaBruta / metaProjeto.meta_faturamento) * 100) : 0;
+    const pctCaixa = metaProjeto.meta_caixa > 0 ? Math.round((caixaLiquido / metaProjeto.meta_caixa) * 100) : 0;
 
-    const ProgressBar = ({ label, current, goal, pct, color, slim }: { label: string; current: number; goal: number; pct: number; color: string; slim?: boolean }) => (
+    const ProgressBar = ({ label, current, goal, pct, color, slim }: { label: string; current: number; goal: number; pct: number; color: string; slim?: boolean }) => {
+        const over = pct > 100;
+        const barPct = Math.min(100, pct);
+        const overExtra = pct - 100;
+        const displayLabel = over ? `100% +${overExtra}%` : `${pct}%`;
+        const displayColor = over ? '#BEFF00' : color;
+        return (
         <div className="flex-1 min-w-[140px]">
             <div className="flex justify-between items-baseline mb-1">
                 <span className={`${slim ? 'text-[10px]' : 'text-xs'} font-bold text-white`}>{label}</span>
-                <span className={`${slim ? 'text-[9px]' : 'text-[10px]'} font-black`} style={{ color }}>{pct}%</span>
+                <span className={`${slim ? 'text-[9px]' : 'text-[10px]'} font-black flex items-center gap-1`} style={{ color: displayColor }}>
+                    {over && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#BEFF00] animate-pulse" />}
+                    {displayLabel}
+                </span>
             </div>
             <div className={`${slim ? 'h-1.5' : 'h-2.5'} bg-[#111] rounded-full overflow-hidden`}>
-                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${barPct}%`, background: over ? 'linear-gradient(90deg, ' + color + ', #BEFF00)' : color }} />
             </div>
             {!slim && (
                 <div className="flex justify-between text-[10px] mt-1" style={{ color: TEXT_SEC }}>
@@ -99,7 +108,8 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                 </div>
             )}
         </div>
-    );
+        );
+    };
 
     // Build a performanceMap from the perf data by user id
     const perfMap: Record<number, { fat: number; caixa: number }> = {};
@@ -151,8 +161,8 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                                 <div className="space-y-3">
                                     {groupMetas.map((user, i) => {
                                         const perf = perfMap[user.id_usuario] || { fat: 0, caixa: 0 };
-                                        const uPctFat = user.meta_faturamento > 0 ? Math.min(100, Math.round((perf.fat / user.meta_faturamento) * 100)) : 0;
-                                        const uPctCaixa = user.meta_caixa > 0 ? Math.min(100, Math.round((perf.caixa / user.meta_caixa) * 100)) : 0;
+                                        const uPctFat = user.meta_faturamento > 0 ? Math.round((perf.fat / user.meta_faturamento) * 100) : 0;
+                                        const uPctCaixa = user.meta_caixa > 0 ? Math.round((perf.caixa / user.meta_caixa) * 100) : 0;
                                         return (
                                             <div key={user.id_usuario} className="p-3 bg-[#111] rounded-xl border border-white/5">
                                                 <div className="flex items-center gap-2 mb-2">
