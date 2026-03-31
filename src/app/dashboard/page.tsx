@@ -80,13 +80,13 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
 
     if (!metaProjeto) return null;
 
-    const pctFat = metaProjeto.meta_faturamento > 0 ? Math.round((receitaBruta / metaProjeto.meta_faturamento) * 100) : 0;
-    const pctCaixa = metaProjeto.meta_caixa > 0 ? Math.round((caixaLiquido / metaProjeto.meta_caixa) * 100) : 0;
+    const pctFat = metaProjeto.meta_faturamento > 0 ? parseFloat(((receitaBruta / metaProjeto.meta_faturamento) * 100).toFixed(1)) : 0;
+    const pctCaixa = metaProjeto.meta_caixa > 0 ? parseFloat(((caixaLiquido / metaProjeto.meta_caixa) * 100).toFixed(1)) : 0;
 
     const ProgressBar = ({ label, current, goal, pct, color, slim }: { label: string; current: number; goal: number; pct: number; color: string; slim?: boolean }) => {
         const over = pct > 100;
         const barPct = Math.min(100, pct);
-        const overExtra = pct - 100;
+        const overExtra = parseFloat((pct - 100).toFixed(1));
         const displayLabel = over ? `100% +${overExtra}%` : `${pct}%`;
         const displayColor = over ? '#BEFF00' : color;
         return (
@@ -161,8 +161,8 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                                 <div className="space-y-3">
                                     {groupMetas.map((user, i) => {
                                         const perf = perfMap[user.id_usuario] || { fat: 0, caixa: 0 };
-                                        const uPctFat = user.meta_faturamento > 0 ? Math.round((perf.fat / user.meta_faturamento) * 100) : 0;
-                                        const uPctCaixa = user.meta_caixa > 0 ? Math.round((perf.caixa / user.meta_caixa) * 100) : 0;
+                                        const uPctFat = user.meta_faturamento > 0 ? parseFloat(((perf.fat / user.meta_faturamento) * 100).toFixed(1)) : 0;
+                                        const uPctCaixa = user.meta_caixa > 0 ? parseFloat(((perf.caixa / user.meta_caixa) * 100).toFixed(1)) : 0;
                                         return (
                                             <div key={user.id_usuario} className="p-3 bg-[#111] rounded-xl border border-white/5">
                                                 <div className="flex items-center gap-2 mb-2">
