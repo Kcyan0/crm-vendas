@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Check, X, Settings2, Trash2 } from "lucide-react";
+import { Plus, Trash2, Settings2, Target } from "lucide-react";
+import { useProject } from "@/context/ProjectContext";
 
 type Gateway = {
     id_gateway: number;
@@ -12,7 +13,19 @@ type Gateway = {
     tem_entrada: boolean;
 };
 
+type UserMeta = {
+    id_usuario: number;
+    nome: string;
+    tipo: string;
+    meta_faturamento: number;
+    meta_caixa: number;
+    meta_vendas: number;
+};
+
 export default function SettingsPage() {
+    const { selectedProject } = useProject();
+
+    // ── Gateways ──────────────────────────────────────────────
     const [gateways, setGateways] = useState<Gateway[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingGatewayId, setEditingGatewayId] = useState<number | null>(null);
@@ -34,9 +47,7 @@ export default function SettingsPage() {
         }
     };
 
-    useEffect(() => {
-        fetchGateways();
-    }, []);
+    useEffect(() => { fetchGateways(); }, []);
 
     const handleOpenCreate = () => {
         setEditingGatewayId(null);
@@ -87,15 +98,224 @@ export default function SettingsPage() {
         }
     };
 
+    // ── Metas ─────────────────────────────────────────────────
+    const now = new Date();
+    const [metaMes, setMetaMes] = useState(now.getMonth() + 1);
+    const [metaAno, setMetaAno] = useState(now.getFullYear());
+    const [userMetas, setUserMetas] = useState<UserMeta[]>([]);
+    const [metasSaving, setMetasSaving] = useState<Record<number, boolean>>({});
+    const [metasSaved, setMetasSaved] = useState<Record<number, boolean>>({});
+
+    const fetchMetas = async () => {
+        if (!selectedProject?.id_projeto) return;
+        try {
+            const res = await fetch(`/api/metas?projectId=${selectedProject.id_projeto}&mes=${metaMes}&ano=${metaAno}`);
+            const data = await res.json();
+            setUserMetas(data);
+        } catch (e) {
+            console.error("Failed to fetch metas", e);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedProject) fetchMetas();
+    }, [selectedProject, metaMes, metaAno]);
+
+    const handleMetaChange = (userId: number, field: keyof UserMeta, value: string) => {
+        setUserMetas(prev => prev.map(u =>
+            u.id_usuario === userId ? { ...u, [field]: parseFloat(value) || 0 } : u
+        ));
+    };
+
+    const handleSaveMeta = async (user: UserMeta) => {
+        setMetasSaving(prev => ({ ...prev, [user.id_usuario]: true }));
+        try {
+            await fetch('/api/metas', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id_usuario: user.id_usuario,
+                    mes: metaMes,
+                    ano: metaAno,
+                    meta_faturamento: user.meta_faturamento,
+                    meta_caixa: user.meta_caixa,
+                    meta_vendas: user.meta_vendas,
+                })
+            });
+            setMetasSaved(prev => ({ ...prev, [user.id_usuario]: true }));
+            setTimeout(() => setMetasSaved(prev => ({ ...prev, [user.id_usuario]: false })), 2000);
+        } catch (e) {
+            console.error("Error saving meta", e);
+        } finally {
+            setMetasSaving(prev => ({ ...prev, [user.id_usuario]: false }));
+        }
+    };
+
+    const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const sdrs = userMetas.filter(u => u.tipo === 'SDR');
+    const closers = userMetas.filter(u => u.tipo === 'CLOSER');
+
+    const formatCurr = (v: number) =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(v);
+
     return (
         <div className="pt-4 h-full flex flex-col">
             <div className="flex justify-between items-end mb-8">
                 <div>
                     <h2 className="text-3xl font-bold text-white tracking-tight">Configurações Gerais</h2>
-                    <p className="text-[#888888] mt-1">Gerencie os Gateways, Formas de Pagamento e Taxas do sistema.</p>
+                    <p className="text-[#888888] mt-1">Gerencie Gateways, Formas de Pagamento e Metas do time.</p>
                 </div>
             </div>
 
+            {/* ── Metas ─────────────────────────────────── */}
+            <div className="glass-panel p-6 bg-[#1A1A1A] border-[#2A2A2A] mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg" style={{ background: 'rgba(190,255,0,0.12)' }}>
+                            <Target size={22} style={{ color: '#BEFF00' }} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-white">Metas por Usuário</h3>
+                            <p className="text-[#888888] text-sm">Defina a meta mensal de Caixa e Faturamento por membro.</p>
+                        </div>
+                    </div>
+                    {/* Month/Year picker */}
+                    <div className="flex items-center gap-2">
+                        <select
+                            value={metaMes}
+                            onChange={e => setMetaMes(Number(e.target.value))}
+                            className="bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                        >
+                            {MONTHS.map((m, i) => (
+                                <option key={i} value={i + 1}>{m}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={metaAno}
+                            onChange={e => setMetaAno(Number(e.target.value))}
+                            className="bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                        >
+                            {[2024, 2025, 2026, 2027].map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {userMetas.length === 0 ? (
+                    <div className="text-center py-10 border-2 border-dashed border-[#2A2A2A] rounded-xl text-[#888888] text-sm">
+                        Nenhum usuário ativo encontrado no projeto selecionado.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* SDRs */}
+                        {sdrs.length > 0 && (
+                            <div>
+                                <h4 className="text-sm font-bold text-[#888888] uppercase tracking-widest mb-3">SDRs</h4>
+                                <div className="space-y-3">
+                                    {sdrs.map(user => (
+                                        <div key={user.id_usuario} className="p-4 bg-[#111] border border-[#2A2A2A] rounded-xl">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="w-7 h-7 rounded-full bg-[#BEFF00] flex items-center justify-center font-bold text-xs text-black">
+                                                    {user.nome.charAt(0).toUpperCase()}
+                                                </div>
+                                                <span className="text-white font-semibold text-sm">{user.nome}</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-[10px] uppercase font-bold text-[#888888] mb-1">Meta Faturamento</label>
+                                                    <input
+                                                        type="number"
+                                                        step="100"
+                                                        value={user.meta_faturamento}
+                                                        onChange={e => handleMetaChange(user.id_usuario, 'meta_faturamento', e.target.value)}
+                                                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                                                        placeholder="R$ 0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] uppercase font-bold text-[#888888] mb-1">Meta Caixa</label>
+                                                    <input
+                                                        type="number"
+                                                        step="100"
+                                                        value={user.meta_caixa}
+                                                        onChange={e => handleMetaChange(user.id_usuario, 'meta_caixa', e.target.value)}
+                                                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                                                        placeholder="R$ 0"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-end mt-3">
+                                                <button
+                                                    onClick={() => handleSaveMeta(user)}
+                                                    disabled={metasSaving[user.id_usuario]}
+                                                    className="btn-primary text-xs py-1.5 px-4"
+                                                >
+                                                    {metasSaved[user.id_usuario] ? '✓ Salvo!' : metasSaving[user.id_usuario] ? 'Salvando…' : 'Salvar'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Closers */}
+                        {closers.length > 0 && (
+                            <div>
+                                <h4 className="text-sm font-bold text-[#888888] uppercase tracking-widest mb-3">Closers</h4>
+                                <div className="space-y-3">
+                                    {closers.map(user => (
+                                        <div key={user.id_usuario} className="p-4 bg-[#111] border border-[#2A2A2A] rounded-xl">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="w-7 h-7 rounded-full bg-[#22D3EE] flex items-center justify-center font-bold text-xs text-black">
+                                                    {user.nome.charAt(0).toUpperCase()}
+                                                </div>
+                                                <span className="text-white font-semibold text-sm">{user.nome}</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-[10px] uppercase font-bold text-[#888888] mb-1">Meta Faturamento</label>
+                                                    <input
+                                                        type="number"
+                                                        step="100"
+                                                        value={user.meta_faturamento}
+                                                        onChange={e => handleMetaChange(user.id_usuario, 'meta_faturamento', e.target.value)}
+                                                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                                                        placeholder="R$ 0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] uppercase font-bold text-[#888888] mb-1">Meta Caixa</label>
+                                                    <input
+                                                        type="number"
+                                                        step="100"
+                                                        value={user.meta_caixa}
+                                                        onChange={e => handleMetaChange(user.id_usuario, 'meta_caixa', e.target.value)}
+                                                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                                                        placeholder="R$ 0"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-end mt-3">
+                                                <button
+                                                    onClick={() => handleSaveMeta(user)}
+                                                    disabled={metasSaving[user.id_usuario]}
+                                                    className="btn-primary text-xs py-1.5 px-4"
+                                                >
+                                                    {metasSaved[user.id_usuario] ? '✓ Salvo!' : metasSaving[user.id_usuario] ? 'Salvando…' : 'Salvar'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* ── Gateways ──────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="glass-panel text-left p-6 h-fit bg-[#1A1A1A] border-[#2A2A2A]">
                     <div className="flex justify-between items-center mb-6">
@@ -206,4 +426,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-

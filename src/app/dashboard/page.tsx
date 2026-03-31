@@ -48,6 +48,127 @@ const BORDER = 'rgba(255,255,255,0.07)';
 const LIME = '#BEFF00';
 const TEXT_SEC = '#888888';
 
+// ─── MetasPanel component ────────────────────────────────────────────────────
+type MetaUser = { id_usuario: number; nome: string; tipo: string; meta_faturamento: number; meta_caixa: number; meta_vendas: number; };
+
+function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, closers, formatBRL }: {
+    projectId?: string; mes: number; ano: number;
+    receitaBruta: number; caixaLiquido: number;
+    sdrs: any[]; closers: any[];
+    formatBRL: (v: number) => string;
+}) {
+    const [metas, setMetas] = useState<MetaUser[]>([]);
+    const [expanded, setExpanded] = useState(false);
+
+    useEffect(() => {
+        if (!projectId || !mes || !ano) return;
+        fetch(`/api/metas?projectId=${projectId}&mes=${mes}&ano=${ano}`)
+            .then(r => r.json())
+            .then(d => setMetas(Array.isArray(d) ? d : []))
+            .catch(() => setMetas([]));
+    }, [projectId, mes, ano]);
+
+    // Build per-user performance by matching names from perf data
+    const perfMap: Record<number, { fat: number; caixa: number }> = {};
+    [...sdrs, ...closers].forEach((u: any) => {
+        perfMap[u.id] = { fat: u.vgv || 0, caixa: u.caixa || 0 };
+    });
+
+    const totalMetaFat = metas.reduce((s, m) => s + (m.meta_faturamento || 0), 0);
+    const totalMetaCaixa = metas.reduce((s, m) => s + (m.meta_caixa || 0), 0);
+    const pctFat = totalMetaFat > 0 ? Math.min(100, Math.round((receitaBruta / totalMetaFat) * 100)) : 0;
+    const pctCaixa = totalMetaCaixa > 0 ? Math.min(100, Math.round((caixaLiquido / totalMetaCaixa) * 100)) : 0;
+
+    if (metas.length === 0 && !expanded) return null;
+
+    const ProgressBar = ({ label, current, goal, pct, color }: { label: string; current: number; goal: number; pct: number; color: string }) => (
+        <div className="flex-1 min-w-[160px]">
+            <div className="flex justify-between items-baseline mb-1">
+                <span className="text-xs font-bold text-white">{label}</span>
+                <span className="text-[10px] font-black" style={{ color }}>{pct}%</span>
+            </div>
+            <div className="h-2.5 bg-[#111] rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
+            </div>
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: TEXT_SEC }}>
+                <span>{formatBRL(current)}</span>
+                <span>meta {formatBRL(goal)}</span>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="glass-panel p-4 sm:p-5 mb-6 border border-white/5 bg-[#151515] rounded-2xl">
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg" style={{ background: 'rgba(190,255,0,0.12)' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#BEFF00" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+                        </svg>
+                    </div>
+                    <span className="font-bold text-white text-sm">Acompanhamento de Metas</span>
+                    {totalMetaFat === 0 && totalMetaCaixa === 0 && (
+                        <span className="text-[10px] text-[#888888]">— defina metas em Configurações</span>
+                    )}
+                </div>
+                <button
+                    onClick={() => setExpanded(v => !v)}
+                    className="text-xs px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white transition flex items-center gap-1"
+                >
+                    {expanded ? 'Fechar' : 'Expandir'}
+                    <svg className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+            </div>
+
+            {/* Summary bars */}
+            <div className="flex flex-wrap gap-6">
+                <ProgressBar label="Meta de Faturamento" current={receitaBruta} goal={totalMetaFat} pct={pctFat} color={LIME} />
+                <ProgressBar label="Meta de Caixa" current={caixaLiquido} goal={totalMetaCaixa} pct={pctCaixa} color="#22D3EE" />
+            </div>
+
+            {/* Expanded: individual per-user bars */}
+            {expanded && metas.length > 0 && (
+                <div className="mt-5 pt-5 border-t border-white/10 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {['SDR', 'CLOSER'].map(tipo => {
+                        const group = metas.filter(m => m.tipo === tipo);
+                        if (group.length === 0) return null;
+                        const colors = tipo === 'SDR'
+                            ? ['#BEFF00','#A3E635','#84CC16','#65A30D','#4D7C0F']
+                            : ['#22D3EE','#38BDF8','#60A5FA','#818CF8','#A78BFA'];
+                        return (
+                            <div key={tipo}>
+                                <h4 className="text-[10px] uppercase font-bold text-[#888888] tracking-wider mb-3">{tipo === 'SDR' ? 'SDRs' : 'Closers'}</h4>
+                                <div className="space-y-4">
+                                    {group.map((user, i) => {
+                                        const perf = perfMap[user.id_usuario] || { fat: 0, caixa: 0 };
+                                        const uPctFat = user.meta_faturamento > 0 ? Math.min(100, Math.round((perf.fat / user.meta_faturamento) * 100)) : 0;
+                                        const uPctCaixa = user.meta_caixa > 0 ? Math.min(100, Math.round((perf.caixa / user.meta_caixa) * 100)) : 0;
+                                        return (
+                                            <div key={user.id_usuario} className="p-3 bg-[#111] rounded-xl border border-white/5">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-black" style={{ background: colors[i % colors.length] }}>
+                                                        {user.nome.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <span className="text-xs font-semibold text-white">{user.nome}</span>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <ProgressBar label="Faturamento" current={perf.fat} goal={user.meta_faturamento} pct={uPctFat} color={colors[i % colors.length]} />
+                                                    <ProgressBar label="Caixa" current={perf.caixa} goal={user.meta_caixa} pct={uPctCaixa} color={colors[i % colors.length] + 'AA'} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
     const { selectedProject } = useProject();
     const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -235,8 +356,21 @@ export default function Dashboard() {
                 })}
             </div>
 
+            {/* ── Acompanhamento de Metas ──────────────────────────────────── */}
+            <MetasPanel
+                projectId={selectedProject?.id_projeto?.toString()}
+                mes={new Date(startDate).getMonth() + 1 || (new Date().getMonth() + 1)}
+                ano={new Date(startDate).getFullYear() || new Date().getFullYear()}
+                receitaBruta={metrics?.receita || 0}
+                caixaLiquido={metrics?.caixaLiquido || 0}
+                sdrs={sdrs}
+                closers={closers}
+                formatBRL={formatBRL}
+            />
+
             {/* Grid Container for Dashboard Boxes */}
             <div className={`grid grid-cols-1 xl:grid-cols-2 gap-6 pb-8 ${zoomedSection ? 'flex-1' : ''}`}>
+
 
             {/* Zoomable Box: Performance Comercial */}
             <div className={`transition-all duration-300 ${zoomedSection === 'performance' ? 'fixed inset-6 md:inset-12 lg:inset-20 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group flex flex-col'}`}>
