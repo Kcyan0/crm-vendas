@@ -62,6 +62,7 @@ export default function KanbanBoard() {
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
   const [saleLead, setSaleLead] = useState<Lead | null>(null);
   const [saleObservacoes, setSaleObservacoes] = useState("");
+  const [showCaixaBreakdown, setShowCaixaBreakdown] = useState(false);
 
   type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; valor_entrada: string; };
   const newPagamento = (defaultGateway = ""): Pagamento => ({
@@ -911,14 +912,86 @@ export default function KanbanBoard() {
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A]">
-                  <div className="flex items-center gap-2 text-xs text-[#888888] mb-1">
-                    <span>💵</span> Caixa Gerado (Líquido)
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2 text-xs text-[#888888]">
+                      <span>💵</span> Caixa Gerado (Líquido)
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCaixaBreakdown(v => !v)}
+                      title="Ver cálculo detalhado"
+                      className="w-4 h-4 rounded-full bg-[#2A2A2A] text-[#888888] hover:bg-orange-400/20 hover:text-orange-400 flex items-center justify-center text-[9px] font-black transition-colors"
+                    >?</button>
                   </div>
                   <div className="text-base font-black text-orange-400">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(saleTotals.liquido)}
                   </div>
                 </div>
               </div>
+
+              {/* Caixa Breakdown Panel */}
+              {showCaixaBreakdown && (
+                <div className="rounded-xl bg-[#111] border border-orange-400/20 p-4 text-sm space-y-3">
+                  <div className="mb-2">
+                    <p className="font-bold text-white text-sm">Cálculo do Caixa Gerado</p>
+                    <p className="text-[#888888] text-xs mt-0.5">Demonstrativo de como o valor líquido foi calculado.</p>
+                  </div>
+                  {pagamentos.map((p, idx) => {
+                    const v = parseFloat(p.valor) || 0;
+                    const taxa = parseFloat(p.taxa_gateway) || 0;
+                    const entrada = parseFloat(p.valor_entrada) || 0;
+                    const parcelas = parseInt(p.numero_parcelas) || 1;
+                    const gw = gateways.find((g: any) => g.nome === p.forma_pagamento);
+                    const taxaPct = gw?.taxa_percentual || 0;
+                    const taxaFixed = gw?.taxa_fixa || 0;
+                    const temEntrada = entrada > 0;
+                    const subtotal = v - taxa;
+                    const fmt = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+                    return (
+                      <div key={p.id} className="pb-3 border-b border-white/5 last:border-0">
+                        <p className="text-[10px] font-bold text-orange-300 uppercase tracking-wider mb-2">{p.forma_pagamento}{parcelas > 1 ? ` (${parcelas}x)` : ''}</p>
+                        <div className="space-y-1">
+                          {temEntrada ? (
+                            <>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-[#888]">(-) Entrada Paga pela Empresa</span>
+                                <span className="text-red-400">-{fmt(entrada)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-[#888]">(+) Valor Bruto da Entrada</span>
+                                <span className="text-[#bbb]">{fmt(entrada)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-[#888]">(-) Taxa da Entrada ({taxaPct.toFixed(2)}%)</span>
+                                <span className="text-red-400">-{fmt(entrada * taxaPct / 100 + taxaFixed)}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-[#888]">(+) {parcelas > 1 ? 'Valor Bruto Parcelado' : 'Parcela Única Bruta'}</span>
+                                <span className="text-[#bbb]">{fmt(v)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-[#888]">(-) Taxa ({taxaPct > 0 || taxaFixed > 0 ? `${taxaPct.toFixed(2)}%${taxaFixed > 0 ? ` + R$${taxaFixed}` : ''}` : '0%'})</span>
+                                <span className="text-red-400">-{fmt(taxa)}</span>
+                              </div>
+                            </>
+                          )}
+                          <div className="flex justify-between text-xs font-bold pt-1 border-t border-white/5">
+                            <span className="text-white">Subtotal</span>
+                            <span className={subtotal < 0 ? 'text-red-400' : 'text-orange-300'}>{fmt(subtotal)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="flex justify-between font-black text-sm pt-1">
+                    <span className="text-white">Total Caixa Gerado</span>
+                    <span className="text-orange-400">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(saleTotals.liquido)}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex justify-end gap-3 pt-2 border-t border-[#222222]">
