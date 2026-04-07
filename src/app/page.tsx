@@ -202,23 +202,28 @@ export default function KanbanBoard() {
     // Intercept when dropping on "Venda"
     if (status_novo === "Venda") {
       const leadInfo = leads.find((l) => l.id_lead === id_lead);
-      if (leadInfo && leadInfo.status_atual !== "Venda") {
-        const defaultGw = gateways[0]?.nome || "PIX";
-        const propValue = leadInfo.valor_proposta ? leadInfo.valor_proposta.toString() : "";
-        const initialPagamento = {
-          id: Math.random().toString(36).slice(2),
-          forma_pagamento: defaultGw,
-          valor: propValue,
-          numero_parcelas: "1",
-          taxa_gateway: propValue ? calcFee(defaultGw, propValue) : "0",
-          valor_entrada: ""
-        };
-        setPagamentos([initialPagamento]);
-        setSaleObservacoes("");
-        setSaleLead(leadInfo);
-        setIsSaleModalOpen(true);
+      if (leadInfo) {
+        if (leadInfo.status_atual === 'Venda') {
+          // Lead already sold — open the edit-sale flow instead
+          handleOpenEditSale({ stopPropagation: () => {} } as any, leadInfo);
+        } else {
+          const defaultGw = gateways[0]?.nome || "PIX";
+          const propValue = leadInfo.valor_proposta ? leadInfo.valor_proposta.toString() : "";
+          const initialPagamento = {
+            id: Math.random().toString(36).slice(2),
+            forma_pagamento: defaultGw,
+            valor: propValue,
+            numero_parcelas: "1",
+            taxa_gateway: propValue ? calcFee(defaultGw, propValue) : "0",
+            valor_entrada: ""
+          };
+          setPagamentos([initialPagamento]);
+          setSaleObservacoes("");
+          setSaleLead(leadInfo);
+          setIsSaleModalOpen(true);
+        }
       }
-      return; // Stop the standard status logic update because it's a financial action
+      return;
     }
 
     // Intercept when dropping on "Reembolsado"
@@ -323,6 +328,9 @@ export default function KanbanBoard() {
     e.preventDefault();
     if (!saleLead) return;
 
+    const currentLead = leads.find(l => l.id_lead === saleLead.id_lead);
+    const isEdit = currentLead?.status_atual === 'Venda';
+
     try {
       await fetch("/api/vendas", {
         method: "POST",
@@ -336,12 +344,12 @@ export default function KanbanBoard() {
         }),
       });
 
+      await logActivity(saleLead.id_lead, isEdit ? 'Venda editada' : 'Venda registrada');
       setIsSaleModalOpen(false);
       setSaleLead(null);
       setSaleObservacoes("");
+      setShowCaixaBreakdown(false);
       setPagamentos([newPagamento(gateways[0]?.nome || "")]);
-      const isEdit = !!(saleLead && leads.find(l => l.id_lead === saleLead.id_lead && l.status_atual === 'Venda'));
-      await logActivity(saleLead!.id_lead, isEdit ? 'Venda editada' : 'Venda registrada');
       fetchLeads();
     } catch (err) {
       console.error(err);
