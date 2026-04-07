@@ -5,6 +5,8 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
 
         let query = supabase
             .from('leads')
@@ -17,6 +19,8 @@ export async function GET(request: Request) {
             .order('data_entrada', { ascending: false });
 
         if (projectId) query = query.eq('id_projeto', projectId);
+        if (startDate) query = query.gte('data_entrada', `${startDate}T00:00:00`);
+        if (endDate) query = query.lte('data_entrada', `${endDate}T23:59:59`);
 
         const { data, error } = await query;
         if (error) throw error;

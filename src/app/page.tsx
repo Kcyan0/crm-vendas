@@ -42,6 +42,9 @@ export default function KanbanBoard() {
   // Kanban filter state
   const [filterSdr, setFilterSdr] = useState("");
   const [filterCloser, setFilterCloser] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   // Refund modal state
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [refundLeadId, setRefundLeadId] = useState<number | null>(null);
@@ -91,10 +94,13 @@ export default function KanbanBoard() {
       setLoading(false);
       return;
     }
-    fetchLeads();
     fetchUsers();
     fetchGateways();
   }, [selectedProject]);
+
+  useEffect(() => {
+    if (selectedProject) fetchLeads();
+  }, [selectedProject, startDate, endDate]);
 
   const fetchGateways = async () => {
     try {
@@ -188,7 +194,11 @@ export default function KanbanBoard() {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/leads?projectId=${selectedProject?.id_projeto}`);
+      const query = new URLSearchParams();
+      if (selectedProject?.id_projeto) query.set('projectId', selectedProject.id_projeto.toString());
+      if (startDate) query.set('startDate', startDate);
+      if (endDate) query.set('endDate', endDate);
+      const res = await fetch(`/api/leads?${query.toString()}`);
       const data = await res.json();
       setLeads(data);
     } catch (e) {
@@ -540,14 +550,21 @@ export default function KanbanBoard() {
           <p className="text-[#888888] mt-1 text-sm">Arraste os cards para atualizar o status no pipeline.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full md:w-64">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          <div className="relative w-full md:w-auto flex-1 md:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
             <input
               type="text"
               placeholder="Buscar lead..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-white focus:outline-none w-full"
             />
+          </div>
+          <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-2">
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-transparent border-none text-sm text-[#888888] outline-none focus:ring-0 p-2" title="Data Inicial" />
+            <span className="text-[#333]">-</span>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-transparent border-none text-sm text-[#888888] outline-none focus:ring-0 p-2" title="Data Final" />
           </div>
           <button
             onClick={handleExportCSV}
@@ -595,6 +612,7 @@ export default function KanbanBoard() {
             if (l.status_atual !== col && !(col === 'Loss' && l.status_atual === 'Nao prosseguiu')) return false;
             if (filterSdr && String(l.id_sdr_responsavel) !== filterSdr) return false;
             if (filterCloser && String(l.id_closer_responsavel) !== filterCloser) return false;
+            if (searchTerm && !l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && !l.telefone?.includes(searchTerm)) return false;
             return true;
           });
 
