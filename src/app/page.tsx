@@ -64,6 +64,13 @@ export default function KanbanBoard() {
   const [saleObservacoes, setSaleObservacoes] = useState("");
   const [showCaixaBreakdown, setShowCaixaBreakdown] = useState(false);
 
+  // Detail panel state
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailLead, setDetailLead] = useState<Lead | null>(null);
+  const [detailVendas, setDetailVendas] = useState<any[]>([]);
+  const [detailCaixaOpen, setDetailCaixaOpen] = useState(false);
+  const [detailStatusSaving, setDetailStatusSaving] = useState(false);
+
   type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; valor_entrada: string; };
   const newPagamento = (defaultGateway = ""): Pagamento => ({
     id: Math.random().toString(36).slice(2),
@@ -457,6 +464,53 @@ export default function KanbanBoard() {
     }
   };
 
+  const handleOpenDetail = async (lead: Lead) => {
+    setDetailLead(lead);
+    setDetailCaixaOpen(false);
+    setIsDetailOpen(true);
+    if (lead.status_atual === 'Venda') {
+      try {
+        const res = await fetch(`/api/vendas?leadId=${lead.id_lead}`);
+        const rows = await res.json();
+        setDetailVendas(Array.isArray(rows) ? rows : []);
+      } catch { setDetailVendas([]); }
+    } else {
+      setDetailVendas([]);
+    }
+  };
+
+  const handleDetailStatusChange = async (newStatus: string) => {
+    if (!detailLead) return;
+    if (newStatus === 'Venda') {
+      setIsDetailOpen(false);
+      handleOpenEditSale({ stopPropagation: () => {} } as any, detailLead);
+      return;
+    }
+    if (newStatus === 'Reembolsado') {
+      setRefundLeadId(detailLead.id_lead);
+      setRefundMotivo('');
+      setIsRefundModalOpen(true);
+      return;
+    }
+    setDetailStatusSaving(true);
+    try {
+      await fetch('/api/leads', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_lead: detailLead.id_lead, status_atual: newStatus }) });
+      setDetailLead(prev => prev ? { ...prev, status_atual: newStatus } : prev);
+      setLeads(prev => prev.map(l => l.id_lead === detailLead.id_lead ? { ...l, status_atual: newStatus } : l));
+      await logActivity(detailLead.id_lead, `Status alterado para "${newStatus}"`);
+    } catch (err) { console.error(err); }
+    finally { setDetailStatusSaving(false); }
+  };
+
+  const handleDetailDelete = async () => {
+    if (!detailLead) return;
+    if (!confirm('Deseja realmente excluir permanentemente este Lead?')) return;
+    try {
+      await fetch(`/api/leads?id=${detailLead.id_lead}`, { method: 'DELETE' });
+      setIsDetailOpen(false);
+      fetchLeads();
+    } catch (err) { console.error(err); }
+  };
 
 
   if (loading) {
@@ -554,11 +608,11 @@ export default function KanbanBoard() {
                     key={lead.id_lead}
                     draggable
                     onDragStart={(e) => handleDragStart(e, lead.id_lead)}
-                    onDoubleClick={() => handleOpenEdit(lead)}
+                    onDoubleClick={() => handleOpenDetail(lead)}
                     className="glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 border-[#2A2A2A] hover:border-orange-300 transition-all select-none group relative bg-[#1A1A1A]"
                   >
                     <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(lead); }} className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]">Editar</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleOpenDetail(lead); }} className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]">Ver</button>
                     </div>
                     <div className="flex justify-between items-start mb-2 pr-12">
                       <h4 className="font-bold text-white leading-tight">{lead.nome}</h4>
@@ -1044,6 +1098,171 @@ export default function KanbanBoard() {
                 <button type="submit" className="px-6 py-2 rounded-xl font-bold text-sm" style={{ background: '#ef4444', color: '#fff' }}>Confirmar Reembolso</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Lead Detail Panel ───────────────────────────────────── */}
+      {isDetailOpen && detailLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsDetailOpen(false)}>
+          <div className="relative w-full max-w-sm bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-start justify-between p-5 pb-4 border-b border-[#222]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#BEFF00] flex items-center justify-center text-black font-black text-lg shrink-0">
+                  {detailLead.nome.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base leading-tight">{detailLead.nome}</h3>
+                  <p className="text-[#666] text-xs mt-0.5">Detalhes do Lead</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setIsDetailOpen(false); handleOpenEdit(detailLead); }}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#222] hover:bg-[#2A2A2A] text-white border border-[#333] transition"
+                >
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  Editar Lead
+                </button>
+                <button onClick={() => setIsDetailOpen(false)} className="text-[#555] hover:text-white text-lg leading-none">✕</button>
+              </div>
+            </div>
+
+            {/* Info rows */}
+            <div className="p-5 space-y-3 border-b border-[#222]">
+              {detailLead.telefone && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[#888] text-sm"><Phone size={14}/> Telefone</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white text-sm font-medium">{detailLead.telefone}</span>
+                    <button onClick={() => navigator.clipboard.writeText(detailLead.telefone)} className="text-[#555] hover:text-white transition" title="Copiar">
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" strokeWidth={2}/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    </button>
+                    <a href={`https://wa.me/55${detailLead.telefone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="text-green-500 hover:text-green-400 transition" title="WhatsApp">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.15.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.57-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    </a>
+                  </div>
+                </div>
+              )}
+              {detailLead.instagram && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[#888] text-sm"><Instagram size={14}/> Instagram</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white text-sm font-medium">@{detailLead.instagram.replace('@','')}</span>
+                    <button onClick={() => navigator.clipboard.writeText(detailLead.instagram)} className="text-[#555] hover:text-white transition" title="Copiar">
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" strokeWidth={2}/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    </button>
+                    <a href={`https://instagram.com/${detailLead.instagram.replace('@','')}`} target="_blank" rel="noreferrer" className="text-pink-500 hover:text-pink-400 transition" title="Instagram">
+                      <Instagram size={14}/>
+                    </a>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[#888] text-sm"><Clock size={14}/> Entrada</div>
+                <span className="text-white text-sm font-medium">{formatDateBr(detailLead.data_entrada)}</span>
+              </div>
+              {detailLead.closer_nome && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[#888] text-sm">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    Closer
+                  </div>
+                  <span className="text-white font-bold text-sm uppercase">{detailLead.closer_nome}</span>
+                </div>
+              )}
+              {detailLead.sdr_nome && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[#888] text-sm">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    SDR
+                  </div>
+                  <span className="text-white font-bold text-sm uppercase">{detailLead.sdr_nome}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Briefing */}
+            {detailLead.observacoes_gerais && (
+              <div className="px-5 py-4 border-b border-[#222]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-[#888] text-sm">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Briefing
+                  </div>
+                </div>
+                <p className="text-[#aaa] text-xs leading-relaxed line-clamp-4">{detailLead.observacoes_gerais}</p>
+              </div>
+            )}
+
+            {/* Venda info */}
+            {detailLead.status_atual === 'Venda' && (
+              <div className="px-5 py-4 border-b border-[#222]">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 text-[#888] text-sm">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Informações da Venda
+                  </div>
+                  <button
+                    onClick={() => { setIsDetailOpen(false); handleOpenEditSale({ stopPropagation: () => {} } as any, detailLead); }}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-[#222] hover:bg-[#2A2A2A] text-[#aaa] hover:text-white border border-[#333] transition"
+                  >
+                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    Editar
+                  </button>
+                </div>
+                {(() => {
+                  const totalBruto = detailVendas.reduce((s, v) => s + (parseFloat(v.valor_bruto) || 0), 0);
+                  const totalLiquido = detailVendas.reduce((s, v) => s + (parseFloat(v.valor_liquido_caixa) || 0), 0);
+                  const fmt = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+                  return (
+                    <div className="bg-[#111] rounded-xl border border-[#222] overflow-hidden">
+                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-[#222]">
+                        <span className="text-[#888] text-xs font-medium">Valor Total da Venda</span>
+                        <span className="text-[#BEFF00] font-black text-sm">{fmt(totalBruto)}</span>
+                      </div>
+                      <div className="flex justify-between items-center px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#888] text-xs font-medium">Caixa Gerado</span>
+                          <button onClick={() => setDetailCaixaOpen(v => !v)} className="w-4 h-4 rounded-full bg-[#222] text-[#666] hover:text-orange-400 hover:bg-orange-400/10 text-[9px] font-black flex items-center justify-center transition">?</button>
+                        </div>
+                        <span className="text-orange-400 font-black text-sm">{fmt(totalLiquido)}</span>
+                      </div>
+                      {detailCaixaOpen && (
+                        <div className="px-4 pb-3 border-t border-[#222] space-y-2 pt-3">
+                          {detailVendas.map((v, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-[#666]">{v.forma_pagamento}</span>
+                              <div className="text-right">
+                                <span className="text-orange-300">{fmt(parseFloat(v.valor_liquido_caixa) || 0)}</span>
+                                <span className="text-[#555] ml-1">(-{fmt(parseFloat(v.taxa_gateway) || 0)} taxa)</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Footer: status + actions */}
+            <div className="p-5 flex items-center gap-3">
+              <select
+                value={detailLead.status_atual}
+                onChange={e => handleDetailStatusChange(e.target.value)}
+                disabled={detailStatusSaving}
+                className="flex-1 bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-[#BEFF00]"
+              >
+                {KANBAN_COLUMNS.map(col => <option key={col} value={col}>{col === 'Loss' ? 'Loss' : col}</option>)}
+              </select>
+              <button onClick={handleDetailDelete} className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-red-900/20 hover:bg-red-500/20 text-red-500 border border-red-500/20 transition" title="Excluir Lead">
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+              <button onClick={() => setIsDetailOpen(false)} className="px-4 h-9 rounded-xl bg-[#1A1A1A] hover:bg-[#222] text-white border border-[#2A2A2A] text-sm font-medium transition">Fechar</button>
+            </div>
           </div>
         </div>
       )}
