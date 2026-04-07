@@ -112,10 +112,10 @@ export default function TeamPage() {
                 </button>
             </div>
 
-            <div className="glass-panel overflow-hidden bg-[#1A1A1A]">
-                <div className="overflow-x-auto">
+            <div className="glass-panel overflow-hidden bg-[#1A1A1A] flex flex-col flex-1 min-h-0">
+                <div className="overflow-x-auto overflow-y-auto flex-1">
                     <table className="w-full text-left border-collapse">
-                        <thead>
+                        <thead className="sticky top-0 z-10">
                             <tr className="border-b border-[#2A2A2A] bg-[#111111]">
                                 <th className="p-4 text-xs font-semibold text-[#888888] tracking-wider uppercase">Nome / Cargo</th>
                                 <th className="p-4 text-xs font-semibold text-[#888888] tracking-wider uppercase">Status</th>
