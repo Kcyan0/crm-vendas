@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         });
 
         // Leads created on this date
-        let leadsQuery = supabase.from('leads').select('id_sdr_responsavel, id_closer_responsavel, status_atual')
+        let leadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual')
             .gte('data_entrada', `${startDate}T00:00:00`).lte('data_entrada', `${endDate}T23:59:59`);
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
         const { data: leads } = await leadsQuery;
@@ -77,8 +77,39 @@ export async function GET(request: Request) {
             performanceCloser[closerId].caixa += parseFloat(v.valor_liquido_caixa || v.valor_bruto) || 0;
         });
 
-        // SDR vendas count — leads created in period that are now "Venda"
-        // Already available from the leads query (status_atual === 'Venda')
+        // SDR vgv/caixa — fetch sales for leads where the SDR is responsible
+        // We join via id_lead: get all leads whose SDR is known, then match with vendas
+        let vendasSdrQuery = supabase
+            .from('vendas')
+            .select('id_lead, valor_bruto, valor_liquido_caixa')
+            .in('status_pagamento', ['pago', 'pendente'])
+            .gte('data_venda', `${startDate}T00:00:00`)
+            .lte('data_venda', `${endDate}T23:59:59`);
+        const { data: vendasSdr } = await vendasSdrQuery;
+
+        // Build a map of lead_id -> sdr_id from the leads fetched earlier
+        const leadToSdr: Record<number, number> = {};
+        (leads || []).forEach((l: any) => {
+            if (l.id_lead && l.id_sdr_responsavel) leadToSdr[l.id_lead] = l.id_sdr_responsavel;
+        });
+
+        // Also fetch ALL leads for this project to cover sales outside the start/end window
+        let allLeadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, status_atual');
+        if (projectId) allLeadsQuery = allLeadsQuery.eq('id_projeto', projectId);
+        const { data: allLeads } = await allLeadsQuery;
+        (allLeads || []).forEach((l: any) => {
+            if (l.id_lead && l.id_sdr_responsavel) leadToSdr[l.id_lead] = l.id_sdr_responsavel;
+        });
+
+        (vendasSdr || []).forEach((v: any) => {
+            const sdrId = leadToSdr[v.id_lead];
+            if (sdrId && performanceSDR[sdrId]) {
+                performanceSDR[sdrId].vgv = (performanceSDR[sdrId].vgv || 0) + (parseFloat(v.valor_bruto) || 0);
+                performanceSDR[sdrId].caixa = (performanceSDR[sdrId].caixa || 0) + (parseFloat(v.valor_liquido_caixa || v.valor_bruto) || 0);
+            }
+        });
+
+        // SDR vendas count — leads in period with status 'Venda'
         (leads || []).forEach((l: any) => {
             const sdrId = l.id_sdr_responsavel;
             if (sdrId && performanceSDR[sdrId] && l.status_atual === 'Venda') {
