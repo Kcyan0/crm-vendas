@@ -41,15 +41,23 @@ export async function GET(request: Request) {
                 if (l.status_atual !== 'Novo') performanceSDR[sdrId].primeiraResposta += 1;
                 if (l.status_atual === 'Follow-up' || l.status_atual === 'Remarcado') performanceSDR[sdrId].convitesEnviados += 1;
                 if (l.id_closer_responsavel) performanceSDR[sdrId].leadsQualificados += 1;
+                // Count vendas from period leads (same cohort as Leads column)
+                if (l.status_atual === 'Venda') {
+                    performanceSDR[sdrId].vendasFechadas = (performanceSDR[sdrId].vendasFechadas || 0) + 1;
+                }
             }
             const closerId = l.id_closer_responsavel;
             if (closerId && performanceCloser[closerId]) {
                 performanceCloser[closerId].totalCalls += 1;
                 performanceCloser[closerId].callsAgendadas += 1;
+                // Count vendas from period leads (same cohort as Leads column)
+                if (l.status_atual === 'Venda') {
+                    performanceCloser[closerId].vendas += 1;
+                }
             }
         });
 
-        // Sales for closers in the selected period — query vendas by data_venda directly
+        // Sales for closers in the selected period — for VGV/Caixa financial metrics only
         let vendasQuery = supabase
             .from('vendas')
             .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa, id_oportunidade, forma_pagamento')
@@ -59,19 +67,11 @@ export async function GET(request: Request) {
 
         const { data: vendasPeriod } = await vendasQuery;
 
-        // Group by oportunidade to avoid double-counting entrada+parcelas rows as 2 sales
-        const seenOport = new Set<number>();
+        // Accumulate VGV/Caixa per closer (de-duplicate entrada+parcelas rows via id_oportunidade)
+        const seenOport = new Set<string>();
         (vendasPeriod || []).forEach((v: any) => {
-            const oportKey = v.id_oportunidade ?? v.id_lead;
             const closerId = v.id_closer;
             if (!closerId || !performanceCloser[closerId]) return;
-
-            // Count each distinct sale once
-            const saleKey = `${oportKey}-${closerId}`;
-            if (!seenOport.has(saleKey as any)) {
-                seenOport.add(saleKey as any);
-                performanceCloser[closerId].vendas += 1;
-            }
 
             performanceCloser[closerId].vgv += parseFloat(v.valor_bruto) || 0;
             performanceCloser[closerId].caixa += parseFloat(v.valor_liquido_caixa || v.valor_bruto) || 0;
@@ -109,13 +109,6 @@ export async function GET(request: Request) {
             }
         });
 
-        // SDR vendas count — leads in period with status 'Venda'
-        (leads || []).forEach((l: any) => {
-            const sdrId = l.id_sdr_responsavel;
-            if (sdrId && performanceSDR[sdrId] && l.status_atual === 'Venda') {
-                performanceSDR[sdrId].vendasFechadas = (performanceSDR[sdrId].vendasFechadas || 0) + 1;
-            }
-        });
 
         // Reembolsos per user (all-time for conversation rate context)
         let reembolsadosQuery = supabase.from('leads').select('id_sdr_responsavel, id_closer_responsavel').eq('status_atual', 'Reembolsado');
