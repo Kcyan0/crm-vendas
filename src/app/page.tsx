@@ -70,6 +70,7 @@ export default function KanbanBoard() {
   const [detailVendas, setDetailVendas] = useState<any[]>([]);
   const [detailCaixaOpen, setDetailCaixaOpen] = useState(false);
   const [detailStatusSaving, setDetailStatusSaving] = useState(false);
+  const [briefingExpanded, setBriefingExpanded] = useState(false);
 
   type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; valor_entrada: string; };
   const newPagamento = (defaultGateway = ""): Pagamento => ({
@@ -335,11 +336,12 @@ export default function KanbanBoard() {
     e.preventDefault();
     if (!saleLead) return;
 
-    const currentLead = leads.find(l => l.id_lead === saleLead.id_lead);
+    const currentLeadId = saleLead.id_lead;
+    const currentLead = leads.find(l => l.id_lead === currentLeadId);
     const isEdit = currentLead?.status_atual === 'Venda';
 
     try {
-      await fetch("/api/vendas", {
+      const res = await fetch("/api/vendas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -351,18 +353,23 @@ export default function KanbanBoard() {
         }),
       });
 
-      await logActivity(saleLead.id_lead, isEdit ? 'Venda editada' : 'Venda registrada');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      await logActivity(currentLeadId, isEdit ? 'Venda editada' : 'Venda registrada');
       setIsSaleModalOpen(false);
       setSaleLead(null);
       setSaleObservacoes("");
       setShowCaixaBreakdown(false);
       setPagamentos([newPagamento(gateways[0]?.nome || "")]);
       fetchLeads();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Sale save error:', err);
+      alert(`Erro ao salvar venda: ${err.message || err}`);
     }
   };
-
   const handleOpenEditSale = async (e: React.MouseEvent, lead: Lead) => {
     e.stopPropagation();
     try {
@@ -467,6 +474,7 @@ export default function KanbanBoard() {
   const handleOpenDetail = async (lead: Lead) => {
     setDetailLead(lead);
     setDetailCaixaOpen(false);
+    setBriefingExpanded(false);
     setIsDetailOpen(true);
     if (lead.status_atual === 'Venda') {
       try {
@@ -1191,8 +1199,17 @@ export default function KanbanBoard() {
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Briefing
                   </div>
+                  <button
+                    onClick={() => setBriefingExpanded(v => !v)}
+                    className="text-[10px] px-2 py-0.5 rounded-lg bg-[#222] hover:bg-[#2A2A2A] text-[#888] hover:text-white border border-[#333] transition flex items-center gap-1"
+                  >
+                    {briefingExpanded ? 'Recolher' : 'Expandir'}
+                    <svg className={`w-2.5 h-2.5 transition-transform ${briefingExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+                  </button>
                 </div>
-                <p className="text-[#aaa] text-xs leading-relaxed line-clamp-4">{detailLead.observacoes_gerais}</p>
+                <p className={`text-[#aaa] text-xs leading-relaxed whitespace-pre-line ${briefingExpanded ? '' : 'line-clamp-4'}`}>
+                  {detailLead.observacoes_gerais}
+                </p>
               </div>
             )}
 
