@@ -72,14 +72,15 @@ export default function KanbanBoard() {
   const [detailStatusSaving, setDetailStatusSaving] = useState(false);
   const [briefingExpanded, setBriefingExpanded] = useState(false);
 
-  type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; valor_entrada: string; };
+  type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; valor_entrada: string; entrada_paga_empresa: boolean; };
   const newPagamento = (defaultGateway = ""): Pagamento => ({
     id: Math.random().toString(36).slice(2),
     forma_pagamento: defaultGateway,
     valor: "",
     numero_parcelas: "1",
     taxa_gateway: "0",
-    valor_entrada: ""
+    valor_entrada: "",
+    entrada_paga_empresa: false
   });
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([newPagamento()]);
 
@@ -117,12 +118,12 @@ export default function KanbanBoard() {
     return ((v * (gw.taxa_percentual / 100)) + gw.taxa_fixa).toFixed(2);
   };
 
-  const handlePagamentoChange = (id: string, field: keyof Pagamento, value: string) => {
+  const handlePagamentoChange = (id: string, field: keyof Pagamento, value: string | boolean) => {
     setPagamentos(prev => prev.map(p => {
       if (p.id !== id) return p;
       const updated = { ...p, [field]: value };
       // Recalculate the gateway fee on value or gateway changes (only on the full valor)
-      if (field === 'forma_pagamento' || field === 'valor') {
+      if ((field === 'forma_pagamento' || field === 'valor') && typeof value === 'string') {
         updated.taxa_gateway = calcFee(
           field === 'forma_pagamento' ? value : p.forma_pagamento,
           field === 'valor' ? value : p.valor
@@ -223,7 +224,8 @@ export default function KanbanBoard() {
             valor: propValue,
             numero_parcelas: "1",
             taxa_gateway: propValue ? calcFee(defaultGw, propValue) : "0",
-            valor_entrada: ""
+            valor_entrada: "",
+            entrada_paga_empresa: false
           };
           setPagamentos([initialPagamento]);
           setSaleObservacoes("");
@@ -941,6 +943,21 @@ export default function KanbanBoard() {
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.max(0, parseFloat(p.valor) - parseFloat(p.valor_entrada)))}
                               </span> em {p.numero_parcelas}x
                             </p>
+                          )}
+                          {/* Entrada paga pela empresa toggle */}
+                          {p.valor_entrada && parseFloat(p.valor_entrada) > 0 && (
+                            <label className="flex items-center gap-2 mt-3 cursor-pointer select-none group">
+                              <div
+                                onClick={() => handlePagamentoChange(p.id, 'entrada_paga_empresa', !p.entrada_paga_empresa as any)}
+                                className={`relative w-9 h-5 rounded-full transition-colors ${p.entrada_paga_empresa ? 'bg-orange-500' : 'bg-[#333]'}`}
+                              >
+                                <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${p.entrada_paga_empresa ? 'translate-x-4' : 'translate-x-0'}`} />
+                              </div>
+                              <div>
+                                <span className="text-xs font-medium text-white">Entrada paga pela empresa</span>
+                                <p className="text-[10px] text-[#888] mt-0.5">A empresa financia a entrada — valor será <span className="text-orange-400">descontado</span> do caixa</p>
+                              </div>
+                            </label>
                           )}
                         </div>
                       </div>

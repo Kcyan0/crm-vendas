@@ -80,6 +80,11 @@ export async function POST(request: Request) {
             if (entrada > 0 && entrada < valorTotal) {
                 // Down payment row (immediate, 1x)
                 const taxaEntrada = taxaGw > 0 ? (entrada / valorTotal) * taxaGw : 0;
+                const entradaPagaEmpresa = !!p.entrada_paga_empresa;
+                // If company financed the entrada: net = -(entrada) (cost), not +(entrada - taxaEntrada)
+                const liquidoEntrada = entradaPagaEmpresa
+                    ? -(entrada)
+                    : entrada - taxaEntrada;
                 vendasToInsert.push({
                     id_oportunidade,
                     id_lead,
@@ -90,7 +95,7 @@ export async function POST(request: Request) {
                     forma_pagamento: `${formaPgto} (Entrada)`,
                     numero_parcelas: 1,
                     taxa_gateway: parseFloat(taxaEntrada.toFixed(2)),
-                    valor_liquido_caixa: entrada - taxaEntrada,
+                    valor_liquido_caixa: parseFloat(liquidoEntrada.toFixed(2)),
                     status_pagamento: 'pago',
                     data_venda: new Date().toISOString(),
                     data_recebimento: new Date().toISOString().split('T')[0]
