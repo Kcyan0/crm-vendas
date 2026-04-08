@@ -66,6 +66,7 @@ export default function KanbanBoard() {
   const [saleLead, setSaleLead] = useState<Lead | null>(null);
   const [saleObservacoes, setSaleObservacoes] = useState("");
   const [showCaixaBreakdown, setShowCaixaBreakdown] = useState(false);
+  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Detail panel state
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -361,7 +362,8 @@ export default function KanbanBoard() {
           pagamentos,
           observacoes: saleObservacoes,
           id_sdr: saleLead.id_sdr_responsavel,
-          id_closer: saleLead.id_closer_responsavel
+          id_closer: saleLead.id_closer_responsavel,
+          data_venda: saleDate
         }),
       });
 
@@ -376,6 +378,7 @@ export default function KanbanBoard() {
       setSaleObservacoes("");
       setShowCaixaBreakdown(false);
       setPagamentos([newPagamento(gateways[0]?.nome || "")]);
+      setSaleDate(new Date().toISOString().split('T')[0]);
       fetchLeads();
     } catch (err: any) {
       console.error('Sale save error:', err);
@@ -393,6 +396,7 @@ export default function KanbanBoard() {
         const defaultGw = gateways[0]?.nome || "PIX";
         setPagamentos([newPagamento(defaultGw)]);
         setSaleObservacoes(lead.observacoes_gerais || "");
+        setSaleDate(new Date().toISOString().split('T')[0]);
       } else {
         // Merge rows that share the same gateway (e.g. "Boleto (Entrada)" + "Boleto (Parcelas)")
         const mergedMap: Record<string, any> = {};
@@ -429,6 +433,9 @@ export default function KanbanBoard() {
         }));
         setPagamentos(reconstructed);
         setSaleObservacoes(lead.observacoes_gerais || "");
+        
+        const existingDate = rows[0]?.data_venda ? new Date(rows[0].data_venda).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        setSaleDate(existingDate);
       }
 
       setSaleLead(lead);
@@ -867,6 +874,12 @@ export default function KanbanBoard() {
             </div>
 
             <form onSubmit={handleSaveSale} className="space-y-4">
+              {/* Data da Venda */}
+              <div>
+                <label className="block text-xs text-[#888888] mb-1 font-bold uppercase">Data da Venda</label>
+                <input type="date" required value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className="w-full sm:w-1/2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl p-2 text-sm focus:border-orange-500 focus:outline-none" />
+              </div>
+
               {/* Payment Rows */}
               <div className="space-y-3">
                 {pagamentos.map((p, idx) => (

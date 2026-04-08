@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { id_lead, pagamentos, observacoes, id_sdr, id_closer } = body;
+        const { id_lead, pagamentos, observacoes, id_sdr, id_closer, data_venda } = body;
 
         if (!id_lead || !pagamentos || pagamentos.length === 0) {
             return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
@@ -97,8 +97,8 @@ export async function POST(request: Request) {
                     taxa_gateway: parseFloat(taxaEntrada.toFixed(2)),
                     valor_liquido_caixa: parseFloat(liquidoEntrada.toFixed(2)),
                     status_pagamento: 'pago',
-                    data_venda: new Date().toISOString(),
-                    data_recebimento: new Date().toISOString().split('T')[0]
+                    data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : new Date().toISOString(),
+                    data_recebimento: data_venda ? `${data_venda}` : new Date().toISOString().split('T')[0]
                 });
                 // Installments row (remainder) — first installment 30 days after today
                 const restante = valorTotal - entrada;
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
                     taxa_gateway: parseFloat(taxaResto.toFixed(2)),
                     valor_liquido_caixa: restante - taxaResto - desconto,
                     status_pagamento: 'pago',
-                    data_venda: new Date().toISOString(),
+                    data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : new Date().toISOString(),
                     data_recebimento: primeiraParcelaDate.toISOString().split('T')[0]
                 });
             } else {
@@ -135,8 +135,8 @@ export async function POST(request: Request) {
                     taxa_gateway: taxaGw,
                     valor_liquido_caixa: valorLiquido,
                     status_pagamento: 'pago',
-                    data_venda: new Date().toISOString(),
-                    data_recebimento: new Date().toISOString().split('T')[0]
+                    data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : new Date().toISOString(),
+                    data_recebimento: data_venda ? `${data_venda}` : new Date().toISOString().split('T')[0]
                 });
             }
         }
