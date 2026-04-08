@@ -67,9 +67,25 @@ export async function GET(request: Request) {
 
         const { data: vendasPeriod } = await vendasQuery;
 
-        // Accumulate VGV/Caixa per closer (de-duplicate entrada+parcelas rows via id_oportunidade)
-        const seenOport = new Set<string>();
+        // Also fetch ALL leads for this project to cover sales outside the start/end window for accurate SDR attribution & filtering
+        let allLeadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, status_atual');
+        if (projectId) allLeadsQuery = allLeadsQuery.eq('id_projeto', projectId);
+        const { data: allLeads } = await allLeadsQuery;
+
+        const validLeadIds = new Set<number>();
+        const leadToSdr: Record<number, number> = {};
+        
+        (allLeads || []).forEach((l: any) => {
+            if (l.status_atual !== 'Reembolsado' && l.status_atual !== 'Loss') {
+                validLeadIds.add(l.id_lead);
+                if (l.id_sdr_responsavel) leadToSdr[l.id_lead] = l.id_sdr_responsavel;
+            }
+        });
+
+        // Accumulate VGV/Caixa per closer
         (vendasPeriod || []).forEach((v: any) => {
+            if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
+            
             const closerId = v.id_closer;
             if (!closerId || !performanceCloser[closerId]) return;
 
@@ -78,7 +94,6 @@ export async function GET(request: Request) {
         });
 
         // SDR vgv/caixa — fetch sales for leads where the SDR is responsible
-        // We join via id_lead: get all leads whose SDR is known, then match with vendas
         let vendasSdrQuery = supabase
             .from('vendas')
             .select('id_lead, valor_bruto, valor_liquido_caixa')
@@ -87,21 +102,9 @@ export async function GET(request: Request) {
             .lte('data_venda', `${endDate}T23:59:59`);
         const { data: vendasSdr } = await vendasSdrQuery;
 
-        // Build a map of lead_id -> sdr_id from the leads fetched earlier
-        const leadToSdr: Record<number, number> = {};
-        (leads || []).forEach((l: any) => {
-            if (l.id_lead && l.id_sdr_responsavel) leadToSdr[l.id_lead] = l.id_sdr_responsavel;
-        });
-
-        // Also fetch ALL leads for this project to cover sales outside the start/end window
-        let allLeadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, status_atual');
-        if (projectId) allLeadsQuery = allLeadsQuery.eq('id_projeto', projectId);
-        const { data: allLeads } = await allLeadsQuery;
-        (allLeads || []).forEach((l: any) => {
-            if (l.id_lead && l.id_sdr_responsavel) leadToSdr[l.id_lead] = l.id_sdr_responsavel;
-        });
-
         (vendasSdr || []).forEach((v: any) => {
+            if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
+            
             const sdrId = leadToSdr[v.id_lead];
             if (sdrId && performanceSDR[sdrId]) {
                 performanceSDR[sdrId].vgv = (performanceSDR[sdrId].vgv || 0) + (parseFloat(v.valor_bruto) || 0);
