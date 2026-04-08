@@ -62,7 +62,7 @@ export async function GET(request: Request) {
                 };
             }
             salesMap[oportId].valor_bruto += parseFloat(v.valor_bruto) || 0;
-            salesMap[oportId].valor_liquido_caixa += parseFloat(v.valor_liquido_caixa) || 0;
+            salesMap[oportId].valor_liquido_caixa += v.valor_liquido_caixa != null ? parseFloat(v.valor_liquido_caixa) : (parseFloat(v.valor_bruto) || 0);
             salesMap[oportId].rows.push(v);
             const gw = baseGateway(v.forma_pagamento);
             if (!salesMap[oportId].gateways.includes(gw)) {
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
         for (const sale of groupedSales) {
             for (const v of sale.rows) {
                 const parcelas = v.numero_parcelas || 1;
-                const valorParcela = (parseFloat(v.valor_liquido_caixa) || parseFloat(v.valor_bruto) || 0) / parcelas;
+                const valorParcela = (v.valor_liquido_caixa != null ? parseFloat(v.valor_liquido_caixa) : (parseFloat(v.valor_bruto) || 0)) / parcelas;
                 const dataBase = new Date(v.data_recebimento || v.data_venda);
                 for (let i = 0; i < parcelas; i++) {
                     const dataParcela = new Date(dataBase);
@@ -141,7 +141,7 @@ export async function GET(request: Request) {
             let valCaixa = 0;
             for (const v of sale.rows) {
                 const parcelas = v.numero_parcelas || 1;
-                const valorParcela = (parseFloat(v.valor_liquido_caixa) || parseFloat(v.valor_bruto) || 0) / parcelas;
+                const valorParcela = (v.valor_liquido_caixa != null ? parseFloat(v.valor_liquido_caixa) : (parseFloat(v.valor_bruto) || 0)) / parcelas;
                 const dataBase = new Date(v.data_recebimento || v.data_venda);
                 for (let i = 0; i < parcelas; i++) {
                     const dataParcela = new Date(dataBase);

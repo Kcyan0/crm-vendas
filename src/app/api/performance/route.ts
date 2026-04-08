@@ -90,7 +90,7 @@ export async function GET(request: Request) {
             if (!closerId || !performanceCloser[closerId]) return;
 
             performanceCloser[closerId].vgv += parseFloat(v.valor_bruto) || 0;
-            performanceCloser[closerId].caixa += parseFloat(v.valor_liquido_caixa || v.valor_bruto) || 0;
+            performanceCloser[closerId].caixa += v.valor_liquido_caixa != null ? parseFloat(v.valor_liquido_caixa) : (parseFloat(v.valor_bruto) || 0);
         });
 
         // SDR vgv/caixa — fetch sales for leads where the SDR is responsible
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
             const sdrId = leadToSdr[v.id_lead];
             if (sdrId && performanceSDR[sdrId]) {
                 performanceSDR[sdrId].vgv = (performanceSDR[sdrId].vgv || 0) + (parseFloat(v.valor_bruto) || 0);
-                performanceSDR[sdrId].caixa = (performanceSDR[sdrId].caixa || 0) + (parseFloat(v.valor_liquido_caixa || v.valor_bruto) || 0);
+                performanceSDR[sdrId].caixa = (performanceSDR[sdrId].caixa || 0) + (v.valor_liquido_caixa != null ? parseFloat(v.valor_liquido_caixa) : (parseFloat(v.valor_bruto) || 0));
             }
         });
 
