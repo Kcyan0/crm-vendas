@@ -37,6 +37,7 @@ export default function KanbanBoard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSavingLead, setIsSavingLead] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   // Kanban filter state
@@ -317,8 +318,9 @@ export default function KanbanBoard() {
 
   const handleSaveLead = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProject) return;
+    if (!selectedProject || isSavingLead) return;
 
+    setIsSavingLead(true);
     try {
       const isEdit = editingLeadId !== null;
       const method = isEdit ? "PUT" : "POST";
@@ -342,6 +344,8 @@ export default function KanbanBoard() {
       fetchLeads();
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsSavingLead(false);
     }
   };
 
@@ -850,8 +854,12 @@ export default function KanbanBoard() {
                   >
                     Cancelar
                   </button>
-                  <button type="submit" className="flex-1 md:flex-none btn-primary justify-center">
-                    {editingLeadId ? "Salvar" : "Criar Lead"}
+                  <button
+                    type="submit"
+                    disabled={isSavingLead}
+                    className="flex-1 md:flex-none btn-primary justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isSavingLead ? "Salvando..." : (editingLeadId ? "Salvar" : "Criar Lead")}
                   </button>
                 </div>
               </div>
