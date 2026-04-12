@@ -387,8 +387,8 @@ export default function Dashboard() {
             {/* ── Acompanhamento de Metas ──────────────────────────────────── */}
             <MetasPanel
                 projectId={selectedProject?.id_projeto?.toString()}
-                mes={new Date(startDate).getMonth() + 1 || (new Date().getMonth() + 1)}
-                ano={new Date(startDate).getFullYear() || new Date().getFullYear()}
+                mes={startDate ? parseInt(startDate.split('-')[1]) : (new Date().getMonth() + 1)}
+                ano={startDate ? parseInt(startDate.split('-')[0]) : new Date().getFullYear()}
                 receitaBruta={metrics?.receita || 0}
                 caixaLiquido={metrics?.caixaLiquido || 0}
                 sdrs={sdrs}
