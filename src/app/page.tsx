@@ -118,11 +118,16 @@ export default function KanbanBoard() {
     }
   };
 
-  const calcFee = (gatewayName: string, valor: string) => {
+  const calcFee = (gatewayName: string, valor: string, entrada?: string) => {
     const gw = gateways.find(g => g.nome === gatewayName);
     if (!gw) return "0";
-    const v = parseFloat(valor) || 0;
+    let v = parseFloat(valor) || 0;
     if (v <= 0) return "0";
+    // Se o gateway usa entrada (ex: TMB), a taxa incide só sobre o RESTANTE
+    if (gw.tem_entrada && entrada) {
+      const e = parseFloat(entrada) || 0;
+      v = Math.max(0, v - e);
+    }
     return ((v * (gw.taxa_percentual / 100)) + gw.taxa_fixa).toFixed(2);
   };
 
@@ -130,12 +135,12 @@ export default function KanbanBoard() {
     setPagamentos(prev => prev.map(p => {
       if (p.id !== id) return p;
       const updated = { ...p, [field]: value };
-      // Recalculate the gateway fee on value or gateway changes (only on the full valor)
-      if ((field === 'forma_pagamento' || field === 'valor') && typeof value === 'string') {
-        updated.taxa_gateway = calcFee(
-          field === 'forma_pagamento' ? value : p.forma_pagamento,
-          field === 'valor' ? value : p.valor
-        );
+      // Recalculate gateway fee whenever valor, forma_pagamento OR valor_entrada changes
+      if ((field === 'forma_pagamento' || field === 'valor' || field === 'valor_entrada') && typeof value === 'string') {
+        const gwName = field === 'forma_pagamento' ? value : p.forma_pagamento;
+        const valorBase = field === 'valor' ? value : p.valor;
+        const entradaVal = field === 'valor_entrada' ? value : p.valor_entrada;
+        updated.taxa_gateway = calcFee(gwName, valorBase, entradaVal);
       }
       return updated;
     }));
