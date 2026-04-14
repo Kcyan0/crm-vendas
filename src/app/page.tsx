@@ -136,6 +136,8 @@ export default function KanbanBoard() {
     } else {
         taxaTotal = (v * ((gw.taxa_percentual ?? 0) / 100)) + (gw.taxa_fixa ?? 0);
     }
+    // Safety cap: taxa can never exceed the total value
+    taxaTotal = Math.min(taxaTotal, v);
     return { total: taxaTotal.toFixed(2), entrada: taxaEntradaCalc.toFixed(2) };
   };
 
@@ -244,7 +246,8 @@ export default function KanbanBoard() {
           // Lead already sold — open the edit-sale flow instead
           handleOpenEditSale({ stopPropagation: () => {} } as any, leadInfo);
         } else {
-          const defaultGw = gateways[0]?.nome || "PIX";
+          const freshGateways = gateways.length > 0 ? gateways : await fetch('/api/gateways').then(r => r.json()).then((d: any[]) => d.filter((g: any) => g.ativo !== false && g.ativo !== 0));
+          const defaultGw = freshGateways[0]?.nome || "PIX";
           const propValue = leadInfo.valor_proposta ? leadInfo.valor_proposta.toString() : "";
           const initialFeeCalc = propValue ? calcFee(defaultGw, propValue) : { total: "0", entrada: "0" };
           const initialPagamento = {
@@ -260,6 +263,8 @@ export default function KanbanBoard() {
           setPagamentos([initialPagamento]);
           setSaleObservacoes("");
           setSaleLead(leadInfo);
+          // Refresh gateways to get latest tax configs from settings
+          await fetchGateways();
           setIsSaleModalOpen(true);
         }
       }
@@ -461,6 +466,8 @@ export default function KanbanBoard() {
       }
 
       setSaleLead(lead);
+      // Refresh gateways to get latest settings before opening modal
+      await fetchGateways();
       setIsSaleModalOpen(true);
     } catch (err) {
       console.error(err);
@@ -966,10 +973,11 @@ export default function KanbanBoard() {
                           <input
                             type="number"
                             step="0.01"
-                            min="0"
-                            className="min-w-0 w-full bg-transparent border-none text-[#888888] text-sm py-2 focus:outline-none"
-                            value={p.taxa_gateway}
-                            onChange={e => handlePagamentoChange(p.id, 'taxa_gateway', e.target.value)}
+                            readOnly
+                            tabIndex={-1}
+                            className="min-w-0 w-full bg-transparent border-none text-[#888888] text-sm py-2 focus:outline-none cursor-not-allowed"
+                            value={parseFloat(p.taxa_gateway) > parseFloat(p.valor) ? (parseFloat(p.valor) || 0).toFixed(2) : p.taxa_gateway}
+                            title="Calculado automaticamente com base na taxa do gateway"
                           />
                         </div>
                       </div>
