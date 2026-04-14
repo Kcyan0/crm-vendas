@@ -123,11 +123,7 @@ export default function KanbanBoard() {
     if (!gw) return "0";
     let v = parseFloat(valor) || 0;
     if (v <= 0) return "0";
-    // Se o gateway usa entrada (ex: TMB), a taxa incide só sobre o RESTANTE
-    if (gw.tem_entrada && entrada) {
-      const e = parseFloat(entrada) || 0;
-      v = Math.max(0, v - e);
-    }
+    // A taxa do gateway incide sobre o valor integral, inclusive a entrada
     return ((v * (gw.taxa_percentual / 100)) + gw.taxa_fixa).toFixed(2);
   };
 

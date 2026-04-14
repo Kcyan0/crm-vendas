@@ -75,11 +75,9 @@ export async function POST(request: Request) {
             const formaPgto = p.forma_pagamento || 'PIX';
             const parcelas = parseInt(p.numero_parcelas) || 1;
             const desconto = parseFloat(p.desconto) || 0;
-
-            // Safety cap: taxa never exceeds the financed portion (valor - entrada)
-            const restante = entrada > 0 && entrada < valorTotal ? valorTotal - entrada : valorTotal;
+            // Safety cap: taxa never exceeds the total value
             const rawTaxa = parseFloat(p.taxa_gateway) || 0;
-            const taxaGw = Math.min(rawTaxa, restante);
+            const taxaGw = Math.min(rawTaxa, valorTotal);
 
             if (entrada > 0 && entrada < valorTotal) {
                 // Down payment row (immediate, 1x)
