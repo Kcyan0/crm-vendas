@@ -102,13 +102,26 @@ export async function GET(request: Request) {
 
         const conversaoAproximada = leadsTotais > 0 ? ((vendasTotais / leadsTotais) * 100).toFixed(1) : '0.0';
 
-        // Receita por forma de pagamento (use base gateway, accumulate per sale)
+        // Receita por forma de pagamento (Caixa Líquido no período atual para visualização do donut)
         const byPayment: Record<string, number> = {};
         for (const sale of groupedSales) {
-            // Spread the total valor_bruto proportionally across gateways
             for (const v of sale.rows) {
                 const gw = baseGateway(v.forma_pagamento);
-                byPayment[gw] = (byPayment[gw] || 0) + (parseFloat(v.valor_bruto) || 0);
+                const parcelas = v.numero_parcelas || 1;
+                const valorParcela = (v.valor_liquido_caixa != null ? parseFloat(v.valor_liquido_caixa) : (parseFloat(v.valor_bruto) || 0)) / parcelas;
+                const dataBase = new Date(v.data_recebimento || v.data_venda);
+                
+                let cxDaParcela = 0;
+                for (let i = 0; i < parcelas; i++) {
+                    const dataParcela = new Date(dataBase);
+                    dataParcela.setMonth(dataParcela.getMonth() + i);
+                    if (dataParcela >= start && dataParcela <= end) {
+                        cxDaParcela += valorParcela;
+                    }
+                }
+                if (cxDaParcela !== 0) {
+                    byPayment[gw] = (byPayment[gw] || 0) + cxDaParcela;
+                }
             }
         }
         const receitaPorPagamento = Object.entries(byPayment).map(([name, value]) => ({ name, value }));
