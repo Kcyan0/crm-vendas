@@ -255,7 +255,7 @@ async function createGoogleEvent(userEmail: string, chamada: any, closerEmail?: 
 
     const attendees: any[] = [];
     if (closerEmail && closerEmail !== userEmail) attendees.push({ email: closerEmail });
-    if (sdrEmail && sdrEmail !== userEmail) attendees.push({ email: sdrEmail });
+    // SDR não recebe convite — apenas o Lead e o Closer são convidados
     if (leadEmail && leadEmail !== userEmail) attendees.push({ email: leadEmail });
 
     const event: any = {
@@ -290,7 +290,7 @@ async function updateGoogleEvent(userEmail: string, eventId: string, chamada: an
 
     const attendees: any[] = [];
     if (closerEmail && closerEmail !== userEmail) attendees.push({ email: closerEmail });
-    if (sdrEmail && sdrEmail !== userEmail) attendees.push({ email: sdrEmail });
+    // SDR não recebe convite — apenas o Lead e o Closer são convidados
     if (leadEmail && leadEmail !== userEmail) attendees.push({ email: leadEmail });
 
     const event: any = {
