@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X, Globe } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -20,12 +20,14 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
     const NAV_ITEMS = [
         { name: "Painel de Leads", icon: KanbanSquare, path: "/" },
         { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+        { name: "Visão Geral", icon: Globe, path: "/overview" },
         { name: "Performance", icon: BarChart2, path: "/performance" },
         { name: "Meu Time", icon: Users, path: "/team" },
         { name: "Calendário", icon: Calendar, path: "/calendar" },
         { name: "Projetos", icon: FolderKanban, path: "/projects" },
         { name: "Configurações", icon: SettingsIcon, path: "/settings" },
     ];
+
 
     return (
         <>
