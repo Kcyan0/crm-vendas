@@ -130,11 +130,11 @@ export default function KanbanBoard() {
     let taxaEntradaCalc = 0;
 
     if (entrada > 0 && entrada < v && gw.tem_entrada) {
-        taxaEntradaCalc = (entrada * (gw.taxa_entrada_percentual / 100)) + gw.taxa_entrada_fixa;
-        let taxaResto = ((v - entrada) * (gw.taxa_percentual / 100)) + gw.taxa_fixa;
+        taxaEntradaCalc = (entrada * ((gw.taxa_entrada_percentual ?? 0) / 100)) + (gw.taxa_entrada_fixa ?? 0);
+        const taxaResto = ((v - entrada) * ((gw.taxa_percentual ?? 0) / 100)) + (gw.taxa_fixa ?? 0);
         taxaTotal = taxaEntradaCalc + taxaResto;
     } else {
-        taxaTotal = (v * (gw.taxa_percentual / 100)) + gw.taxa_fixa;
+        taxaTotal = (v * ((gw.taxa_percentual ?? 0) / 100)) + (gw.taxa_fixa ?? 0);
     }
     return { total: taxaTotal.toFixed(2), entrada: taxaEntradaCalc.toFixed(2) };
   };
