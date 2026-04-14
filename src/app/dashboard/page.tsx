@@ -85,26 +85,41 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
 
     const ProgressBar = ({ label, current, goal, pct, color, slim }: { label: string; current: number; goal: number; pct: number; color: string; slim?: boolean }) => {
         const over = pct > 100;
-        const barPct = Math.min(100, pct);
-        const overExtra = parseFloat((pct - 100).toFixed(1));
+        const overExtra = over ? parseFloat((pct - 100).toFixed(1)) : 0;
         const displayLabel = over ? `100% +${overExtra}%` : `${pct}%`;
-        const displayColor = over ? '#BEFF00' : color;
+        const bonusColor = '#FFD700'; // Dourado pra representar o excedente na barra
+        const displayColor = over ? bonusColor : color;
+
+        // Se over, a "meta"(100) comprimiu pra dar espaço pro extra na mesma escala, ou seja: (100 / pct)%
+        const widthBase = over ? (100 / pct) * 100 : pct;
+        const widthExtra = over ? ((pct - 100) / pct) * 100 : 0;
+
         return (
         <div className="flex-1 min-w-[140px]">
             <div className="flex justify-between items-baseline mb-1">
                 <span className={`${slim ? 'text-[10px]' : 'text-xs'} font-bold text-white`}>{label}</span>
                 <span className={`${slim ? 'text-[9px]' : 'text-[10px]'} font-black flex items-center gap-1`} style={{ color: displayColor }}>
-                    {over && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#BEFF00] animate-pulse" />}
+                    {over && <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: bonusColor }} />}
                     {displayLabel}
                 </span>
             </div>
-            <div className={`${slim ? 'h-1.5' : 'h-2.5'} bg-[#111] rounded-full overflow-hidden`}>
-                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${barPct}%`, background: over ? 'linear-gradient(90deg, ' + color + ', #BEFF00)' : color }} />
+            {/* ProgressBar container com overflow hidden para que as bordas da base e do extra não saiam quadradas nas pontas */}
+            <div className={`${slim ? 'h-1.5' : 'h-2.5'} bg-[#111] rounded-full flex overflow-hidden`}>
+                <div className="h-full transition-all duration-700 relative" style={{ width: `${widthBase}%`, background: color }}>
+                    {/* O Pino de Chegada */}
+                    {over && <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white z-10 shadow-[0_0_8px_rgba(255,255,255,0.8)]" title="Alcance da Meta" />} 
+                </div>
+                {over && (
+                    <div className="h-full transition-all duration-700" style={{ width: `${widthExtra}%`, background: bonusColor }} />
+                )}
             </div>
             {!slim && (
                 <div className="flex justify-between text-[10px] mt-1" style={{ color: TEXT_SEC }}>
                     <span>{formatBRL(current)}</span>
-                    <span>meta {formatBRL(goal)}</span>
+                    <span className="flex items-center gap-1">
+                        meta {formatBRL(goal)}
+                        {over && <span style={{ color: bonusColor }}>(Bônus: {formatBRL(current - goal)})</span>}
+                    </span>
                 </div>
             )}
         </div>
