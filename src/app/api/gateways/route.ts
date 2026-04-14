@@ -19,13 +19,21 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { nome, taxa_percentual, taxa_fixa, ativo, tem_entrada } = body;
+        const { nome, taxa_percentual, taxa_fixa, ativo, tem_entrada, taxa_entrada_percentual, taxa_entrada_fixa } = body;
         if (!nome) return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
 
         const isAtivo = ativo === undefined || ativo === true || String(ativo) === '1';
         const { data, error } = await supabase
             .from('gateways_pagamento')
-            .insert({ nome, taxa_percentual: parseFloat(taxa_percentual) || 0, taxa_fixa: parseFloat(taxa_fixa) || 0, ativo: isAtivo, tem_entrada: !!tem_entrada })
+            .insert({ 
+                nome, 
+                taxa_percentual: parseFloat(taxa_percentual) || 0, 
+                taxa_fixa: parseFloat(taxa_fixa) || 0, 
+                ativo: isAtivo, 
+                tem_entrada: !!tem_entrada,
+                taxa_entrada_percentual: parseFloat(taxa_entrada_percentual) || 0,
+                taxa_entrada_fixa: parseFloat(taxa_entrada_fixa) || 0
+            })
             .select('id_gateway')
             .single();
 
@@ -39,13 +47,21 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
     try {
         const body = await request.json();
-        const { id_gateway, nome, taxa_percentual, taxa_fixa, ativo, tem_entrada } = body;
+        const { id_gateway, nome, taxa_percentual, taxa_fixa, ativo, tem_entrada, taxa_entrada_percentual, taxa_entrada_fixa } = body;
         if (!id_gateway || !nome) return NextResponse.json({ error: 'ID e Nome são obrigatórios' }, { status: 400 });
 
         const isAtivo = ativo === undefined || ativo === true || String(ativo) === '1';
         const { error } = await supabase
             .from('gateways_pagamento')
-            .update({ nome, taxa_percentual: parseFloat(taxa_percentual) || 0, taxa_fixa: parseFloat(taxa_fixa) || 0, ativo: isAtivo, tem_entrada: !!tem_entrada })
+            .update({ 
+                nome, 
+                taxa_percentual: parseFloat(taxa_percentual) || 0, 
+                taxa_fixa: parseFloat(taxa_fixa) || 0, 
+                ativo: isAtivo, 
+                tem_entrada: !!tem_entrada,
+                taxa_entrada_percentual: parseFloat(taxa_entrada_percentual) || 0,
+                taxa_entrada_fixa: parseFloat(taxa_entrada_fixa) || 0
+            })
             .eq('id_gateway', id_gateway);
 
         if (error) throw error;

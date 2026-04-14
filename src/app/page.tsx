@@ -77,13 +77,14 @@ export default function KanbanBoard() {
   const [detailStatusSaving, setDetailStatusSaving] = useState(false);
   const [briefingExpanded, setBriefingExpanded] = useState(false);
 
-  type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; valor_entrada: string; entrada_paga_empresa: boolean; };
+  type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; taxa_entrada: string; valor_entrada: string; entrada_paga_empresa: boolean; };
   const newPagamento = (defaultGateway = ""): Pagamento => ({
     id: Math.random().toString(36).slice(2),
     forma_pagamento: defaultGateway,
     valor: "",
     numero_parcelas: "1",
     taxa_gateway: "0",
+    taxa_entrada: "0",
     valor_entrada: "",
     entrada_paga_empresa: false
   });
@@ -118,25 +119,37 @@ export default function KanbanBoard() {
     }
   };
 
-  const calcFee = (gatewayName: string, valor: string, entrada?: string) => {
+  const calcFee = (gatewayName: string, valor: string, entradaStr?: string) => {
     const gw = gateways.find(g => g.nome === gatewayName);
-    if (!gw) return "0";
+    if (!gw) return { total: "0", entrada: "0" };
     let v = parseFloat(valor) || 0;
-    if (v <= 0) return "0";
-    // A taxa do gateway incide sobre o valor integral, inclusive a entrada
-    return ((v * (gw.taxa_percentual / 100)) + gw.taxa_fixa).toFixed(2);
+    let entrada = parseFloat(entradaStr || "0") || 0;
+    if (v <= 0) return { total: "0", entrada: "0" };
+    
+    let taxaTotal = 0;
+    let taxaEntradaCalc = 0;
+
+    if (entrada > 0 && entrada < v && gw.tem_entrada) {
+        taxaEntradaCalc = (entrada * (gw.taxa_entrada_percentual / 100)) + gw.taxa_entrada_fixa;
+        let taxaResto = ((v - entrada) * (gw.taxa_percentual / 100)) + gw.taxa_fixa;
+        taxaTotal = taxaEntradaCalc + taxaResto;
+    } else {
+        taxaTotal = (v * (gw.taxa_percentual / 100)) + gw.taxa_fixa;
+    }
+    return { total: taxaTotal.toFixed(2), entrada: taxaEntradaCalc.toFixed(2) };
   };
 
   const handlePagamentoChange = (id: string, field: keyof Pagamento, value: string | boolean) => {
     setPagamentos(prev => prev.map(p => {
       if (p.id !== id) return p;
       const updated = { ...p, [field]: value };
-      // Recalculate gateway fee whenever valor, forma_pagamento OR valor_entrada changes
       if ((field === 'forma_pagamento' || field === 'valor' || field === 'valor_entrada') && typeof value === 'string') {
         const gwName = field === 'forma_pagamento' ? value : p.forma_pagamento;
         const valorBase = field === 'valor' ? value : p.valor;
         const entradaVal = field === 'valor_entrada' ? value : p.valor_entrada;
-        updated.taxa_gateway = calcFee(gwName, valorBase, entradaVal);
+        const fees = calcFee(gwName, valorBase, entradaVal);
+        updated.taxa_gateway = fees.total;
+        updated.taxa_entrada = fees.entrada;
       }
       return updated;
     }));
@@ -233,12 +246,14 @@ export default function KanbanBoard() {
         } else {
           const defaultGw = gateways[0]?.nome || "PIX";
           const propValue = leadInfo.valor_proposta ? leadInfo.valor_proposta.toString() : "";
+          const initialFeeCalc = propValue ? calcFee(defaultGw, propValue) : { total: "0", entrada: "0" };
           const initialPagamento = {
             id: Math.random().toString(36).slice(2),
             forma_pagamento: defaultGw,
             valor: propValue,
             numero_parcelas: "1",
-            taxa_gateway: propValue ? calcFee(defaultGw, propValue) : "0",
+            taxa_gateway: initialFeeCalc.total,
+            taxa_entrada: initialFeeCalc.entrada,
             valor_entrada: "",
             entrada_paga_empresa: false
           };
@@ -1067,15 +1082,18 @@ export default function KanbanBoard() {
                   </div>
                   {pagamentos.map((p, idx) => {
                     const v = parseFloat(p.valor) || 0;
-                    const taxa = parseFloat(p.taxa_gateway) || 0;
+                    const taxaTotal = parseFloat(p.taxa_gateway) || 0;
+                    const taxaEnt = parseFloat(p.taxa_entrada) || 0;
                     const entrada = parseFloat(p.valor_entrada) || 0;
                     const parcelas = parseInt(p.numero_parcelas) || 1;
                     const gw = gateways.find((g: any) => g.nome === p.forma_pagamento);
                     const taxaPct = gw?.taxa_percentual || 0;
                     const taxaFixed = gw?.taxa_fixa || 0;
+                    const txPEntrada = gw?.taxa_entrada_percentual || 0;
+                    const txFEntrada = gw?.taxa_entrada_fixa || 0;
                     const temEntrada = entrada > 0;
                     const isEmpresa = p.entrada_paga_empresa;
-                    const subtotal = v - taxa - (isEmpresa ? entrada : 0);
+                    const subtotal = v - taxaTotal - (isEmpresa ? entrada : 0);
                     const fmt = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
                     return (
                       <div key={p.id} className="pb-3 border-b border-white/5 last:border-0">
@@ -1094,8 +1112,17 @@ export default function KanbanBoard() {
                                 <span className="text-[#bbb]">{fmt(entrada)}</span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-[#888]">(-) Taxa da Entrada ({taxaPct.toFixed(2)}%)</span>
-                                <span className="text-red-400">-{fmt(entrada > 0 ? (entrada/v)*taxa : 0)}</span>
+                                <span className="text-[#888]">(-) Taxa da Entrada ({txPEntrada > 0 || txFEntrada > 0 ? `${txPEntrada.toFixed(2)}%${txFEntrada > 0 ? ` + R$${txFEntrada}` : ''}` : '0%'})</span>
+                                <span className="text-red-400">-{fmt(taxaEnt)}</span>
+                              </div>
+                              <div className="pt-2"></div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-[#888]">(+) {parcelas > 1 ? 'Valor Bruto Parcelado' : 'Parcela Única Bruta'}</span>
+                                <span className="text-[#bbb]">{fmt(v - entrada)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-[#888]">(-) Taxa ({taxaPct > 0 || taxaFixed > 0 ? `${taxaPct.toFixed(2)}%${taxaFixed > 0 ? ` + R$${taxaFixed}` : ''}` : '0%'})</span>
+                                <span className="text-red-400">-{fmt(taxaTotal - taxaEnt)}</span>
                               </div>
                             </>
                           ) : (
@@ -1106,7 +1133,7 @@ export default function KanbanBoard() {
                               </div>
                               <div className="flex justify-between text-xs">
                                 <span className="text-[#888]">(-) Taxa ({taxaPct > 0 || taxaFixed > 0 ? `${taxaPct.toFixed(2)}%${taxaFixed > 0 ? ` + R$${taxaFixed}` : ''}` : '0%'})</span>
-                                <span className="text-red-400">-{fmt(taxa)}</span>
+                                <span className="text-red-400">-{fmt(taxaTotal)}</span>
                               </div>
                             </>
                           )}

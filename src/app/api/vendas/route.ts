@@ -78,10 +78,11 @@ export async function POST(request: Request) {
             // Safety cap: taxa never exceeds the total value
             const rawTaxa = parseFloat(p.taxa_gateway) || 0;
             const taxaGw = Math.min(rawTaxa, valorTotal);
+            const rawTaxaEntrada = p.taxa_entrada !== undefined ? parseFloat(p.taxa_entrada) : -1;
 
             if (entrada > 0 && entrada < valorTotal) {
                 // Down payment row (immediate, 1x)
-                const taxaEntrada = taxaGw > 0 ? (entrada / valorTotal) * taxaGw : 0;
+                const taxaEntrada = rawTaxaEntrada !== -1 ? rawTaxaEntrada : (taxaGw > 0 ? (entrada / valorTotal) * taxaGw : 0);
                 const entradaPagaEmpresa = !!p.entrada_paga_empresa;
                 // If company financed the entrada: net = -(entrada) (cost), not +(entrada - taxaEntrada)
                 const liquidoEntrada = entradaPagaEmpresa

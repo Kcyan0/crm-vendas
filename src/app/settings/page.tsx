@@ -11,6 +11,8 @@ type Gateway = {
     taxa_fixa: number;
     ativo: number;
     tem_entrada: boolean;
+    taxa_entrada_percentual: number;
+    taxa_entrada_fixa: number;
 };
 
 type TeamMeta = { meta_faturamento: number; meta_caixa: number; };
@@ -28,7 +30,9 @@ export default function SettingsPage() {
         taxa_percentual: "0",
         taxa_fixa: "0",
         ativo: true,
-        tem_entrada: false
+        tem_entrada: false,
+        taxa_entrada_percentual: "0",
+        taxa_entrada_fixa: "0"
     });
 
     const fetchGateways = async () => {
@@ -45,7 +49,7 @@ export default function SettingsPage() {
 
     const handleOpenCreate = () => {
         setEditingGatewayId(null);
-        setFormData({ nome: "", taxa_percentual: "0", taxa_fixa: "0", ativo: true, tem_entrada: false });
+        setFormData({ nome: "", taxa_percentual: "0", taxa_fixa: "0", ativo: true, tem_entrada: false, taxa_entrada_percentual: "0", taxa_entrada_fixa: "0" });
         setIsModalOpen(true);
     };
 
@@ -56,7 +60,9 @@ export default function SettingsPage() {
             taxa_percentual: gateway.taxa_percentual.toString(),
             taxa_fixa: gateway.taxa_fixa.toString(),
             ativo: gateway.ativo === 1 || gateway.ativo === true as any,
-            tem_entrada: !!gateway.tem_entrada
+            tem_entrada: !!gateway.tem_entrada,
+            taxa_entrada_percentual: (gateway.taxa_entrada_percentual || 0).toString(),
+            taxa_entrada_fixa: (gateway.taxa_entrada_fixa || 0).toString()
         });
         setIsModalOpen(true);
     };
@@ -356,6 +362,7 @@ export default function SettingsPage() {
                                             {gw.tem_entrada && (
                                                 <div className="text-sm">
                                                     <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded mt-1">Aceita Entrada</span>
+                                                    <span className="text-[#888888] block text-xs font-semibold uppercase mt-1">Taxa Entrada: <span className="text-white">{gw.taxa_entrada_percentual?.toFixed(2) || '0.00'}%</span></span>
                                                 </div>
                                             )}
                                         </div>
@@ -418,6 +425,19 @@ export default function SettingsPage() {
                                     </div>
                                 </label>
                             </div>
+
+                            {formData.tem_entrada && (
+                                <div className="grid grid-cols-2 gap-4 p-4 mt-4 bg-blue-500/5 border border-blue-500/20 rounded-xl animate-in fade-in slide-in-from-top-2">
+                                    <div>
+                                        <label className="block text-xs font-medium text-[#888] uppercase tracking-wider mb-1">Taxa da Entrada (%)</label>
+                                        <input type="number" step="0.01" className="w-full bg-[#111] border border-[#2A2A2A] text-white focus:ring-blue-500" value={formData.taxa_entrada_percentual} onChange={(e) => setFormData({ ...formData, taxa_entrada_percentual: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-[#888] uppercase tracking-wider mb-1">Taxa Fixa Entrada (R$)</label>
+                                        <input type="number" step="0.01" className="w-full bg-[#111] border border-[#2A2A2A] text-white focus:ring-blue-500" value={formData.taxa_entrada_fixa} onChange={(e) => setFormData({ ...formData, taxa_entrada_fixa: e.target.value })} />
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="flex justify-end gap-3 mt-8 pt-4">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-[#888888] hover:text-white transition-colors">Cancelar</button>

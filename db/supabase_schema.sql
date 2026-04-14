@@ -35,13 +35,16 @@ CREATE TABLE IF NOT EXISTS gateways_pagamento (
     nome TEXT NOT NULL,
     taxa_percentual NUMERIC(5,2) DEFAULT 0,
     taxa_fixa NUMERIC(10,2) DEFAULT 0,
+    taxa_entrada_percentual NUMERIC(5,2) DEFAULT 0,
+    taxa_entrada_fixa NUMERIC(10,2) DEFAULT 0,
+    tem_entrada BOOLEAN DEFAULT FALSE,
     ativo BOOLEAN DEFAULT TRUE
 );
 
-INSERT INTO gateways_pagamento (nome, taxa_percentual, taxa_fixa) VALUES 
-    ('PIX', 0, 0),
-    ('Cartão de Crédito', 2.99, 0),
-    ('Boleto', 1.5, 2.00)
+INSERT INTO gateways_pagamento (nome, taxa_percentual, taxa_fixa, tem_entrada) VALUES 
+    ('PIX', 0, 0, FALSE),
+    ('Cartão de Crédito', 2.99, 0, FALSE),
+    ('Boleto', 1.5, 2.00, FALSE)
 ON CONFLICT DO NOTHING;
 
 -- 4. Leads
