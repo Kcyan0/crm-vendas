@@ -20,7 +20,6 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
     const NAV_ITEMS = [
         { name: "Painel de Leads", icon: KanbanSquare, path: "/" },
         { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-        { name: "Visão Geral", icon: Globe, path: "/overview" },
         { name: "Performance", icon: BarChart2, path: "/performance" },
         { name: "Meu Time", icon: Users, path: "/team" },
         { name: "Calendário", icon: Calendar, path: "/calendar" },
@@ -62,6 +61,33 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                         <span className="text-xs font-medium uppercase" style={{ color: '#BEFF00', letterSpacing: '0.15em' }}>CRM</span>
                     </div>
                 </div>
+            </div>
+
+            {/* Visão Geral — acima do seletor de projeto */}
+            <div className="px-4 mb-2">
+                <Link
+                    href="/overview"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-150 w-full"
+                    style={pathname === '/overview'
+                        ? { background: '#BEFF00', color: '#0A0A0A' }
+                        : { color: '#888888' }
+                    }
+                    onMouseEnter={e => {
+                        if (pathname !== '/overview') {
+                            (e.currentTarget as HTMLElement).style.background = '#1A1A1A';
+                            (e.currentTarget as HTMLElement).style.color = '#FFFFFF';
+                        }
+                    }}
+                    onMouseLeave={e => {
+                        if (pathname !== '/overview') {
+                            (e.currentTarget as HTMLElement).style.background = 'transparent';
+                            (e.currentTarget as HTMLElement).style.color = '#888888';
+                        }
+                    }}
+                >
+                    <Globe size={18} />
+                    <span className="font-semibold text-sm">Visão Geral</span>
+                </Link>
             </div>
 
             {/* Project selector */}
