@@ -149,8 +149,11 @@ export async function POST(request: Request) {
         const { error: vendasErr } = await supabase.from('vendas').insert(vendasToInsert);
         if (vendasErr) throw vendasErr;
 
+        // Soma o valor bruto real de todos os pagamentos informados para atualizar o kanban
+        const totalVendaBruta = pagamentos.reduce((acc: number, p: any) => acc + (parseFloat(p.valor) || 0), 0);
+
         // Update lead status and optionally save observacoes
-        const leadUpdate: any = { status_atual: 'Venda' };
+        const leadUpdate: any = { status_atual: 'Venda', valor_proposta: totalVendaBruta };
         if (observacoes) leadUpdate.observacoes_gerais = observacoes;
         await supabase.from('leads').update(leadUpdate).eq('id_lead', id_lead);
 
