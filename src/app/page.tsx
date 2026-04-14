@@ -153,8 +153,10 @@ export default function KanbanBoard() {
   const saleTotals = pagamentos.reduce((acc, p) => {
     const v = parseFloat(p.valor) || 0;
     const taxa = parseFloat(p.taxa_gateway) || 0;
+    const entrada = parseFloat(p.valor_entrada) || 0;
+    const descEntrada = p.entrada_paga_empresa ? entrada : 0;
     acc.bruto += v;
-    acc.liquido += v - taxa;
+    acc.liquido += v - taxa - descEntrada;
     return acc;
   }, { bruto: 0, liquido: 0 });
 
@@ -1072,7 +1074,8 @@ export default function KanbanBoard() {
                     const taxaPct = gw?.taxa_percentual || 0;
                     const taxaFixed = gw?.taxa_fixa || 0;
                     const temEntrada = entrada > 0;
-                    const subtotal = v - taxa;
+                    const isEmpresa = p.entrada_paga_empresa;
+                    const subtotal = v - taxa - (isEmpresa ? entrada : 0);
                     const fmt = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
                     return (
                       <div key={p.id} className="pb-3 border-b border-white/5 last:border-0">
@@ -1080,17 +1083,19 @@ export default function KanbanBoard() {
                         <div className="space-y-1">
                           {temEntrada ? (
                             <>
-                              <div className="flex justify-between text-xs">
-                                <span className="text-[#888]">(-) Entrada Paga pela Empresa</span>
-                                <span className="text-red-400">-{fmt(entrada)}</span>
-                              </div>
+                              {isEmpresa && (
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-[#888]">(-) Entrada Paga pela Empresa</span>
+                                  <span className="text-red-400">-{fmt(entrada)}</span>
+                                </div>
+                              )}
                               <div className="flex justify-between text-xs">
                                 <span className="text-[#888]">(+) Valor Bruto da Entrada</span>
                                 <span className="text-[#bbb]">{fmt(entrada)}</span>
                               </div>
                               <div className="flex justify-between text-xs">
                                 <span className="text-[#888]">(-) Taxa da Entrada ({taxaPct.toFixed(2)}%)</span>
-                                <span className="text-red-400">-{fmt(entrada * taxaPct / 100 + taxaFixed)}</span>
+                                <span className="text-red-400">-{fmt(entrada > 0 ? (entrada/v)*taxa : 0)}</span>
                               </div>
                             </>
                           ) : (
