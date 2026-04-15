@@ -246,9 +246,16 @@ export default function KanbanBoard() {
       const leadInfo = leads.find((l) => l.id_lead === id_lead);
       if (leadInfo) {
         if (leadInfo.status_atual === 'Venda') {
-          // Lead already sold — open the edit-sale flow instead
+          // Lead already in Venda — open the edit-sale flow
           handleOpenEditSale({ stopPropagation: () => {} } as any, leadInfo);
         } else {
+          // Check if this lead already has vendas in DB (e.g. moved from No-show back to Venda)
+          const existingCheck = await fetch(`/api/vendas?leadId=${leadInfo.id_lead}`);
+          const existingRows = await existingCheck.json();
+          if (Array.isArray(existingRows) && existingRows.length > 0) {
+            // Has prior vendas — open edit flow so user can review/update
+            handleOpenEditSale({ stopPropagation: () => {} } as any, leadInfo);
+          } else {
           const freshGateways = gateways.length > 0 ? gateways : await fetch('/api/gateways').then(r => r.json()).then((d: any[]) => d.filter((g: any) => g.ativo !== false && g.ativo !== 0));
           const defaultGw = freshGateways[0]?.nome || "PIX";
           const propValue = leadInfo.valor_proposta ? leadInfo.valor_proposta.toString() : "";
@@ -271,6 +278,7 @@ export default function KanbanBoard() {
           // Refresh gateways to get latest tax configs from settings (skipReset=true)
           await fetchGateways(true);
           setIsSaleModalOpen(true);
+          } // end else (no existing vendas)
         }
       }
       return;

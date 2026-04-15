@@ -186,7 +186,8 @@ export async function POST(request: Request) {
         // Update lead status and optionally save observacoes
         const leadUpdate: any = { status_atual: 'Venda', valor_proposta: totalVendaBruta };
         if (observacoes) leadUpdate.observacoes_gerais = observacoes;
-        await supabase.from('leads').update(leadUpdate).eq('id_lead', id_lead);
+        const { error: leadErr } = await supabase.from('leads').update(leadUpdate).eq('id_lead', id_lead);
+        if (leadErr) throw leadErr;
 
         return NextResponse.json({ success: true, id_oportunidade });
     } catch (error: any) {
