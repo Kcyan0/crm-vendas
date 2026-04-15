@@ -107,13 +107,14 @@ export default function KanbanBoard() {
     if (selectedProject) fetchLeads();
   }, [selectedProject, startDate, endDate]);
 
-  const fetchGateways = async () => {
+  const fetchGateways = async (skipReset = false) => {
     try {
       const res = await fetch("/api/gateways");
       const data = await res.json();
       const ativos = data.filter((g: any) => g.ativo !== false && g.ativo !== 0);
       setGateways(ativos);
-      if (ativos.length > 0) {
+      // Only reset pagamentos if not called from inside the sale modal flow
+      if (!skipReset && ativos.length > 0) {
         setPagamentos([newPagamento(ativos[0].nome)]);
       }
     } catch (e) {
@@ -267,8 +268,8 @@ export default function KanbanBoard() {
           setPagamentos([initialPagamento]);
           setSaleObservacoes("");
           setSaleLead(leadInfo);
-          // Refresh gateways to get latest tax configs from settings
-          await fetchGateways();
+          // Refresh gateways to get latest tax configs from settings (skipReset=true)
+          await fetchGateways(true);
           setIsSaleModalOpen(true);
         }
       }
@@ -488,8 +489,8 @@ export default function KanbanBoard() {
       }
 
       setSaleLead(lead);
-      // Refresh gateways to get latest settings before opening modal
-      await fetchGateways();
+      // Refresh gateways before opening (skipReset=true to preserve reconstructed pagamentos)
+      await fetchGateways(true);
       setIsSaleModalOpen(true);
     } catch (err) {
       console.error(err);
