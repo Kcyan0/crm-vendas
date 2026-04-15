@@ -1274,7 +1274,7 @@ export default function KanbanBoard() {
       {/* ── Lead Detail Panel ───────────────────────────────────── */}
       {isDetailOpen && detailLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsDetailOpen(false)}>
-          <div className="relative w-full max-w-sm bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="relative w-full max-w-sm bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-start justify-between p-5 pb-4 border-b border-[#222]">
               <div className="flex items-center gap-3">
@@ -1298,6 +1298,8 @@ export default function KanbanBoard() {
               </div>
             </div>
 
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto">
             {/* Info rows */}
             <div className="p-5 space-y-3 border-b border-[#222]">
               {detailLead.telefone && (
@@ -1426,8 +1428,10 @@ export default function KanbanBoard() {
               </div>
             )}
 
+            </div>{/* end scrollable content */}
+
             {/* Footer: status + actions */}
-            <div className="p-5 flex items-center gap-3">
+            <div className="p-5 flex items-center gap-3 border-t border-[#222] shrink-0">
               <select
                 value={detailLead.status_atual}
                 onChange={e => handleDetailStatusChange(e.target.value)}
