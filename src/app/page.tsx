@@ -711,7 +711,7 @@ export default function KanbanBoard() {
                     </div>
                     <div className="flex justify-between items-start mb-2 pr-12">
                       <h4 className="font-bold text-white leading-tight">{lead.nome}</h4>
-                      {lead.valor_proposta && (
+                      {lead.valor_proposta && ['Venda', 'Reembolsado'].includes(lead.status_atual) && (
                         <span className="text-emerald-700 font-bold text-sm bg-emerald-100 px-2 rounded-md border border-emerald-200">
                           R$ {lead.valor_proposta}
                         </span>
