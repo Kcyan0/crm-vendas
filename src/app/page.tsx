@@ -77,7 +77,7 @@ export default function KanbanBoard() {
   const [detailStatusSaving, setDetailStatusSaving] = useState(false);
   const [briefingExpanded, setBriefingExpanded] = useState(false);
 
-  type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; taxa_entrada: string; valor_entrada: string; entrada_paga_empresa: boolean; };
+  type Pagamento = { id: string; forma_pagamento: string; valor: string; numero_parcelas: string; taxa_gateway: string; taxa_entrada: string; valor_entrada: string; entrada_paga_empresa: boolean; status_pagamento: string; data_recebimento_custom: string; };
   const newPagamento = (defaultGateway = ""): Pagamento => ({
     id: Math.random().toString(36).slice(2),
     forma_pagamento: defaultGateway,
@@ -86,7 +86,9 @@ export default function KanbanBoard() {
     taxa_gateway: "0",
     taxa_entrada: "0",
     valor_entrada: "",
-    entrada_paga_empresa: false
+    entrada_paga_empresa: false,
+    status_pagamento: "pago",
+    data_recebimento_custom: ""
   });
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([newPagamento()]);
 
@@ -258,7 +260,9 @@ export default function KanbanBoard() {
             taxa_gateway: initialFeeCalc.total,
             taxa_entrada: initialFeeCalc.entrada,
             valor_entrada: "",
-            entrada_paga_empresa: false
+            entrada_paga_empresa: false,
+            status_pagamento: "pago",
+            data_recebimento_custom: ""
           };
           setPagamentos([initialPagamento]);
           setSaleObservacoes("");
@@ -425,7 +429,7 @@ export default function KanbanBoard() {
         setSaleObservacoes(lead.observacoes_gerais || "");
         setSaleDate(new Date().toISOString().split('T')[0]);
       } else {
-        // Merge rows that share the same gateway (e.g. "Boleto (Entrada)" + "Boleto (Parcelas)")
+        // Merge rows that share the same gateway (e.g. "TMB (Entrada)" + "TMB (Parcelas)")
         const mergedMap: Record<string, any> = {};
         for (const row of rows) {
           const baseGw = row.forma_pagamento.replace(/ \(Entrada\)| \(Parcelas\)/g, '');
@@ -434,32 +438,50 @@ export default function KanbanBoard() {
               id: Math.random().toString(36).slice(2),
               forma_pagamento: baseGw,
               valor: 0,
-              numero_parcelas: row.numero_parcelas.toString(),
+              numero_parcelas: '1',
               taxa_gateway: 0,
-              valor_entrada: ""
+              taxa_entrada: '0',
+              valor_entrada: '',
+              entrada_paga_empresa: false,
+              status_pagamento: row.status_pagamento || 'pago',
+              data_recebimento_custom: ''
             };
           }
           if (row.forma_pagamento.includes('(Entrada)')) {
-            mergedMap[baseGw].valor_entrada = row.valor_bruto.toString();
-            mergedMap[baseGw].taxa_gateway += row.taxa_gateway;
-          } else {
-            mergedMap[baseGw].valor += row.valor_bruto;
+            // Entrada row: mark entry value and its isolated taxa
+            mergedMap[baseGw].valor += parseFloat(row.valor_bruto) || 0;
+            mergedMap[baseGw].valor_entrada = (parseFloat(row.valor_bruto) || 0).toString();
+            mergedMap[baseGw].taxa_gateway += parseFloat(row.taxa_gateway) || 0;
+            mergedMap[baseGw].taxa_entrada = (parseFloat(row.taxa_gateway) || 0).toFixed(2);
+            // If valor_liquido_caixa is negative, the empresa paid the entrada
+            mergedMap[baseGw].entrada_paga_empresa = parseFloat(row.valor_liquido_caixa) < 0;
+          } else if (row.forma_pagamento.includes('(Parcelas)')) {
+            // Parcelas row: add to total valor and get parcelas count
+            mergedMap[baseGw].valor += parseFloat(row.valor_bruto) || 0;
             mergedMap[baseGw].numero_parcelas = row.numero_parcelas.toString();
-            mergedMap[baseGw].taxa_gateway += row.taxa_gateway;
-          }
-          if (!row.forma_pagamento.includes('(Entrada)') && !row.forma_pagamento.includes('(Parcelas)')) {
-            // Simple row (no entrada)
-            mergedMap[baseGw].valor = row.valor_bruto;
-            mergedMap[baseGw].taxa_gateway = row.taxa_gateway;
+            mergedMap[baseGw].taxa_gateway += parseFloat(row.taxa_gateway) || 0;
+            mergedMap[baseGw].status_pagamento = row.status_pagamento || 'pago';
+            if (row.status_pagamento === 'pendente' && row.data_recebimento) {
+              mergedMap[baseGw].data_recebimento_custom = row.data_recebimento;
+            }
+          } else {
+            // Simple row (no entrada/parcelas split)
+            mergedMap[baseGw].valor = parseFloat(row.valor_bruto) || 0;
+            mergedMap[baseGw].numero_parcelas = row.numero_parcelas.toString();
+            mergedMap[baseGw].taxa_gateway = parseFloat(row.taxa_gateway) || 0;
+            mergedMap[baseGw].status_pagamento = row.status_pagamento || 'pago';
+            if (row.status_pagamento === 'pendente' && row.data_recebimento) {
+              mergedMap[baseGw].data_recebimento_custom = row.data_recebimento;
+            }
           }
         }
         const reconstructed = Object.values(mergedMap).map((m: any) => ({
           ...m,
           valor: m.valor.toString(),
-          taxa_gateway: m.taxa_gateway.toFixed(2)
+          taxa_gateway: typeof m.taxa_gateway === 'number' ? m.taxa_gateway.toFixed(2) : m.taxa_gateway
         }));
         setPagamentos(reconstructed);
-        setSaleObservacoes(lead.observacoes_gerais || "");
+        setSaleObservacoes(lead.observacoes_gerais || '');
         
         const existingDate = rows[0]?.data_venda ? new Date(rows[0].data_venda).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
         setSaleDate(existingDate);
@@ -1027,6 +1049,39 @@ export default function KanbanBoard() {
                         </div>
                       </div>
                     )}
+                    {/* Status do Pagamento — Pago / Pendente */}
+                    <div className="pt-3 border-t border-[#2A2A2A] mt-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[#888]">Status do recebimento:</span>
+                        <div className="flex rounded-lg overflow-hidden border border-[#2A2A2A] text-xs">
+                          <button
+                            type="button"
+                            onClick={() => handlePagamentoChange(p.id, 'status_pagamento', 'pago')}
+                            className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pago' ? 'bg-[#BEFF00] text-[#0A0A0A]' : 'bg-[#111] text-[#666] hover:text-white'}`}
+                          >✓ Pago</button>
+                          <button
+                            type="button"
+                            onClick={() => handlePagamentoChange(p.id, 'status_pagamento', 'pendente')}
+                            className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pendente' ? 'bg-amber-500 text-[#0A0A0A]' : 'bg-[#111] text-[#666] hover:text-white'}`}
+                          >⏳ Pendente</button>
+                        </div>
+                      </div>
+                      {p.status_pagamento === 'pendente' && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-[10px] text-[#888]">Data prevista:</span>
+                          <input
+                            type="date"
+                            className="bg-[#111] border border-amber-500/40 text-amber-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-amber-400"
+                            value={p.data_recebimento_custom}
+                            min={new Date().toISOString().split('T')[0]}
+                            onChange={e => handlePagamentoChange(p.id, 'data_recebimento_custom', e.target.value)}
+                          />
+                          {p.data_recebimento_custom && (
+                            <span className="text-[10px] text-amber-400/70">Não entra no caixa atual</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                 ))}

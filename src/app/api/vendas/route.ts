@@ -5,6 +5,32 @@ export async function GET(request: Request) {
     try {
         const url = new URL(request.url);
         const leadId = url.searchParams.get('leadId');
+        const pendentes = url.searchParams.get('pendentes');
+        const month = url.searchParams.get('month'); // YYYY-MM
+        const projectId = url.searchParams.get('projectId');
+
+        if (pendentes === 'true' && month && projectId) {
+            // Return pending vendas for calendar view
+            const [year, m] = month.split('-').map(Number);
+            const startDate = new Date(year, m - 1, 1).toISOString().split('T')[0];
+            const endDate = new Date(year, m, 0).toISOString().split('T')[0];
+
+            const { data, error } = await supabase
+                .from('vendas')
+                .select('id_venda, id_lead, forma_pagamento, valor_bruto, data_recebimento, leads(nome)')
+                .eq('status_pagamento', 'pendente')
+                .gte('data_recebimento', startDate)
+                .lte('data_recebimento', endDate);
+
+            if (error) throw error;
+            const formatted = (data || []).map((v: any) => ({
+                ...v,
+                lead: v.leads ? { nome: v.leads.nome } : undefined,
+                leads: undefined
+            }));
+            return NextResponse.json(formatted);
+        }
+
         if (!leadId) return NextResponse.json({ error: 'leadId required' }, { status: 400 });
 
         const { data, error } = await supabase
@@ -75,6 +101,8 @@ export async function POST(request: Request) {
             const formaPgto = p.forma_pagamento || 'PIX';
             const parcelas = parseInt(p.numero_parcelas) || 1;
             const desconto = parseFloat(p.desconto) || 0;
+            const statusPgto = p.status_pagamento || 'pago';
+            const dataRecebCustom = p.data_recebimento_custom || null;
             // Safety cap: taxa never exceeds the total value
             const rawTaxa = parseFloat(p.taxa_gateway) || 0;
             const taxaGw = Math.min(rawTaxa, valorTotal);
@@ -119,9 +147,11 @@ export async function POST(request: Request) {
                     numero_parcelas: parcelas,
                     taxa_gateway: parseFloat(taxaResto.toFixed(2)),
                     valor_liquido_caixa: restante - taxaResto - desconto,
-                    status_pagamento: 'pago',
+                    status_pagamento: statusPgto,
                     data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : new Date().toISOString(),
-                    data_recebimento: primeiraParcelaDate.toISOString().split('T')[0]
+                    data_recebimento: statusPgto === 'pendente' && dataRecebCustom
+                        ? dataRecebCustom
+                        : primeiraParcelaDate.toISOString().split('T')[0]
                 });
             } else {
                 // Regular row (no entrada)
@@ -137,9 +167,11 @@ export async function POST(request: Request) {
                     numero_parcelas: parcelas,
                     taxa_gateway: taxaGw,
                     valor_liquido_caixa: valorLiquido,
-                    status_pagamento: 'pago',
+                    status_pagamento: statusPgto,
                     data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : new Date().toISOString(),
-                    data_recebimento: data_venda ? `${data_venda}` : new Date().toISOString().split('T')[0]
+                    data_recebimento: statusPgto === 'pendente' && dataRecebCustom
+                        ? dataRecebCustom
+                        : (data_venda ? `${data_venda}` : new Date().toISOString().split('T')[0])
                 });
             }
         }

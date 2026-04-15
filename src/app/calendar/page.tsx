@@ -31,6 +31,15 @@ type TeamMember = {
 
 type Lead = { id_lead: number; nome: string };
 
+type PendingVenda = {
+  id_venda: number;
+  id_lead: number;
+  forma_pagamento: string;
+  valor_bruto: number;
+  data_recebimento: string;
+  lead?: { nome: string };
+};
+
 const STATUS_COLORS: Record<string, string> = {
   agendada: "bg-blue-500",
   realizada: "bg-[#BEFF00]",
@@ -65,6 +74,7 @@ function CalendarContent() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [saving, setSaving] = useState(false);
+  const [pendingVendas, setPendingVendas] = useState<PendingVenda[]>([]);
   const [formData, setFormData] = useState({
     titulo: "",
     data: "",
@@ -103,6 +113,15 @@ function CalendarContent() {
     }
   }, [selectedProject, month]);
 
+  const fetchPendingVendas = useCallback(async () => {
+    if (!selectedProject) return;
+    try {
+      const res = await fetch(`/api/vendas?pendentes=true&month=${month}&projectId=${selectedProject.id_projeto}`);
+      const data = await res.json();
+      setPendingVendas(Array.isArray(data) ? data : []);
+    } catch { setPendingVendas([]); }
+  }, [selectedProject, month]);
+
   const fetchTeamAndLeads = useCallback(async () => {
     if (!selectedProject) return;
     const [teamRes, leadsRes] = await Promise.all([
@@ -116,7 +135,8 @@ function CalendarContent() {
 
   useEffect(() => {
     fetchChamadas();
-  }, [fetchChamadas]);
+    fetchPendingVendas();
+  }, [fetchChamadas, fetchPendingVendas]);
 
   useEffect(() => {
     fetchTeamAndLeads();
@@ -160,6 +180,12 @@ function CalendarContent() {
       return d.getDate() === day.getDate() && d.getMonth() === day.getMonth() && d.getFullYear() === day.getFullYear();
     });
   };
+  const getPendingForDay = (day: Date) =>
+    pendingVendas.filter(v => {
+      if (!v.data_recebimento) return false;
+      const d = new Date(v.data_recebimento + 'T12:00:00');
+      return d.getDate() === day.getDate() && d.getMonth() === day.getMonth() && d.getFullYear() === day.getFullYear();
+    });
 
   const handleDayClick = (day: Date) => {
     setSelectedDate(day);
@@ -329,7 +355,7 @@ function CalendarContent() {
                   >
                     <span className={`text-sm font-bold mb-1 self-end ${isToday ? "text-[#BEFF00]" : "text-[#888]"}`}>{day.getDate()}</span>
                     <div className="flex flex-col gap-0.5">
-                      {dayChamadas.slice(0, 3).map((c) => (
+                      {dayChamadas.slice(0, 2).map((c) => (
                         <div
                           key={c.id_chamada}
                           onClick={(e) => { e.stopPropagation(); handleEditChamada(c); }}
@@ -338,8 +364,18 @@ function CalendarContent() {
                           {new Date(c.data_hora_inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} {c.titulo}
                         </div>
                       ))}
-                      {dayChamadas.length > 3 && (
-                        <div className="text-[10px] text-[#888] font-semibold">+{dayChamadas.length - 3} mais</div>
+                      {getPendingForDay(day).slice(0, 2).map((v) => (
+                        <div
+                          key={`pv-${v.id_venda}`}
+                          onClick={(e) => e.stopPropagation()}
+                          title={`A Receber: ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v.valor_bruto)} via ${v.forma_pagamento}${v.lead ? ` — ${v.lead.nome}` : ''}`}
+                          className="text-[10px] font-bold text-[#0A0A0A] px-1.5 py-0.5 rounded-md truncate bg-amber-400 cursor-default"
+                        >
+                          💰 {v.lead?.nome || 'Lead'} · {new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v.valor_bruto)}
+                        </div>
+                      ))}
+                      {(dayChamadas.length + getPendingForDay(day).length) > 4 && (
+                        <div className="text-[10px] text-[#888] font-semibold">+{dayChamadas.length + getPendingForDay(day).length - 4} mais</div>
                       )}
                     </div>
                   </div>
@@ -390,6 +426,24 @@ function CalendarContent() {
             </div>
           </div>
 
+          {/* Pagamentos Pendentes */}
+          {pendingVendas.length > 0 && (
+            <div className="glass-panel bg-[#1A1A1A] p-4">
+              <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <span className="text-amber-400">💰</span> A Receber
+              </h4>
+              <div className="flex flex-col gap-2">
+                {pendingVendas.slice(0, 5).map(v => (
+                  <div key={v.id_venda} className="p-2.5 rounded-xl bg-amber-400/5 border border-amber-400/20">
+                    <p className="text-amber-300 text-xs font-semibold truncate">{v.lead?.nome || 'Lead'}</p>
+                    <p className="text-white text-sm font-bold">{new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v.valor_bruto)}</p>
+                    <p className="text-[#888] text-[10px] mt-0.5">{v.forma_pagamento} · {new Date(v.data_recebimento + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Legenda */}
           <div className="glass-panel bg-[#1A1A1A] p-4">
             <h4 className="text-xs font-bold text-[#888] mb-3 uppercase tracking-wider">Status</h4>
@@ -400,6 +454,10 @@ function CalendarContent() {
                   <span className="text-xs text-[#888]">{label}</span>
                 </div>
               ))}
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <span className="text-xs text-[#888]">Pagamento Pendente</span>
+              </div>
             </div>
           </div>
         </div>
