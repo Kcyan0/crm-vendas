@@ -29,9 +29,9 @@ export default function LoginPage() {
       return
     }
 
-    // Login com sucesso, redirecionar via router para forçar refresh
-    router.push('/')
-    router.refresh()
+    // Login com sucesso, forçar reload completo da página para limpar cache do Next.js
+    // e recarregar os contextos (ProjectContext) do zero
+    window.location.href = '/'
   }
 
   return (

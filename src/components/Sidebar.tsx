@@ -14,7 +14,8 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
     const handleLogout = async () => {
         const supabase = createClient();
         await supabase.auth.signOut();
-        router.push('/login');
+        localStorage.removeItem('feracrm_selected_project');
+        window.location.href = '/login';
     };
 
     const NAV_ITEMS = [
