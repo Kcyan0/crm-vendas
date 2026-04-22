@@ -793,37 +793,63 @@ export default function Dashboard() {
                         <div className="flex flex-col gap-2 mt-2">
                             <h3 className="text-xs sm:text-sm font-bold text-white">Comissões do Período</h3>
                             <p className="text-[10px] text-[#666] -mt-1 mb-1">Calculado sobre o caixa líquido gerado × % individual de cada colaborador.</p>
-                            <div className="flex flex-col gap-2">
-                                {/* Closer */}
-                                <div className="flex items-center justify-between p-3 rounded-xl bg-[#111] border border-[#2A2A2A]">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-purple-400 text-lg">🎯</span>
-                                        <div>
-                                            <p className="text-xs font-bold text-white">Closer(s)</p>
-                                            {metrics?.comissaoCloserDetalhes && metrics.comissaoCloserDetalhes.length > 0 && (
-                                                <p className="text-[10px] text-[#666] leading-tight">
-                                                    {metrics.comissaoCloserDetalhes.map(d => `${d.nome} ${d.pct}%`).join(' · ')}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <span className="text-purple-400 font-black text-sm">{formatBRL(metrics?.comissaoCloserTotal || 0)}</span>
+                            <div className="flex flex-col gap-1.5">
+
+                                {/* Header row */}
+                                <div className="grid grid-cols-4 text-[10px] font-bold text-[#555] uppercase tracking-wider px-3 pb-1">
+                                    <span>Nome</span>
+                                    <span className="text-right">Caixa</span>
+                                    <span className="text-right">%</span>
+                                    <span className="text-right">Comissão</span>
                                 </div>
-                                {/* SDR */}
-                                <div className="flex items-center justify-between p-3 rounded-xl bg-[#111] border border-[#2A2A2A]">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-cyan-400 text-lg">📞</span>
-                                        <div>
-                                            <p className="text-xs font-bold text-white">SDR(s)</p>
-                                            {metrics?.comissaoSdrDetalhes && metrics.comissaoSdrDetalhes.length > 0 && (
-                                                <p className="text-[10px] text-[#666] leading-tight">
-                                                    {metrics.comissaoSdrDetalhes.map(d => `${d.nome} ${d.pct}%`).join(' · ')}
-                                                </p>
-                                            )}
+
+                                {/* Closers */}
+                                {metrics?.comissaoCloserDetalhes && metrics.comissaoCloserDetalhes.length > 0 && (
+                                    <>
+                                        <div className="flex items-center gap-1.5 px-3 pt-1 pb-0.5">
+                                            <span className="text-purple-400 text-xs">🎯</span>
+                                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Closers</span>
                                         </div>
-                                    </div>
-                                    <span className="text-cyan-400 font-black text-sm">{formatBRL(metrics?.comissaoSdrTotal || 0)}</span>
-                                </div>
+                                        {metrics.comissaoCloserDetalhes.map((d) => (
+                                            <div key={d.nome} className="grid grid-cols-4 items-center p-3 rounded-xl bg-[#111] border border-purple-500/10 gap-1">
+                                                <span className="text-white text-xs font-semibold truncate">{d.nome}</span>
+                                                <span className="text-[#888] text-xs text-right">{formatBRL(d.caixa)}</span>
+                                                <span className="text-purple-300 text-xs text-right font-bold">{d.pct}%</span>
+                                                <span className="text-purple-400 text-sm font-black text-right">{formatBRL(d.comissao)}</span>
+                                            </div>
+                                        ))}
+                                        <div className="grid grid-cols-4 items-center px-3 py-1 border-t border-[#2A2A2A]">
+                                            <span className="text-[#555] text-[10px] col-span-3">Total Closers</span>
+                                            <span className="text-purple-400 text-xs font-black text-right">{formatBRL(metrics.comissaoCloserTotal || 0)}</span>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* SDRs */}
+                                {metrics?.comissaoSdrDetalhes && metrics.comissaoSdrDetalhes.length > 0 && (
+                                    <>
+                                        <div className="flex items-center gap-1.5 px-3 pt-2 pb-0.5">
+                                            <span className="text-cyan-400 text-xs">📞</span>
+                                            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">SDRs</span>
+                                        </div>
+                                        {metrics.comissaoSdrDetalhes.map((d) => (
+                                            <div key={d.nome} className="grid grid-cols-4 items-center p-3 rounded-xl bg-[#111] border border-cyan-500/10 gap-1">
+                                                <span className="text-white text-xs font-semibold truncate">{d.nome}</span>
+                                                <span className="text-[#888] text-xs text-right">{formatBRL(d.caixa)}</span>
+                                                <span className="text-cyan-300 text-xs text-right font-bold">{d.pct}%</span>
+                                                <span className="text-cyan-400 text-sm font-black text-right">{formatBRL(d.comissao)}</span>
+                                            </div>
+                                        ))}
+                                        <div className="grid grid-cols-4 items-center px-3 py-1 border-t border-[#2A2A2A]">
+                                            <span className="text-[#555] text-[10px] col-span-3">Total SDRs</span>
+                                            <span className="text-cyan-400 text-xs font-black text-right">{formatBRL(metrics.comissaoSdrTotal || 0)}</span>
+                                        </div>
+                                    </>
+                                )}
+
+                                {(!metrics?.comissaoCloserDetalhes?.length && !metrics?.comissaoSdrDetalhes?.length) && (
+                                    <div className="text-center text-[#555] text-xs py-4">Nenhuma venda com colaboradores no período.</div>
+                                )}
                             </div>
                         </div>
 
