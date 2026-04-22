@@ -45,6 +45,7 @@ type Metrics = {
     comissaoSdrTotal?: number;
     comissaoCloserDetalhes?: { nome: string; caixa: number; pct: number; comissao: number }[];
     comissaoSdrDetalhes?: { nome: string; caixa: number; pct: number; comissao: number }[];
+    statusLeads?: { status: string; count: number; pct: number }[];
 };
 
 const DARK = '#1A1A1A';
@@ -650,6 +651,38 @@ export default function Dashboard() {
                         {renderTicketDonut("Ticket Médio (Faturamento) por SDR", metrics?.tmFaturamentoSdr, zoomedSection === 'performance')}
                         {renderTicketDonut("Ticket Médio (Caixa) por SDR", metrics?.tmCaixaSdr, zoomedSection === 'performance')}
                     </div>
+
+                    {/* Status dos Leads */}
+                    {metrics?.statusLeads && metrics.statusLeads.length > 0 && (
+                        <div className="mt-2">
+                            <h3 className={`${zoomedSection === 'performance' ? 'text-sm' : 'text-xs'} font-bold text-white mb-1`}>Status dos Leads</h3>
+                            <p className="text-[10px] text-[#888] mb-3">Distribuição de todos os leads por status no pipeline.</p>
+                            <div className="flex flex-col gap-2.5">
+                                {metrics.statusLeads.map(({ status, count, pct }) => {
+                                    const STATUS_COLORS: Record<string, string> = {
+                                        'Venda': '#BEFF00', 'Loss': '#f472b6', 'Remarcado': '#facc15',
+                                        'No-show': '#fb923c', 'Novo': '#60a5fa', 'Reembolsado': '#a78bfa', 'Follow-up': '#34d399'
+                                    };
+                                    const color = STATUS_COLORS[status] || '#888';
+                                    return (
+                                        <div key={status} className="flex items-center gap-3">
+                                            <div className="flex items-center gap-1.5 shrink-0" style={{ width: zoomedSection === 'performance' ? '180px' : '120px' }}>
+                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                                <span className="text-white font-semibold truncate" style={{ fontSize: zoomedSection === 'performance' ? '12px' : '10px' }}>
+                                                    {status === 'Loss' ? 'Loss / Não prosseguiu' : status}
+                                                </span>
+                                                <span className="text-[#666]" style={{ fontSize: '10px' }}>({count})</span>
+                                            </div>
+                                            <div className="flex-1 h-2.5 bg-[#111] rounded-full overflow-hidden">
+                                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                            </div>
+                                            <span className="text-white font-bold shrink-0" style={{ fontSize: '11px', minWidth: '38px', textAlign: 'right' }}>{pct}%</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
