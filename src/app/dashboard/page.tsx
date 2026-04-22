@@ -41,6 +41,10 @@ type Metrics = {
     funnelData?: { name: string; value: number }[];
     chargebackRate?: string;
     recentRefundReasons?: string[];
+    comissaoCloserTotal?: number;
+    comissaoSdrTotal?: number;
+    comissaoCloserDetalhes?: { nome: string; caixa: number; pct: number; comissao: number }[];
+    comissaoSdrDetalhes?: { nome: string; caixa: number; pct: number; comissao: number }[];
 };
 
 const DARK = '#1A1A1A';
@@ -782,6 +786,44 @@ export default function Dashboard() {
                                         Nenhum reembolso 🎉
                                     </div>
                                 )}
+                            </div>
+                        </div>
+
+                        {/* Comissões */}
+                        <div className="flex flex-col gap-2 mt-2">
+                            <h3 className="text-xs sm:text-sm font-bold text-white">Comissões do Período</h3>
+                            <p className="text-[10px] text-[#666] -mt-1 mb-1">Calculado sobre o caixa líquido gerado × % individual de cada colaborador.</p>
+                            <div className="flex flex-col gap-2">
+                                {/* Closer */}
+                                <div className="flex items-center justify-between p-3 rounded-xl bg-[#111] border border-[#2A2A2A]">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-purple-400 text-lg">🎯</span>
+                                        <div>
+                                            <p className="text-xs font-bold text-white">Closer(s)</p>
+                                            {metrics?.comissaoCloserDetalhes && metrics.comissaoCloserDetalhes.length > 0 && (
+                                                <p className="text-[10px] text-[#666] leading-tight">
+                                                    {metrics.comissaoCloserDetalhes.map(d => `${d.nome} ${d.pct}%`).join(' · ')}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <span className="text-purple-400 font-black text-sm">{formatBRL(metrics?.comissaoCloserTotal || 0)}</span>
+                                </div>
+                                {/* SDR */}
+                                <div className="flex items-center justify-between p-3 rounded-xl bg-[#111] border border-[#2A2A2A]">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-cyan-400 text-lg">📞</span>
+                                        <div>
+                                            <p className="text-xs font-bold text-white">SDR(s)</p>
+                                            {metrics?.comissaoSdrDetalhes && metrics.comissaoSdrDetalhes.length > 0 && (
+                                                <p className="text-[10px] text-[#666] leading-tight">
+                                                    {metrics.comissaoSdrDetalhes.map(d => `${d.nome} ${d.pct}%`).join(' · ')}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <span className="text-cyan-400 font-black text-sm">{formatBRL(metrics?.comissaoSdrTotal || 0)}</span>
+                                </div>
                             </div>
                         </div>
 

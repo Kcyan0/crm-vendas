@@ -129,10 +129,17 @@ export async function GET(request: Request) {
         // Ticket Médio (per distinct sale)
         const ticketMedio = vendasTotais > 0 ? receita / vendasTotais : 0;
 
-        // Fetch User details for naming
-        const { data: usersData } = await supabase.from('usuarios').select('id_usuario, nome').in('tipo', ['SDR', 'CLOSER']);
+        // Fetch User details for naming + commission %
+        const { data: usersData } = await supabase.from('usuarios').select('id_usuario, nome, percentual_comissao_closer, percentual_comissao_sdr').in('tipo', ['SDR', 'CLOSER', 'ADMIN']);
         const usersMap: Record<number, string> = {};
-        (usersData || []).forEach((u: any) => { usersMap[u.id_usuario] = u.nome; });
+        const userCommissionMap: Record<number, { pctCloser: number; pctSdr: number }> = {};
+        (usersData || []).forEach((u: any) => {
+            usersMap[u.id_usuario] = u.nome;
+            userCommissionMap[u.id_usuario] = {
+                pctCloser: parseFloat(u.percentual_comissao_closer) || 0,
+                pctSdr: parseFloat(u.percentual_comissao_sdr) || 0,
+            };
+        });
 
         // Map lead owners for the filtered sales
         const { data: leadsInfoData } = await supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel').in('id_lead', Array.from(validLeadIds!));
@@ -189,6 +196,48 @@ export async function GET(request: Request) {
         const receitaPorCloser = Object.entries(byCloser).map(([name, value]) => ({ name, value }));
         const receitaPorSdr = Object.entries(bySdr).map(([name, value]) => ({ name, value }));
 
+        // ─── Commission calculation (Alternativa A) ─────────────────────────────
+        // For each closer/sdr: sum (caixa * pct%) across all their sales in period
+        let comissaoCloserTotal = 0;
+        let comissaoSdrTotal = 0;
+        const comissaoCloserDetalhes: { nome: string; caixa: number; pct: number; comissao: number }[] = [];
+        const comissaoSdrDetalhes: { nome: string; caixa: number; pct: number; comissao: number }[] = [];
+
+        for (const sale of groupedSales) {
+            let saleCaixa = 0;
+            for (const v of sale.rows) {
+                const parcelas = v.numero_parcelas || 1;
+                const valorParcela = (v.valor_liquido_caixa != null ? parseFloat(v.valor_liquido_caixa) : (parseFloat(v.valor_bruto) || 0)) / parcelas;
+                const dataBase = new Date(v.data_recebimento || v.data_venda);
+                for (let i = 0; i < parcelas; i++) {
+                    const dataParcela = new Date(dataBase);
+                    dataParcela.setMonth(dataParcela.getMonth() + i);
+                    if (dataParcela >= start && dataParcela <= end) saleCaixa += valorParcela;
+                }
+            }
+            const owners = leadOwnerMap[sale.id_lead];
+            if (owners?.closer) {
+                const pct = userCommissionMap[owners.closer]?.pctCloser || 0;
+                comissaoCloserTotal += saleCaixa * pct / 100;
+            }
+            if (owners?.sdr) {
+                const pct = userCommissionMap[owners.sdr]?.pctSdr || 0;
+                comissaoSdrTotal += saleCaixa * pct / 100;
+            }
+        }
+
+        // Per-person detail
+        for (const [name, stats] of Object.entries(closerStats)) {
+            const uid = Object.keys(usersMap).find(k => usersMap[parseInt(k)] === name);
+            const pct = uid ? (userCommissionMap[parseInt(uid)]?.pctCloser || 0) : 0;
+            comissaoCloserDetalhes.push({ nome: name, caixa: stats.caixa, pct, comissao: stats.caixa * pct / 100 });
+        }
+        for (const [name, stats] of Object.entries(sdrStats)) {
+            const uid = Object.keys(usersMap).find(k => usersMap[parseInt(k)] === name);
+            const pct = uid ? (userCommissionMap[parseInt(uid)]?.pctSdr || 0) : 0;
+            comissaoSdrDetalhes.push({ nome: name, caixa: stats.caixa, pct, comissao: stats.caixa * pct / 100 });
+        }
+
         const tmFaturamentoCloser = Object.entries(closerStats).map(([name, stats]) => ({ name, value: stats.count > 0 ? stats.faturamento / stats.count : 0 })).sort((a, b) => b.value - a.value);
         const tmCaixaCloser = Object.entries(closerStats).map(([name, stats]) => ({ name, value: stats.count > 0 ? stats.caixa / stats.count : 0 })).sort((a, b) => b.value - a.value);
         const tmFaturamentoSdr = Object.entries(sdrStats).map(([name, stats]) => ({ name, value: stats.count > 0 ? stats.faturamento / stats.count : 0 })).sort((a, b) => b.value - a.value);
@@ -214,8 +263,20 @@ export async function GET(request: Request) {
             .slice(0, 5)
             .map((l: any) => l.motivo_reembolso);
 
-        return NextResponse.json({
+        // ─── Status dos Leads (para aba Performance) ────────────────────────────
+        const kanbanStatuses = ['Novo', 'Follow-up', 'Remarcado', 'No-show', 'Venda', 'Reembolsado', 'Loss'];
+        const statusCounts: Record<string, number> = {};
+        for (const l of (allLeads || [])) {
+            const s = l.status_atual === 'Nao prosseguiu' ? 'Loss' : l.status_atual;
+            if (kanbanStatuses.includes(s)) statusCounts[s] = (statusCounts[s] || 0) + 1;
+        }
+        const totalLeadsStatus = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+        const statusLeads = kanbanStatuses
+            .filter(s => statusCounts[s] > 0)
+            .map(s => ({ status: s, count: statusCounts[s], pct: totalLeadsStatus > 0 ? parseFloat(((statusCounts[s] / totalLeadsStatus) * 100).toFixed(1)) : 0 }))
+            .sort((a, b) => b.count - a.count);
 
+        return NextResponse.json({
             receita,
             caixaLiquido,
             leadsTotais,
@@ -232,6 +293,11 @@ export async function GET(request: Request) {
             funnelData,
             chargebackRate,
             recentRefundReasons,
+            comissaoCloserTotal,
+            comissaoSdrTotal,
+            comissaoCloserDetalhes,
+            comissaoSdrDetalhes,
+            statusLeads,
             period: { startDate, endDate }
         });
     } catch (error: any) {
