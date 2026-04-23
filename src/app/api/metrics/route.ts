@@ -19,21 +19,20 @@ export async function GET(request: Request) {
         const endDate   = searchParams.get('endDate')   || lastDay;
         const projectId = searchParams.get('projectId');
 
-        // Fetch all paid sales in period (include id_oportunidade for grouping)
-        // We store data_venda as noon UTC (T12:00:00Z) anchored to the BRT calendar date,
-        // so filtering with -03:00 midnight boundaries correctly spans each local day.
-        // BRT midnight start = UTC T03:00:00 of same day
-        // BRT midnight end   = UTC T03:00:00 of NEXT day
+        // Fetch all paid sales in period.
+        // We filter by data_recebimento (plain YYYY-MM-DD string, always stored in local BRT)
+        // instead of data_venda (timestamp) which has timezone issues with old records.
+        // endFilter ref still needed for the periodLeads query below.
         const endDatePlusOne = new Date(`${endDate}T03:00:00.000Z`);
         endDatePlusOne.setUTCDate(endDatePlusOne.getUTCDate() + 1);
-        const endFilter = endDatePlusOne.toISOString(); // e.g. 2026-04-24T03:00:00.000Z
+        const endFilter = endDatePlusOne.toISOString();
 
         const { data: vendas } = await supabase
             .from('vendas')
             .select('id_venda, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_venda, data_recebimento, forma_pagamento, id_lead')
             .eq('status_pagamento', 'pago')
-            .gte('data_venda', `${startDate}T03:00:00.000Z`)
-            .lt('data_venda', endFilter);
+            .gte('data_recebimento', startDate)
+            .lte('data_recebimento', endDate);
 
         // Filter by project through leads if projectId
         let validLeadIds: Set<number> | null = null;
