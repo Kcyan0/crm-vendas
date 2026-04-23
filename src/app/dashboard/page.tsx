@@ -823,68 +823,99 @@ export default function Dashboard() {
                         </div>
 
                         {/* Comissões */}
-                        <div className="flex flex-col gap-2 mt-2">
-                            <h3 className="text-xs sm:text-sm font-bold text-white">Comissões do Período</h3>
-                            <p className="text-[10px] text-[#666] -mt-1 mb-1">Calculado sobre o caixa líquido gerado × % individual de cada colaborador.</p>
-                            <div className="flex flex-col gap-1.5">
+                        {(metrics?.comissaoCloserDetalhes?.length || metrics?.comissaoSdrDetalhes?.length) ? (
+                            <div className="flex flex-col gap-2 mt-2">
+                                <h3 className="text-xs sm:text-sm font-bold text-white">Comissões do Período</h3>
+                                <p className="text-[10px] text-[#888888] -mt-1 mb-1">Calculado sobre o caixa líquido gerado × % individual de cada colaborador.</p>
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
 
-                                {/* Header row */}
-                                <div className="grid grid-cols-4 text-[10px] font-bold text-[#555] uppercase tracking-wider px-3 pb-1">
-                                    <span>Nome</span>
-                                    <span className="text-right">Caixa</span>
-                                    <span className="text-right">%</span>
-                                    <span className="text-right">Comissão</span>
+                                    {/* Closers */}
+                                    {metrics?.comissaoCloserDetalhes && metrics.comissaoCloserDetalhes.length > 0 && (
+                                        <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col">
+                                            <h4 className="text-xs font-bold text-white mb-1">Comissão Closer</h4>
+                                            <p className="text-[10px] text-[#888888] mb-4">Comissão de cada closer sobre o caixa gerado.</p>
+                                            <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
+                                                <table className="w-full text-left text-xs text-[#888888] min-w-[260px]">
+                                                    <thead>
+                                                        <tr className="border-b border-white/10">
+                                                            <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
+                                                            <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Caixa</th>
+                                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">%</th>
+                                                            <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Comissão</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-white/5">
+                                                        {metrics.comissaoCloserDetalhes.map((d, index) => {
+                                                            const avatarColors = ['#A78BFA', '#22D3EE', '#BEFF00', '#F472B6', '#fff'];
+                                                            return (
+                                                                <tr key={d.nome} className="hover:bg-white/[0.02] transition-colors">
+                                                                    <td className="py-2.5 flex items-center gap-2 text-white">
+                                                                        <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: avatarColors[index % avatarColors.length] }}>
+                                                                            {d.nome.charAt(0).toUpperCase()}
+                                                                        </div>
+                                                                        <span className="truncate max-w-[80px] xl:max-w-[110px] text-[10px] xl:text-xs" title={d.nome}>{d.nome}</span>
+                                                                    </td>
+                                                                    <td className="py-2.5 text-right text-white text-[10px] xl:text-xs font-medium">{formatBRL(d.caixa)}</td>
+                                                                    <td className="py-2.5 text-center text-[#A78BFA] font-bold text-[10px] xl:text-xs">{d.pct}%</td>
+                                                                    <td className="py-2.5 text-right text-[#A78BFA] font-black text-[10px] xl:text-xs">{formatBRL(d.comissao)}</td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                        <tr className="border-t border-white/10">
+                                                            <td colSpan={3} className="pt-2.5 text-[10px] text-[#555] font-medium">Total Closers</td>
+                                                            <td className="pt-2.5 text-right text-[#A78BFA] font-black text-xs">{formatBRL(metrics.comissaoCloserTotal || 0)}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* SDRs */}
+                                    {metrics?.comissaoSdrDetalhes && metrics.comissaoSdrDetalhes.length > 0 && (
+                                        <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col">
+                                            <h4 className="text-xs font-bold text-white mb-1">Comissão SDR</h4>
+                                            <p className="text-[10px] text-[#888888] mb-4">Comissão de cada SDR sobre o caixa gerado.</p>
+                                            <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
+                                                <table className="w-full text-left text-xs text-[#888888] min-w-[260px]">
+                                                    <thead>
+                                                        <tr className="border-b border-white/10">
+                                                            <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
+                                                            <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Caixa</th>
+                                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">%</th>
+                                                            <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Comissão</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-white/5">
+                                                        {metrics.comissaoSdrDetalhes.map((d, index) => {
+                                                            const avatarColors = ['#22D3EE', '#BEFF00', '#F472B6', '#A78BFA', '#fff'];
+                                                            return (
+                                                                <tr key={d.nome} className="hover:bg-white/[0.02] transition-colors">
+                                                                    <td className="py-2.5 flex items-center gap-2 text-white">
+                                                                        <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: avatarColors[index % avatarColors.length] }}>
+                                                                            {d.nome.charAt(0).toUpperCase()}
+                                                                        </div>
+                                                                        <span className="truncate max-w-[80px] xl:max-w-[110px] text-[10px] xl:text-xs" title={d.nome}>{d.nome}</span>
+                                                                    </td>
+                                                                    <td className="py-2.5 text-right text-white text-[10px] xl:text-xs font-medium">{formatBRL(d.caixa)}</td>
+                                                                    <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{d.pct}%</td>
+                                                                    <td className="py-2.5 text-right text-[#22D3EE] font-black text-[10px] xl:text-xs">{formatBRL(d.comissao)}</td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                        <tr className="border-t border-white/10">
+                                                            <td colSpan={3} className="pt-2.5 text-[10px] text-[#555] font-medium">Total SDRs</td>
+                                                            <td className="pt-2.5 text-right text-[#22D3EE] font-black text-xs">{formatBRL(metrics.comissaoSdrTotal || 0)}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+
                                 </div>
-
-                                {/* Closers */}
-                                {metrics?.comissaoCloserDetalhes && metrics.comissaoCloserDetalhes.length > 0 && (
-                                    <>
-                                        <div className="flex items-center gap-1.5 px-3 pt-1 pb-0.5">
-                                            <span className="text-purple-400 text-xs">🎯</span>
-                                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Closers</span>
-                                        </div>
-                                        {metrics.comissaoCloserDetalhes.map((d) => (
-                                            <div key={d.nome} className="grid grid-cols-4 items-center p-3 rounded-xl bg-[#111] border border-purple-500/10 gap-1">
-                                                <span className="text-white text-xs font-semibold truncate">{d.nome}</span>
-                                                <span className="text-[#888] text-xs text-right">{formatBRL(d.caixa)}</span>
-                                                <span className="text-purple-300 text-xs text-right font-bold">{d.pct}%</span>
-                                                <span className="text-purple-400 text-sm font-black text-right">{formatBRL(d.comissao)}</span>
-                                            </div>
-                                        ))}
-                                        <div className="grid grid-cols-4 items-center px-3 py-1 border-t border-[#2A2A2A]">
-                                            <span className="text-[#555] text-[10px] col-span-3">Total Closers</span>
-                                            <span className="text-purple-400 text-xs font-black text-right">{formatBRL(metrics.comissaoCloserTotal || 0)}</span>
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* SDRs */}
-                                {metrics?.comissaoSdrDetalhes && metrics.comissaoSdrDetalhes.length > 0 && (
-                                    <>
-                                        <div className="flex items-center gap-1.5 px-3 pt-2 pb-0.5">
-                                            <span className="text-cyan-400 text-xs">📞</span>
-                                            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">SDRs</span>
-                                        </div>
-                                        {metrics.comissaoSdrDetalhes.map((d) => (
-                                            <div key={d.nome} className="grid grid-cols-4 items-center p-3 rounded-xl bg-[#111] border border-cyan-500/10 gap-1">
-                                                <span className="text-white text-xs font-semibold truncate">{d.nome}</span>
-                                                <span className="text-[#888] text-xs text-right">{formatBRL(d.caixa)}</span>
-                                                <span className="text-cyan-300 text-xs text-right font-bold">{d.pct}%</span>
-                                                <span className="text-cyan-400 text-sm font-black text-right">{formatBRL(d.comissao)}</span>
-                                            </div>
-                                        ))}
-                                        <div className="grid grid-cols-4 items-center px-3 py-1 border-t border-[#2A2A2A]">
-                                            <span className="text-[#555] text-[10px] col-span-3">Total SDRs</span>
-                                            <span className="text-cyan-400 text-xs font-black text-right">{formatBRL(metrics.comissaoSdrTotal || 0)}</span>
-                                        </div>
-                                    </>
-                                )}
-
-                                {(!metrics?.comissaoCloserDetalhes?.length && !metrics?.comissaoSdrDetalhes?.length) && (
-                                    <div className="text-center text-[#555] text-xs py-4">Nenhuma venda com colaboradores no período.</div>
-                                )}
                             </div>
-                        </div>
+                        ) : null}
 
                     </div>
                 </div>
