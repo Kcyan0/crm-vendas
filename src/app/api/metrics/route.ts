@@ -54,15 +54,24 @@ export async function GET(request: Request) {
         const endDate   = searchParams.get('endDate')   || lastDay;
         const projectId = searchParams.get('projectId');
 
-        // endFilter for leads queries (BRT-aware)
+        // endFilter for leads & sales queries (BRT-aware midnight)
         const endDatePlusOne = new Date(`${endDate}T03:00:00.000Z`);
         endDatePlusOne.setUTCDate(endDatePlusOne.getUTCDate() + 1);
         const endFilter = endDatePlusOne.toISOString();
+        const startVendaFilter = `${startDate}T03:00:00.000Z`;
 
-        // ─── Fetch SALES in period ────────────────────────────────────────────────
-        // Filter by data_recebimento (plain YYYY-MM-DD, always stored in local BRT).
-        // This is the "payment received" date — avoids UTC timestamp issues.
-        const { data: vendas } = await supabase
+        // ─── 1. FETCH SALES (FATURAMENTO) ─────────────────────────────────────────
+        // Receita Bruta = sales originated in the period (pago + pendente) based on data_venda.
+        const { data: vendasFat } = await supabase
+            .from('vendas')
+            .select('id_venda, id_oportunidade, valor_bruto, data_venda, id_lead')
+            .in('status_pagamento', ['pago', 'pendente'])
+            .gte('data_venda', startVendaFilter)
+            .lt('data_venda', endFilter);
+
+        // ─── 2. FETCH CASH (CAIXA LÍQUIDO) ────────────────────────────────────────
+        // Caixa Líquido = payments received in the period (pago only) based on data_recebimento.
+        const { data: vendasCaixa } = await supabase
             .from('vendas')
             .select('id_venda, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_venda, data_recebimento, forma_pagamento, id_lead')
             .eq('status_pagamento', 'pago')
@@ -79,38 +88,34 @@ export async function GET(request: Request) {
             validLeadIds = new Set((projLeads || []).map((l: any) => l.id_lead));
         }
 
-        const filteredVendas = (vendas || []).filter((v: any) => validLeadIds!.has(v.id_lead));
+        const filteredFat = (vendasFat || []).filter((v: any) => validLeadIds!.has(v.id_lead));
+        const filteredCaixa = (vendasCaixa || []).filter((v: any) => validLeadIds!.has(v.id_lead));
 
-        // ─── GROUP rows by id_oportunidade ────────────────────────────────────────
-        const salesMap: Record<number, {
-            id_oportunidade: number;
-            id_lead: number;
-            valor_bruto: number;
-            gateways: string[];
-            rows: any[];
-        }> = {};
-
-        for (const v of filteredVendas) {
+        // ─── GROUP Faturamento by id_oportunidade ─────────────────────────────────
+        const mapFat: Record<number, { id_lead: number; valor_bruto: number }> = {};
+        for (const v of filteredFat) {
             const oportId = v.id_oportunidade ?? v.id_lead;
-            if (!salesMap[oportId]) {
-                salesMap[oportId] = { id_oportunidade: oportId, id_lead: v.id_lead, valor_bruto: 0, gateways: [], rows: [] };
-            }
-            salesMap[oportId].valor_bruto += parseFloat(v.valor_bruto) || 0;
-            salesMap[oportId].rows.push(v);
-            const gw = baseGateway(v.forma_pagamento);
-            if (!salesMap[oportId].gateways.includes(gw)) salesMap[oportId].gateways.push(gw);
+            if (!mapFat[oportId]) mapFat[oportId] = { id_lead: v.id_lead, valor_bruto: 0 };
+            mapFat[oportId].valor_bruto += parseFloat(v.valor_bruto) || 0;
         }
-        const groupedSales = Object.values(salesMap);
+        const groupedSalesFat = Object.values(mapFat);
 
-        // ─── Receita (faturamento bruto) ──────────────────────────────────────────
-        const receita = groupedSales.reduce((sum, s) => sum + s.valor_bruto, 0);
-        const vendasTotais = groupedSales.length;
+        // ─── GROUP Caixa by id_oportunidade ───────────────────────────────────────
+        const mapCaixa: Record<number, { id_lead: number; rows: any[] }> = {};
+        for (const v of filteredCaixa) {
+            const oportId = v.id_oportunidade ?? v.id_lead;
+            if (!mapCaixa[oportId]) mapCaixa[oportId] = { id_lead: v.id_lead, rows: [] };
+            mapCaixa[oportId].rows.push(v);
+        }
+        const groupedSalesCaixa = Object.values(mapCaixa);
 
-        // ─── Caixa líquido ────────────────────────────────────────────────────────
-        // Single source of truth: use caixaInPeriod() for EVERY caixa figure.
-        // This function uses month-string comparison, avoiding setMonth() edge cases.
+        // ─── Receita (Faturamento Global) ─────────────────────────────────────────
+        const receita = groupedSalesFat.reduce((sum, s) => sum + s.valor_bruto, 0);
+        const vendasTotais = groupedSalesFat.length;
+
+        // ─── Caixa Líquido Global ─────────────────────────────────────────────────
         let caixaLiquido = 0;
-        for (const sale of groupedSales) {
+        for (const sale of groupedSalesCaixa) {
             for (const v of sale.rows) {
                 caixaLiquido += caixaInPeriod(v, startDate, endDate);
             }
@@ -118,19 +123,19 @@ export async function GET(request: Request) {
 
         // ─── Leads count ──────────────────────────────────────────────────────────
         let leadsQuery = supabase.from('leads').select('id_lead')
-            .gte('data_entrada', `${startDate}T03:00:00.000Z`)
+            .gte('data_entrada', startVendaFilter)
             .lt('data_entrada', endFilter);
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
         const { data: leadsData } = await leadsQuery;
         const leadsTotais = leadsData?.length || 0;
         const conversaoAproximada = leadsTotais > 0 ? ((vendasTotais / leadsTotais) * 100).toFixed(1) : '0.0';
 
-        // ─── Ticket Médio ─────────────────────────────────────────────────────────
+        // ─── Ticket Médio (Global based on Faturamento) ───────────────────────────
         const ticketMedio = vendasTotais > 0 ? receita / vendasTotais : 0;
 
-        // ─── Receita por Forma de Pagamento (caixa no período) ───────────────────
+        // ─── Receita por Forma de Pagamento (Caixa no período) ───────────────────
         const byPayment: Record<string, number> = {};
-        for (const sale of groupedSales) {
+        for (const sale of groupedSalesCaixa) {
             for (const v of sale.rows) {
                 const gw = baseGateway(v.forma_pagamento);
                 const cx = caixaInPeriod(v, startDate, endDate);
@@ -164,24 +169,20 @@ export async function GET(request: Request) {
             leadOwnerMap[l.id_lead] = { sdr: l.id_sdr_responsavel, closer: l.id_closer_responsavel };
         });
 
-        // ─── Per-person stats (single loop, single caixa source) ─────────────────
+        // ─── Per-person stats (separated logic) ──────────────────────────────────
         const byCloser: Record<string, number> = {};
         const bySdr: Record<string, number> = {};
         const closerStats: Record<string, { faturamento: number; caixa: number; count: number }> = {};
         const sdrStats: Record<string, { faturamento: number; caixa: number; count: number }> = {};
 
-        for (const sale of groupedSales) {
-            // Caixa for this sale — same formula as global caixaLiquido
-            let saleCaixa = 0;
-            for (const v of sale.rows) saleCaixa += caixaInPeriod(v, startDate, endDate);
-
+        // Faturamento (Receita Bruta e Vendas)
+        for (const sale of groupedSalesFat) {
             const owners = leadOwnerMap[sale.id_lead];
             if (owners?.closer) {
                 const cName = usersMap[owners.closer] || 'Desconhecido';
                 byCloser[cName] = (byCloser[cName] || 0) + sale.valor_bruto;
                 if (!closerStats[cName]) closerStats[cName] = { faturamento: 0, caixa: 0, count: 0 };
                 closerStats[cName].faturamento += sale.valor_bruto;
-                closerStats[cName].caixa += saleCaixa;
                 closerStats[cName].count += 1;
             }
             if (owners?.sdr) {
@@ -189,8 +190,25 @@ export async function GET(request: Request) {
                 bySdr[sName] = (bySdr[sName] || 0) + sale.valor_bruto;
                 if (!sdrStats[sName]) sdrStats[sName] = { faturamento: 0, caixa: 0, count: 0 };
                 sdrStats[sName].faturamento += sale.valor_bruto;
-                sdrStats[sName].caixa += saleCaixa;
                 sdrStats[sName].count += 1;
+            }
+        }
+
+        // Caixa (Dinheiro Recebido)
+        for (const sale of groupedSalesCaixa) {
+            let saleCaixa = 0;
+            for (const v of sale.rows) saleCaixa += caixaInPeriod(v, startDate, endDate);
+
+            const owners = leadOwnerMap[sale.id_lead];
+            if (owners?.closer) {
+                const cName = usersMap[owners.closer] || 'Desconhecido';
+                if (!closerStats[cName]) closerStats[cName] = { faturamento: 0, caixa: 0, count: 0 };
+                closerStats[cName].caixa += saleCaixa;
+            }
+            if (owners?.sdr) {
+                const sName = usersMap[owners.sdr] || 'Desconhecido';
+                if (!sdrStats[sName]) sdrStats[sName] = { faturamento: 0, caixa: 0, count: 0 };
+                sdrStats[sName].caixa += saleCaixa;
             }
         }
 
@@ -229,8 +247,8 @@ export async function GET(request: Request) {
 
         // ─── Chargeback ───────────────────────────────────────────────────────────
         const reembolsados = (allLeads || []).filter((l: any) => l.status_atual === 'Reembolsado');
-        const chargebackRate = (groupedSales.length + reembolsados.length) > 0
-            ? ((reembolsados.length / (groupedSales.length + reembolsados.length)) * 100).toFixed(1)
+        const chargebackRate = (groupedSalesFat.length + reembolsados.length) > 0
+            ? ((reembolsados.length / (groupedSalesFat.length + reembolsados.length)) * 100).toFixed(1)
             : '0.0';
         const recentRefundReasons = reembolsados.filter((l: any) => l.motivo_reembolso).slice(0, 5).map((l: any) => l.motivo_reembolso);
 
