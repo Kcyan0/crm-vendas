@@ -564,7 +564,7 @@ export default function Dashboard() {
 
                 {/* ── ROW: Receita Bars & Pagamentos ── */}
                 <div className="glass-panel p-4 rounded-xl flex flex-col col-span-1 border border-white/5">
-                    <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Por Forma de Pagamento</h3>
+                    <h3 className="text-[10px] sm:text-xs font-bold text-white mb-2 truncate">Receita por Forma de Pagamento</h3>
                     <div className="flex-1 w-full flex items-center justify-center min-h-[160px] overflow-hidden">
                         {metrics?.receitaPorPagamento && metrics.receitaPorPagamento.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -579,6 +579,16 @@ export default function Dashboard() {
                             <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados</div>
                         )}
                     </div>
+                    {metrics?.receitaPorPagamento && metrics.receitaPorPagamento.length > 0 && (
+                        <div className="mt-2 w-full space-y-1 border-t border-white/5 pt-2">
+                            {metrics.receitaPorPagamento.slice(0, 3).map((d: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between text-[10px]">
+                                    <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} /><span className="text-[#aaa] truncate max-w-[90px]">{d.name}</span></div>
+                                    <span className="text-white font-bold">{formatBRL(d.value)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="glass-panel p-4 rounded-xl flex flex-col col-span-1 border border-white/5">
