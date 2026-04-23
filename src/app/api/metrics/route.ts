@@ -9,21 +9,31 @@ function baseGateway(forma: string): string {
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const today = new Date();
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+        // Use Brazil local date (UTC-3) for "today" default so the month boundaries
+        // match what the user sees in BRT, not UTC.
+        const nowBR = new Date(Date.now() - 3 * 60 * 60 * 1000);
+        const firstDay = new Date(nowBR.getUTCFullYear(), nowBR.getUTCMonth(), 1).toISOString().split('T')[0];
+        const lastDay  = new Date(nowBR.getUTCFullYear(), nowBR.getUTCMonth() + 1, 0).toISOString().split('T')[0];
 
         const startDate = searchParams.get('startDate') || firstDay;
-        const endDate = searchParams.get('endDate') || lastDay;
+        const endDate   = searchParams.get('endDate')   || lastDay;
         const projectId = searchParams.get('projectId');
 
         // Fetch all paid sales in period (include id_oportunidade for grouping)
+        // We store data_venda as noon UTC (T12:00:00Z) anchored to the BRT calendar date,
+        // so filtering with -03:00 midnight boundaries correctly spans each local day.
+        // BRT midnight start = UTC T03:00:00 of same day
+        // BRT midnight end   = UTC T03:00:00 of NEXT day
+        const endDatePlusOne = new Date(`${endDate}T03:00:00.000Z`);
+        endDatePlusOne.setUTCDate(endDatePlusOne.getUTCDate() + 1);
+        const endFilter = endDatePlusOne.toISOString(); // e.g. 2026-04-24T03:00:00.000Z
+
         const { data: vendas } = await supabase
             .from('vendas')
             .select('id_venda, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_venda, data_recebimento, forma_pagamento, id_lead')
             .eq('status_pagamento', 'pago')
-            .gte('data_venda', `${startDate}T00:00:00`)
-            .lte('data_venda', `${endDate}T23:59:59`);
+            .gte('data_venda', `${startDate}T03:00:00.000Z`)
+            .lt('data_venda', endFilter);
 
         // Filter by project through leads if projectId
         let validLeadIds: Set<number> | null = null;

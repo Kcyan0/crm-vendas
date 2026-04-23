@@ -52,6 +52,12 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { id_lead, pagamentos, observacoes, id_sdr, id_closer, data_venda } = body;
 
+        // Always use Brazil local date (UTC-3) for "today" so a sale at 23h BRT
+        // doesn't get stored as the next day in UTC.
+        const nowBR = new Date(Date.now() - 3 * 60 * 60 * 1000);
+        const todayBR = nowBR.toISOString().split('T')[0]; // YYYY-MM-DD in BRT
+        const todayBRTs = `${todayBR}T12:00:00.000Z`;     // noon UTC ~= reasonable BRT day anchor
+
         if (!id_lead || !pagamentos || pagamentos.length === 0) {
             return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
         }
@@ -128,8 +134,8 @@ export async function POST(request: Request) {
                     taxa_gateway: parseFloat(taxaEntrada.toFixed(2)),
                     valor_liquido_caixa: parseFloat(liquidoEntrada.toFixed(2)),
                     status_pagamento: 'pago',
-                    data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : new Date().toISOString(),
-                    data_recebimento: data_venda ? `${data_venda}` : new Date().toISOString().split('T')[0]
+                    data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : todayBRTs,
+                    data_recebimento: data_venda ? `${data_venda}` : todayBR
                 });
                 // Installments row (remainder) — first installment 30 days after today
                 const restante = valorTotal - entrada;
@@ -148,7 +154,7 @@ export async function POST(request: Request) {
                     taxa_gateway: parseFloat(taxaResto.toFixed(2)),
                     valor_liquido_caixa: restante - taxaResto - desconto,
                     status_pagamento: statusPgto,
-                    data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : new Date().toISOString(),
+                    data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : todayBRTs,
                     data_recebimento: statusPgto === 'pendente' && dataRecebCustom
                         ? dataRecebCustom
                         : primeiraParcelaDate.toISOString().split('T')[0]
@@ -168,10 +174,10 @@ export async function POST(request: Request) {
                     taxa_gateway: taxaGw,
                     valor_liquido_caixa: valorLiquido,
                     status_pagamento: statusPgto,
-                    data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : new Date().toISOString(),
+                    data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : todayBRTs,
                     data_recebimento: statusPgto === 'pendente' && dataRecebCustom
                         ? dataRecebCustom
-                        : (data_venda ? `${data_venda}` : new Date().toISOString().split('T')[0])
+                        : (data_venda ? `${data_venda}` : todayBR)
                 });
             }
         }
