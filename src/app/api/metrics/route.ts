@@ -64,7 +64,7 @@ export async function GET(request: Request) {
         // Receita Bruta = sales originated in the period (pago + pendente) based on data_venda.
         const { data: vendasFat } = await supabase
             .from('vendas')
-            .select('id_venda, id_oportunidade, valor_bruto, data_venda, id_lead')
+            .select('id_venda, id_oportunidade, valor_bruto, data_venda, id_lead, forma_pagamento')
             .in('status_pagamento', ['pago', 'pendente'])
             .gte('data_venda', startVendaFilter)
             .lt('data_venda', endFilter);
@@ -133,16 +133,24 @@ export async function GET(request: Request) {
         // ─── Ticket Médio (Global based on Faturamento) ───────────────────────────
         const ticketMedio = vendasTotais > 0 ? receita / vendasTotais : 0;
 
+        // ─── Receita por Forma de Pagamento (Faturamento) ───────────────────
+        const byPaymentFat: Record<string, number> = {};
+        for (const v of filteredFat) {
+            const gw = baseGateway(v.forma_pagamento);
+            byPaymentFat[gw] = (byPaymentFat[gw] || 0) + (parseFloat(v.valor_bruto) || 0);
+        }
+        const receitaPorPagamentoFaturamento = Object.entries(byPaymentFat).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
         // ─── Receita por Forma de Pagamento (Caixa no período) ───────────────────
-        const byPayment: Record<string, number> = {};
+        const byPaymentCaixa: Record<string, number> = {};
         for (const sale of groupedSalesCaixa) {
             for (const v of sale.rows) {
                 const gw = baseGateway(v.forma_pagamento);
                 const cx = caixaInPeriod(v, startDate, endDate);
-                if (cx > 0) byPayment[gw] = (byPayment[gw] || 0) + cx;
+                if (cx > 0) byPaymentCaixa[gw] = (byPaymentCaixa[gw] || 0) + cx;
             }
         }
-        const receitaPorPagamento = Object.entries(byPayment).map(([name, value]) => ({ name, value }));
+        const receitaPorPagamentoCaixa = Object.entries(byPaymentCaixa).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
         // ─── User map: names + commission % ──────────────────────────────────────
         const { data: usersData } = await supabase
@@ -278,7 +286,8 @@ export async function GET(request: Request) {
             vendasTotais,
             conversaoAproximada,
             ticketMedio,
-            receitaPorPagamento,
+            receitaPorPagamentoFaturamento,
+            receitaPorPagamentoCaixa,
             receitaPorCloser,
             receitaPorSdr,
             tmFaturamentoCloser,
