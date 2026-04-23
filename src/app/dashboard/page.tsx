@@ -295,41 +295,63 @@ export default function Dashboard() {
         cursor: { fill: 'rgba(255,255,255,0.03)' }
     };
 
-    const renderTicketDonut = (title: string, data: any[] | undefined) => {
+    const [zoomedSection, setZoomedSection] = useState<string | null>(null);
+
+    const renderTicketDonut = (title: string, data: any[] | undefined, isZoomed: boolean) => {
         const total = data?.reduce((acc, curr) => acc + curr.value, 0) || 0;
         return (
-            <div className="glass-panel p-4 rounded-xl flex flex-col items-center">
-                <h3 className="text-[10px] w-full font-bold text-white mb-1 truncate" title={title}>{title}</h3>
-                <div className="flex-1 w-full flex items-center justify-center min-h-[160px] overflow-hidden">
+            <div className="flex flex-col">
+                <h3 className={`${isZoomed ? 'text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-1 whitespace-nowrap overflow-hidden text-ellipsis`} title={title}>{title}</h3>
+                <div className={`flex-1 w-full flex flex-col ${isZoomed ? 'lg:flex-row min-h-[250px]' : 'items-center justify-center min-h-[120px]'} overflow-hidden`}>
                     {data && data.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie data={data} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value" label={false}>
-                                    {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                                </Pie>
-                                <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(v: any) => formatBRL(v)} />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        <>
+                            <div className={`w-full ${isZoomed ? 'lg:w-1/2' : 'h-full flex-1'}`}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={data}
+                                            cx="50%" cy="50%"
+                                            innerRadius={isZoomed ? 60 : 30} outerRadius={isZoomed ? 90 : 50}
+                                            paddingAngle={5} dataKey="value"
+                                            label={isZoomed ? ({ name, percent }: any) => `${(percent * 100).toFixed(0)}%` : undefined}
+                                            labelLine={false}
+                                        >
+                                            {data.map((_, index) => (
+                                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(value: any) => formatBRL(value)} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            {isZoomed && (
+                                <div className="w-full lg:w-1/2 flex flex-col justify-center text-[10px] sm:text-xs mt-4 lg:mt-0 pl-0 lg:pl-4 overflow-y-auto max-h-[200px]">
+                                    <table className="w-full text-left">
+                                        <thead><tr className="border-b border-white/10"><th className="pb-2">Responsável</th><th className="pb-2 text-right">Valor</th></tr></thead>
+                                        <tbody>
+                                            {data.map((d, i) => (
+                                                <tr key={i} className="border-b border-white/5"><td className="py-2 flex items-center gap-2"><div className="w-2 h-2 rounded-full shrink-0" style={{background: CHART_COLORS[i % CHART_COLORS.length]}}></div><span className="truncate max-w-[80px] sm:max-w-[120px]">{d.name}</span></td><td className="py-2 text-right whitespace-nowrap">{formatBRL(d.value)}</td></tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot><tr><td className="pt-2 font-bold">SUM</td><td className="pt-2 font-bold text-right">{formatBRL(total)}</td></tr></tfoot>
+                                    </table>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados</div>
                     )}
                 </div>
-                {data && data.length > 0 && (
-                    <div className="mt-2 w-full space-y-1 border-t border-white/5 pt-2">
-                        {data.slice(0, 3).map((d, i) => (
-                            <div key={i} className="flex items-center justify-between text-[10px]">
-                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} /><span className="text-[#aaa] truncate max-w-[90px]">{d.name}</span></div>
-                                <span className="text-white font-bold">{formatBRL(d.value)}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
         );
     };
 
     return (
         <div className="pt-4 h-full flex flex-col relative" style={{ minHeight: '100vh' }}>
+            {/* Overlay backdrop */}
+            {zoomedSection && (
+                <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setZoomedSection(null)} />
+            )}
             {/* Header e Filtros (mantidos iguais) */}
             <div className="mb-8 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
                 <div>
