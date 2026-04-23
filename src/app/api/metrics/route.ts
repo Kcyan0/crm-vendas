@@ -273,10 +273,18 @@ export async function GET(request: Request) {
             .slice(0, 5)
             .map((l: any) => l.motivo_reembolso);
 
-        // ─── Status dos Leads (para aba Performance) ────────────────────────────
+        // ─── Status dos Leads no PERÍODO (filtrado por data_entrada) ────────────
         const kanbanStatuses = ['Novo', 'Follow-up', 'Remarcado', 'No-show', 'Venda', 'Reembolsado', 'Loss'];
+        let periodLeadsQuery = supabase
+            .from('leads')
+            .select('status_atual')
+            .gte('data_entrada', `${startDate}T03:00:00.000Z`)
+            .lt('data_entrada', endFilter);
+        if (projectId) periodLeadsQuery = (periodLeadsQuery as any).eq('id_projeto', projectId);
+        const { data: periodLeads } = await periodLeadsQuery;
+
         const statusCounts: Record<string, number> = {};
-        for (const l of (allLeads || [])) {
+        for (const l of (periodLeads || [])) {
             const s = l.status_atual === 'Nao prosseguiu' ? 'Loss' : l.status_atual;
             if (kanbanStatuses.includes(s)) statusCounts[s] = (statusCounts[s] || 0) + 1;
         }
