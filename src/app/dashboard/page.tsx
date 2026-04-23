@@ -295,63 +295,41 @@ export default function Dashboard() {
         cursor: { fill: 'rgba(255,255,255,0.03)' }
     };
 
-    const [zoomedSection, setZoomedSection] = useState<string | null>(null);
-
-    const renderTicketDonut = (title: string, data: any[] | undefined, isZoomed: boolean) => {
+    const renderTicketDonut = (title: string, data: any[] | undefined) => {
         const total = data?.reduce((acc, curr) => acc + curr.value, 0) || 0;
         return (
-            <div className="flex flex-col">
-                <h3 className={`${isZoomed ? 'text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-1 whitespace-nowrap overflow-hidden text-ellipsis`} title={title}>{title}</h3>
-                <div className={`flex-1 w-full flex flex-col ${isZoomed ? 'lg:flex-row min-h-[250px]' : 'items-center justify-center min-h-[120px]'} overflow-hidden`}>
+            <div className="glass-panel p-4 rounded-xl flex flex-col items-center border border-white/5">
+                <h3 className="text-[10px] w-full font-bold text-white mb-1 truncate" title={title}>{title}</h3>
+                <div className="flex-1 w-full flex items-center justify-center min-h-[160px] overflow-hidden">
                     {data && data.length > 0 ? (
-                        <>
-                            <div className={`w-full ${isZoomed ? 'lg:w-1/2' : 'h-full flex-1'}`}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={data}
-                                            cx="50%" cy="50%"
-                                            innerRadius={isZoomed ? 60 : 30} outerRadius={isZoomed ? 90 : 50}
-                                            paddingAngle={5} dataKey="value"
-                                            label={isZoomed ? ({ name, percent }: any) => `${(percent * 100).toFixed(0)}%` : undefined}
-                                            labelLine={false}
-                                        >
-                                            {data.map((_, index) => (
-                                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(value: any) => formatBRL(value)} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                            {isZoomed && (
-                                <div className="w-full lg:w-1/2 flex flex-col justify-center text-[10px] sm:text-xs mt-4 lg:mt-0 pl-0 lg:pl-4 overflow-y-auto max-h-[200px]">
-                                    <table className="w-full text-left">
-                                        <thead><tr className="border-b border-white/10"><th className="pb-2">Responsável</th><th className="pb-2 text-right">Valor</th></tr></thead>
-                                        <tbody>
-                                            {data.map((d, i) => (
-                                                <tr key={i} className="border-b border-white/5"><td className="py-2 flex items-center gap-2"><div className="w-2 h-2 rounded-full shrink-0" style={{background: CHART_COLORS[i % CHART_COLORS.length]}}></div><span className="truncate max-w-[80px] sm:max-w-[120px]">{d.name}</span></td><td className="py-2 text-right whitespace-nowrap">{formatBRL(d.value)}</td></tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot><tr><td className="pt-2 font-bold">SUM</td><td className="pt-2 font-bold text-right">{formatBRL(total)}</td></tr></tfoot>
-                                    </table>
-                                </div>
-                            )}
-                        </>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie data={data} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value" label={false}>
+                                    {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                </Pie>
+                                <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(v: any) => formatBRL(v)} />
+                            </PieChart>
+                        </ResponsiveContainer>
                     ) : (
                         <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados</div>
                     )}
                 </div>
+                {data && data.length > 0 && (
+                    <div className="mt-2 w-full space-y-1 border-t border-white/5 pt-2">
+                        {data.slice(0, 3).map((d, i) => (
+                            <div key={i} className="flex items-center justify-between text-[10px]">
+                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} /><span className="text-[#aaa] truncate max-w-[90px]">{d.name}</span></div>
+                                <span className="text-white font-bold">{formatBRL(d.value)}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         );
     };
 
     return (
         <div className="pt-4 h-full flex flex-col relative" style={{ minHeight: '100vh' }}>
-            {/* Overlay backdrop */}
-            {zoomedSection && (
-                <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setZoomedSection(null)} />
-            )}
             {/* Header e Filtros (mantidos iguais) */}
             <div className="mb-8 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
                 <div>
@@ -416,512 +394,333 @@ export default function Dashboard() {
                 formatBRL={formatBRL}
             />
 
-            {/* Grid Container for Dashboard Boxes */}
-            <div className={`grid grid-cols-1 xl:grid-cols-2 gap-6 pb-8 ${zoomedSection ? 'flex-1' : ''}`}>
-
-
-            {/* Zoomable Box: Performance Comercial */}
-            <div className={`transition-all duration-300 ${zoomedSection === 'performance' ? 'fixed inset-6 md:inset-12 lg:inset-20 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group flex flex-col'}`}>
-                <div className="p-4 sm:p-5 flex items-center justify-between font-bold text-lg text-white select-none border-b border-white/10 bg-white/5">
-                    <div className="flex items-center gap-2">
-                        <Activity size={20} style={{ color: LIME }} />
-                        Performance Comercial
-                    </div>
-                    {zoomedSection === 'performance' ? (
-                        <button onClick={() => setZoomedSection(null)} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition">
-                            <span className="hidden sm:inline">Fechar Zoom</span>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                    ) : (
-                        <button onClick={() => setZoomedSection('performance')} className="flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 bg-transparent hover:bg-white/10 rounded-lg transition opacity-0 group-hover:opacity-100 ring-1 ring-white/10">
-                            <span className="hidden sm:inline">Expandir</span>
-                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                        </button>
-                    )}
-                </div>
+            {/* ── Main Dashboard Fluid Grid ─────────────────────────────────── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 pb-12">
                 
-                <div className={`p-4 ${zoomedSection === 'performance' ? 'overflow-y-auto overflow-x-hidden' : 'overflow-hidden'} flex-1 flex flex-col gap-4`}>
-                    <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6' : 'grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4'}`}>
-                        {/* SDRs Período */}
-                        <div className="flex flex-col">
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>SDRs (Período)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
-                                {sdrs.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={sdrs} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <Tooltip {...tooltipStyle} />
-                                            <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 11 }} />
-                                            <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Sem dados no período
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Closers Período */}
-                        <div className="flex flex-col">
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>Closers (Período)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
-                                {closers.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={closers} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <Tooltip {...tooltipStyle} />
-                                            <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 11 }} />
-                                            <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Sem dados no período
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* SDRs Hoje */}
-                        <div className="flex flex-col">
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>SDRs (Hoje)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
-                                {sdrsToday.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={sdrsToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <Tooltip {...tooltipStyle} />
-                                            <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 11 }} />
-                                            <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Sem dados hoje
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Closers Hoje */}
-                        <div className="flex flex-col">
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-xs sm:text-sm' : 'text-[10px] lg:text-xs'} font-bold text-white mb-2 whitespace-nowrap overflow-hidden text-ellipsis`}>Closers (Hoje)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'performance' ? 'min-h-[250px]' : 'min-h-[120px]'}`}>
-                                {closersToday.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={closersToday} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <Tooltip {...tooltipStyle} />
-                                            <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 11 }} />
-                                            <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Sem dados hoje
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Conversões Side-by-Side */}
-                    <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 lg:grid-cols-2'} gap-6 mt-2 mb-2`}>
-                        {/* Conversão SDR */}
-                        <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col relative overflow-hidden">
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-sm' : 'text-xs xl:text-sm'} font-bold text-white mb-1`}>Conversão SDR</h3>
-                            <p className="text-[10px] text-[#888888] mb-4">Performance de cada membro do time de prospecção.</p>
-                            
-                            <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
-                                <table className="w-full text-left text-xs text-[#888888] min-w-[280px]">
-                                    <thead>
-                                        <tr className="border-b border-white/10 pb-2">
-                                            <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
-                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Leads</th>
-                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Vendas</th>
-                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Taxa de Conv.</th>
-                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Taxa de Reemb.</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {sdrs.map((sdr, index) => {
-                                            const leads = sdr.conversasIniciadas || 0;
-                                            const vendas = sdr.vendasFechadas || 0;
-                                            const reembolsos = sdr.reembolsos || 0;
-                                            const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
-                                            const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
-                                            const avatarColors = ['#fff', '#BEFF00', '#22D3EE', '#A78BFA', '#F472B6'];
-                                            
-                                            return (
-                                                <tr key={index} className="hover:bg-white/[0.02] transition-colors">
-                                                    <td className="py-2.5 flex items-center gap-2 text-white">
-                                                        <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: avatarColors[index % avatarColors.length] }}>
-                                                            {sdr.nome.charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <span className="truncate max-w-[80px] xl:max-w-[120px] text-[10px] xl:text-xs" title={sdr.nome}>{sdr.nome}</span>
-                                                    </td>
-                                                    <td className="py-2.5 text-center text-white text-[10px] xl:text-xs font-medium">{leads}</td>
-                                                    <td className="py-2.5 text-center text-white text-[10px] xl:text-xs font-medium">{vendas}</td>
-                                                    <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{taxaConv}%</td>
-                                                    <td className="py-2.5 text-center text-red-500 font-bold text-[10px] xl:text-xs">{taxaReemb}%</td>
-                                                </tr>
-                                            );
-                                        })}
-                                        {sdrs.length === 0 && (
-                                            <tr>
-                                                <td colSpan={5} className="py-4 text-center text-xs">Sem dados no período</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* Conversão Closer */}
-                        <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col relative overflow-hidden">
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-sm' : 'text-xs xl:text-sm'} font-bold text-white mb-1`}>Conversão Closer</h3>
-                            <p className="text-[10px] text-[#888888] mb-4">Performance de cada membro do time de vendas.</p>
-                            
-                            <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
-                                <table className="w-full text-left text-xs text-[#888888] min-w-[280px]">
-                                    <thead>
-                                        <tr className="border-b border-white/10 pb-2">
-                                            <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
-                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Leads</th>
-                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Vendas</th>
-                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Taxa de Conv.</th>
-                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Taxa de Reemb.</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {closers.map((closer, index) => {
-                                            const leads = closer.totalCalls || 0;
-                                            const vendas = closer.vendas || 0;
-                                            const reembolsos = closer.reembolsos || 0;
-                                            const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
-                                            const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
-                                            const avatarColors = ['#A78BFA', '#22D3EE', '#BEFF00', '#F472B6', '#fff'];
-                                            
-                                            return (
-                                                <tr key={index} className="hover:bg-white/[0.02] transition-colors">
-                                                    <td className="py-2.5 flex items-center gap-2 text-white">
-                                                        <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: avatarColors[index % avatarColors.length] }}>
-                                                            {closer.nome.charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <span className="truncate max-w-[80px] xl:max-w-[120px] text-[10px] xl:text-xs" title={closer.nome}>{closer.nome}</span>
-                                                    </td>
-                                                    <td className="py-2.5 text-center text-white text-[10px] xl:text-xs font-medium">{leads}</td>
-                                                    <td className="py-2.5 text-center text-white text-[10px] xl:text-xs font-medium">{vendas}</td>
-                                                    <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{taxaConv}%</td>
-                                                    <td className="py-2.5 text-center text-red-500 font-bold text-[10px] xl:text-xs">{taxaReemb}%</td>
-                                                </tr>
-                                            );
-                                        })}
-                                        {closers.length === 0 && (
-                                            <tr>
-                                                <td colSpan={5} className="py-4 text-center text-xs">Sem dados no período</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Ticket Médio donuts */}
-                    <div className={`grid ${zoomedSection === 'performance' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6' : 'grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4'} flex-1`}>
-                        {renderTicketDonut("Ticket Médio (Faturamento) por Closer", metrics?.tmFaturamentoCloser, zoomedSection === 'performance')}
-                        {renderTicketDonut("Ticket Médio (Caixa) por Closer", metrics?.tmCaixaCloser, zoomedSection === 'performance')}
-                        {renderTicketDonut("Ticket Médio (Faturamento) por SDR", metrics?.tmFaturamentoSdr, zoomedSection === 'performance')}
-                        {renderTicketDonut("Ticket Médio (Caixa) por SDR", metrics?.tmCaixaSdr, zoomedSection === 'performance')}
-                    </div>
-
-                    {/* Status dos Leads */}
-                    {metrics?.statusLeads && metrics.statusLeads.length > 0 && (
-                        <div className="mt-2">
-                            <h3 className={`${zoomedSection === 'performance' ? 'text-sm' : 'text-xs'} font-bold text-white mb-1`}>Status dos Leads</h3>
-                            <p className="text-[10px] text-[#888] mb-3">Distribuição de todos os leads por status no pipeline.</p>
-                            <div className="flex flex-col gap-2.5">
-                                {metrics.statusLeads.map(({ status, count, pct }) => {
-                                    const STATUS_COLORS: Record<string, string> = {
-                                        'Venda': '#BEFF00', 'Loss': '#f472b6', 'Remarcado': '#facc15',
-                                        'No-show': '#fb923c', 'Novo': '#60a5fa', 'Reembolsado': '#a78bfa', 'Follow-up': '#34d399'
-                                    };
-                                    const color = STATUS_COLORS[status] || '#888';
-                                    return (
-                                        <div key={status} className="flex items-center gap-3">
-                                            <div className="flex items-center gap-1.5 shrink-0" style={{ width: zoomedSection === 'performance' ? '180px' : '120px' }}>
+                {/* ── ROW: Status dos Leads ── */}
+                {metrics?.statusLeads && metrics.statusLeads.length > 0 && (
+                    <div className="glass-panel p-4 sm:p-5 bg-[#151515] border border-white/5 rounded-2xl col-span-1 md:col-span-2 xl:col-span-4">
+                        <h3 className="text-xs sm:text-sm font-bold text-white mb-1">Status dos Leads</h3>
+                        <p className="text-[10px] text-[#888] mb-4">Distribuição de todos os leads por status no fluxo.</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-3 gap-x-6">
+                            {metrics.statusLeads.map(({ status, count, pct }) => {
+                                const STATUS_COLORS: Record<string, string> = {
+                                    'Venda': '#BEFF00', 'Loss': '#f472b6', 'Remarcado': '#facc15',
+                                    'No-show': '#fb923c', 'Novo': '#60a5fa', 'Reembolsado': '#a78bfa', 'Follow-up': '#34d399'
+                                };
+                                const color = STATUS_COLORS[status] || '#888';
+                                return (
+                                    <div key={status} className="flex items-center gap-3">
+                                        <div className="flex justify-between items-center w-full max-w-[120px] shrink-0">
+                                            <div className="flex items-center gap-1.5 truncate">
                                                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                                <span className="text-white font-semibold truncate" style={{ fontSize: zoomedSection === 'performance' ? '12px' : '10px' }}>
-                                                    {status === 'Loss' ? 'Loss / Não prosseguiu' : status}
+                                                <span className="text-white font-semibold text-xs truncate" title={status}>
+                                                    {status === 'Loss' ? 'Loss' : status}
                                                 </span>
-                                                <span className="text-[#666]" style={{ fontSize: '10px' }}>({count})</span>
                                             </div>
-                                            <div className="flex-1 h-2.5 bg-[#111] rounded-full overflow-hidden">
-                                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }} />
-                                            </div>
-                                            <span className="text-white font-bold shrink-0" style={{ fontSize: '11px', minWidth: '38px', textAlign: 'right' }}>{pct}%</span>
+                                            <span className="text-[#666] text-[10px] ml-1">({count})</span>
                                         </div>
+                                        <div className="flex-1 h-2 bg-[#111] rounded-full overflow-hidden">
+                                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                        </div>
+                                        <span className="text-white font-bold shrink-0 text-[10px] text-right w-8">{pct}%</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── ROW: SDRs e Closers (Período) ── */}
+                <div className="glass-panel p-4 sm:p-5 border border-white/5 rounded-xl flex flex-col col-span-1 md:col-span-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-4">SDRs (Período)</h3>
+                    <div className="flex-1 w-full min-h-[220px]">
+                        {sdrs.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={sdrs} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                    <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                    <Tooltip {...tooltipStyle} />
+                                    <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 10 }} />
+                                    <Bar dataKey="conversasIniciadas" name="Conversas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="leadsQualificados" name="Qualificados" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="callMarcada" name="Calls" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados no período</div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="glass-panel p-4 sm:p-5 border border-white/5 rounded-xl flex flex-col col-span-1 md:col-span-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-4">Closers (Período)</h3>
+                    <div className="flex-1 w-full min-h-[220px]">
+                        {closers.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={closers} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                    <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                    <Tooltip {...tooltipStyle} />
+                                    <Legend wrapperStyle={{ paddingTop: '8px', color: TEXT_SEC, fontSize: 10 }} />
+                                    <Bar dataKey="totalCalls" name="Total Calls" fill="#888888" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="vendas" name="Vendas" fill={LIME} radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados no período</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── ROW: Tabelas de Conversão ── */}
+                <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col col-span-1 md:col-span-2 overflow-hidden">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-1">Conversão SDR</h3>
+                    <p className="text-[10px] text-[#888888] mb-4">Performance do time de prospecção.</p>
+                    <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
+                        <table className="w-full text-left text-xs text-[#888888] min-w-[280px]">
+                            <thead>
+                                <tr className="border-b border-white/10 pb-2">
+                                    <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
+                                    <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Leads</th>
+                                    <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Vendas</th>
+                                    <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Conv.</th>
+                                    <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Reemb.</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {sdrs.map((sdr, idx) => {
+                                    const leads = sdr.conversasIniciadas || 0;
+                                    const vendas = sdr.vendasFechadas || 0;
+                                    const reembolsos = sdr.reembolsos || 0;
+                                    const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
+                                    const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
+                                    const c = ['#fff', '#BEFF00', '#22D3EE', '#A78BFA', '#F472B6'][idx % 5];
+                                    return (
+                                        <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                                            <td className="py-2.5 flex items-center gap-2 text-white">
+                                                <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: c }}>{sdr.nome.charAt(0).toUpperCase()}</div>
+                                                <span className="truncate max-w-[120px] text-[10px] xl:text-xs">{sdr.nome}</span>
+                                            </td>
+                                            <td className="py-2.5 text-center text-white text-[10px] xl:text-xs">{leads}</td>
+                                            <td className="py-2.5 text-center text-white text-[10px] xl:text-xs">{vendas}</td>
+                                            <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{taxaConv}%</td>
+                                            <td className="py-2.5 text-center text-red-500 font-bold text-[10px] xl:text-xs">{taxaReemb}%</td>
+                                        </tr>
                                     );
                                 })}
-                            </div>
-                        </div>
-                    )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col col-span-1 md:col-span-2 overflow-hidden">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-1">Conversão Closer</h3>
+                    <p className="text-[10px] text-[#888888] mb-4">Performance do time de vendas.</p>
+                    <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
+                        <table className="w-full text-left text-xs text-[#888888] min-w-[280px]">
+                            <thead>
+                                <tr className="border-b border-white/10 pb-2">
+                                    <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
+                                    <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Leads</th>
+                                    <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Vendas</th>
+                                    <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Conv.</th>
+                                    <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">Reemb.</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {closers.map((closer, idx) => {
+                                    const leads = closer.totalCalls || 0;
+                                    const vendas = closer.vendas || 0;
+                                    const reembolsos = closer.reembolsos || 0;
+                                    const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
+                                    const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
+                                    const c = ['#A78BFA', '#22D3EE', '#BEFF00', '#F472B6', '#fff'][idx % 5];
+                                    return (
+                                        <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                                            <td className="py-2.5 flex items-center gap-2 text-white">
+                                                <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: c }}>{closer.nome.charAt(0).toUpperCase()}</div>
+                                                <span className="truncate max-w-[120px] text-[10px] xl:text-xs">{closer.nome}</span>
+                                            </td>
+                                            <td className="py-2.5 text-center text-white text-[10px] xl:text-xs">{leads}</td>
+                                            <td className="py-2.5 text-center text-white text-[10px] xl:text-xs">{vendas}</td>
+                                            <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{taxaConv}%</td>
+                                            <td className="py-2.5 text-center text-red-500 font-bold text-[10px] xl:text-xs">{taxaReemb}%</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* ── ROW: Ticket Médio Donuts (4 colunas) ── */}
+                {renderTicketDonut("Ticket Médio (Faturamento) por Closer", metrics?.tmFaturamentoCloser)}
+                {renderTicketDonut("Ticket Médio (Caixa) por Closer", metrics?.tmCaixaCloser)}
+                {renderTicketDonut("Ticket Médio (Faturamento) por SDR", metrics?.tmFaturamentoSdr)}
+                {renderTicketDonut("Ticket Médio (Caixa) por SDR", metrics?.tmCaixaSdr)}
+
+                {/* ── ROW: Receita Bars & Pagamentos ── */}
+                <div className="glass-panel p-4 rounded-xl flex flex-col col-span-1 border border-white/5">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Por Forma de Pagamento</h3>
+                    <div className="flex-1 w-full flex items-center justify-center min-h-[160px] overflow-hidden">
+                        {metrics?.receitaPorPagamento && metrics.receitaPorPagamento.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={metrics.receitaPorPagamento} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value" label={false}>
+                                        {metrics.receitaPorPagamento.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(v: any) => formatBRL(v)} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados</div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="glass-panel p-4 rounded-xl flex flex-col col-span-1 border border-white/5">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Receita por Closer</h3>
+                    <div className="flex-1 w-full min-h-[160px]">
+                        {metrics?.receitaPorCloser && metrics.receitaPorCloser.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={metrics.receitaPorCloser} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} tickFormatter={(val) => `R$${val/1000}k`} />
+                                    <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
+                                    <Bar dataKey="value" name="Receita" fill="#A78BFA" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem vendas</div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="glass-panel p-4 rounded-xl flex flex-col col-span-1 border border-white/5">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Receita por SDR</h3>
+                    <div className="flex-1 w-full min-h-[160px]">
+                        {metrics?.receitaPorSdr && metrics.receitaPorSdr.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={metrics.receitaPorSdr} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} tickFormatter={(val) => `R$${val/1000}k`} />
+                                    <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
+                                    <Bar dataKey="value" name="Receita" fill="#22D3EE" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem vendas</div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="glass-panel p-4 rounded-xl flex flex-col col-span-1 border border-white/5">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xs sm:text-sm font-bold text-white">Reembolsos &amp; Chargeback</h3>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg" style={{ background: '#ef4444', color: '#fff' }}>
+                            {metrics?.chargebackRate || '0.0'}% tx
+                        </span>
+                    </div>
+                    <div className="flex-1 w-full max-h-[160px] overflow-y-auto space-y-2 custom-scrollbar">
+                        {metrics?.recentRefundReasons && metrics.recentRefundReasons.length > 0 ? (
+                            metrics.recentRefundReasons.map((reason, i) => (
+                                <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-[#111] border border-[#2A2A2A]">
+                                    <span className="text-red-400 mt-0.5 shrink-0 text-[10px]">⚠</span>
+                                    <p className="text-[10px] text-[#cccccc]">{reason}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Nenhum reembolso 🎉</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── ROW: Comissões ── */}
+                {metrics?.comissaoCloserDetalhes && metrics.comissaoCloserDetalhes.length > 0 && (
+                    <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col col-span-1 md:col-span-2">
+                        <h4 className="text-xs sm:text-sm font-bold text-white mb-1">Comissão Closer</h4>
+                        <p className="text-[10px] text-[#888888] mb-4">Calculado sobre caixa recebido.</p>
+                        <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
+                            <table className="w-full text-left text-xs text-[#888888] min-w-[260px]">
+                                <thead>
+                                    <tr className="border-b border-white/10">
+                                        <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
+                                        <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Caixa</th>
+                                        <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">%</th>
+                                        <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Comissão</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {metrics.comissaoCloserDetalhes.map((d, index) => {
+                                        const c = ['#A78BFA', '#22D3EE', '#BEFF00', '#F472B6', '#fff'][index % 5];
+                                        return (
+                                            <tr key={d.nome} className="hover:bg-white/[0.02] transition-colors">
+                                                <td className="py-2.5 flex items-center gap-2 text-white">
+                                                    <div className="w-4 h-4 rounded-full flex justify-center items-center font-bold text-[8px] text-black shrink-0" style={{ background: c }}>{d.nome.charAt(0).toUpperCase()}</div>
+                                                    <span className="truncate max-w-[110px] text-[10px] xl:text-xs">{d.nome}</span>
+                                                </td>
+                                                <td className="py-2.5 text-right text-white text-[10px] xl:text-xs">{formatBRL(d.caixa)}</td>
+                                                <td className="py-2.5 text-center text-[#A78BFA] font-bold text-[10px] xl:text-xs">{d.pct}%</td>
+                                                <td className="py-2.5 text-right text-[#A78BFA] font-black text-[10px] xl:text-xs">{formatBRL(d.comissao)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    <tr className="border-t border-white/10">
+                                        <td colSpan={3} className="pt-2.5 text-[10px] text-[#555] font-medium">Total Closers</td>
+                                        <td className="pt-2.5 text-right text-[#A78BFA] font-black text-xs">{formatBRL(metrics.comissaoCloserTotal || 0)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {metrics?.comissaoSdrDetalhes && metrics.comissaoSdrDetalhes.length > 0 && (
+                    <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col col-span-1 md:col-span-2">
+                        <h4 className="text-xs sm:text-sm font-bold text-white mb-1">Comissão SDR</h4>
+                        <p className="text-[10px] text-[#888888] mb-4">Calculado sobre caixa recebido.</p>
+                        <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
+                            <table className="w-full text-left text-xs text-[#888888] min-w-[260px]">
+                                <thead>
+                                    <tr className="border-b border-white/10">
+                                        <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
+                                        <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Caixa</th>
+                                        <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">%</th>
+                                        <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Comissão</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {metrics.comissaoSdrDetalhes.map((d, index) => {
+                                        const c = ['#22D3EE', '#BEFF00', '#F472B6', '#A78BFA', '#fff'][index % 5];
+                                        return (
+                                            <tr key={d.nome} className="hover:bg-white/[0.02] transition-colors">
+                                                <td className="py-2.5 flex items-center gap-2 text-white">
+                                                    <div className="w-4 h-4 rounded-full flex justify-center items-center font-bold text-[8px] text-black shrink-0" style={{ background: c }}>{d.nome.charAt(0).toUpperCase()}</div>
+                                                    <span className="truncate max-w-[110px] text-[10px] xl:text-xs">{d.nome}</span>
+                                                </td>
+                                                <td className="py-2.5 text-right text-white text-[10px] xl:text-xs">{formatBRL(d.caixa)}</td>
+                                                <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{d.pct}%</td>
+                                                <td className="py-2.5 text-right text-[#22D3EE] font-black text-[10px] xl:text-xs">{formatBRL(d.comissao)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    <tr className="border-t border-white/10">
+                                        <td colSpan={3} className="pt-2.5 text-[10px] text-[#555] font-medium">Total SDRs</td>
+                                        <td className="pt-2.5 text-right text-[#22D3EE] font-black text-xs">{formatBRL(metrics.comissaoSdrTotal || 0)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
 
 
-            {/* Zoomable Box: Receita */}
-            <div className={`transition-all duration-300 ${zoomedSection === 'receita' ? 'fixed inset-6 md:inset-12 lg:inset-20 z-50 glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95' : zoomedSection ? 'hidden' : 'glass-panel rounded-xl overflow-hidden relative group flex flex-col'}`}>
-                <div className="p-4 sm:p-5 flex items-center justify-between font-bold text-lg text-white select-none border-b border-white/10 bg-white/5">
-                    <div className="flex items-center gap-2">
-                        <DollarSign size={20} style={{ color: LIME }} />
-                        Receita e Pagamentos
-                    </div>
-                    {zoomedSection === 'receita' ? (
-                        <button onClick={() => setZoomedSection(null)} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition">
-                            <span className="hidden sm:inline">Fechar Zoom</span>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                    ) : (
-                        <button onClick={() => setZoomedSection('receita')} className="flex items-center gap-2 text-xs sm:text-sm px-3 py-1.5 bg-transparent hover:bg-white/10 rounded-lg transition opacity-0 group-hover:opacity-100 ring-1 ring-white/10">
-                            <span className="hidden sm:inline">Expandir</span>
-                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                        </button>
-                    )}
-                </div>
-                
-                <div className={`p-4 ${zoomedSection === 'receita' ? 'overflow-y-auto overflow-x-hidden' : 'overflow-hidden'} flex-1 flex flex-col`}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full flex-1">
-
-                        {/* Receita por Forma de Pagamento */}
-                        <div className="flex flex-col">
-                            <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Por Forma de Pagamento</h3>
-                            <div className={`flex-1 w-full flex items-center justify-center overflow-hidden ${zoomedSection === 'receita' ? 'min-h-[250px]' : 'min-h-[140px]'}`}>
-                                {metrics?.receitaPorPagamento && metrics.receitaPorPagamento.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={metrics.receitaPorPagamento}
-                                                cx="50%" cy="50%"
-                                                innerRadius={zoomedSection === 'receita' ? 60 : 30} 
-                                                outerRadius={zoomedSection === 'receita' ? 100 : 50}
-                                                paddingAngle={5} dataKey="value"
-                                                label={({ name, percent }: any) => zoomedSection === 'receita' ? `${name} ${percent ? (percent * 100).toFixed(0) : 0}%` : null}
-                                                labelLine={zoomedSection === 'receita'}
-                                            >
-                                                {metrics.receitaPorPagamento.map((_, index) => (
-                                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(value: any) => formatBRL(value)} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full w-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Nenhum pagamento
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Ticket Médio */}
-                        <div className="flex flex-col">
-                            <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Ticket Médio</h3>
-                            <div className={`flex-1 w-full flex items-center justify-center ${zoomedSection === 'receita' ? 'min-h-[250px]' : 'min-h-[140px]'}`}>
-                                <div className="text-center">
-                                    <div className={`rounded-full inline-flex ${zoomedSection === 'receita' ? 'p-4 mb-4' : 'p-2 mb-2'}`} style={{ background: 'rgba(190,255,0,0.1)' }}>
-                                        <DollarSign size={zoomedSection === 'receita' ? 32 : 20} style={{ color: LIME }} />
-                                    </div>
-                                    <div className={`font-black text-white ${zoomedSection === 'receita' ? 'text-4xl' : 'text-xl'}`}>{formatBRL(metrics?.ticketMedio || 0)}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Receita por Closer */}
-                        <div className="flex flex-col">
-                            <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Receita por Closer</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'receita' ? 'min-h-[250px]' : 'min-h-[140px]'}`}>
-                                {metrics?.receitaPorCloser && metrics.receitaPorCloser.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={metrics.receitaPorCloser} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} tickFormatter={(val) => `R$${val/1000}k`} />
-                                            <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
-                                            <Bar dataKey="value" name="Receita" fill="#A78BFA" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Sem vendas
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Receita por SDR */}
-                        <div className="flex flex-col">
-                            <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Receita por Origem (SDR)</h3>
-                            <div className={`flex-1 w-full ${zoomedSection === 'receita' ? 'min-h-[250px]' : 'min-h-[140px]'}`}>
-                                {metrics?.receitaPorSdr && metrics.receitaPorSdr.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={metrics.receitaPorSdr} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} tickFormatter={(val) => `R$${val/1000}k`} />
-                                            <Tooltip {...tooltipStyle} formatter={(value: any) => formatBRL(value)} />
-                                            <Bar dataKey="value" name="Receita" fill="#22D3EE" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Sem vendas
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Reembolsos & Chargeback — inside Receita e Pagamentos */}
-                        <div className="flex flex-col">
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-xs sm:text-sm font-bold text-white">Reembolsos &amp; Chargeback</h3>
-                                <span className="text-[10px] font-black px-2 py-0.5 rounded-lg" style={{ background: '#ef4444', color: '#fff' }}>
-                                    {metrics?.chargebackRate || '0.0'}% taxa
-                                </span>
-                            </div>
-                            <div className={`flex-1 w-full ${zoomedSection === 'receita' ? 'min-h-[250px]' : 'min-h-[140px]'} overflow-y-auto space-y-2`}>
-                                {metrics?.recentRefundReasons && metrics.recentRefundReasons.length > 0 ? (
-                                    metrics.recentRefundReasons.map((reason, i) => (
-                                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-[#111] border border-[#2A2A2A]">
-                                            <span className="text-red-400 mt-0.5 shrink-0">⚠</span>
-                                            <p className="text-xs text-[#cccccc]">{reason}</p>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
-                                        Nenhum reembolso 🎉
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Comissões */}
-                        {(metrics?.comissaoCloserDetalhes?.length || metrics?.comissaoSdrDetalhes?.length) ? (
-                            <div className="flex flex-col gap-2 mt-2">
-                                <h3 className="text-xs sm:text-sm font-bold text-white">Comissões do Período</h3>
-                                <p className="text-[10px] text-[#888888] -mt-1 mb-1">Calculado sobre o caixa líquido gerado × % individual de cada colaborador.</p>
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-
-                                    {/* Closers */}
-                                    {metrics?.comissaoCloserDetalhes && metrics.comissaoCloserDetalhes.length > 0 && (
-                                        <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col">
-                                            <h4 className="text-xs font-bold text-white mb-1">Comissão Closer</h4>
-                                            <p className="text-[10px] text-[#888888] mb-4">Comissão de cada closer sobre o caixa gerado.</p>
-                                            <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
-                                                <table className="w-full text-left text-xs text-[#888888] min-w-[260px]">
-                                                    <thead>
-                                                        <tr className="border-b border-white/10">
-                                                            <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
-                                                            <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Caixa</th>
-                                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">%</th>
-                                                            <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Comissão</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-white/5">
-                                                        {metrics.comissaoCloserDetalhes.map((d, index) => {
-                                                            const avatarColors = ['#A78BFA', '#22D3EE', '#BEFF00', '#F472B6', '#fff'];
-                                                            return (
-                                                                <tr key={d.nome} className="hover:bg-white/[0.02] transition-colors">
-                                                                    <td className="py-2.5 flex items-center gap-2 text-white">
-                                                                        <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: avatarColors[index % avatarColors.length] }}>
-                                                                            {d.nome.charAt(0).toUpperCase()}
-                                                                        </div>
-                                                                        <span className="truncate max-w-[80px] xl:max-w-[110px] text-[10px] xl:text-xs" title={d.nome}>{d.nome}</span>
-                                                                    </td>
-                                                                    <td className="py-2.5 text-right text-white text-[10px] xl:text-xs font-medium">{formatBRL(d.caixa)}</td>
-                                                                    <td className="py-2.5 text-center text-[#A78BFA] font-bold text-[10px] xl:text-xs">{d.pct}%</td>
-                                                                    <td className="py-2.5 text-right text-[#A78BFA] font-black text-[10px] xl:text-xs">{formatBRL(d.comissao)}</td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                        <tr className="border-t border-white/10">
-                                                            <td colSpan={3} className="pt-2.5 text-[10px] text-[#555] font-medium">Total Closers</td>
-                                                            <td className="pt-2.5 text-right text-[#A78BFA] font-black text-xs">{formatBRL(metrics.comissaoCloserTotal || 0)}</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* SDRs */}
-                                    {metrics?.comissaoSdrDetalhes && metrics.comissaoSdrDetalhes.length > 0 && (
-                                        <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col">
-                                            <h4 className="text-xs font-bold text-white mb-1">Comissão SDR</h4>
-                                            <p className="text-[10px] text-[#888888] mb-4">Comissão de cada SDR sobre o caixa gerado.</p>
-                                            <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
-                                                <table className="w-full text-left text-xs text-[#888888] min-w-[260px]">
-                                                    <thead>
-                                                        <tr className="border-b border-white/10">
-                                                            <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
-                                                            <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Caixa</th>
-                                                            <th className="font-medium pb-2 text-center text-[10px] xl:text-xs">%</th>
-                                                            <th className="font-medium pb-2 text-right text-[10px] xl:text-xs">Comissão</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-white/5">
-                                                        {metrics.comissaoSdrDetalhes.map((d, index) => {
-                                                            const avatarColors = ['#22D3EE', '#BEFF00', '#F472B6', '#A78BFA', '#fff'];
-                                                            return (
-                                                                <tr key={d.nome} className="hover:bg-white/[0.02] transition-colors">
-                                                                    <td className="py-2.5 flex items-center gap-2 text-white">
-                                                                        <div className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-[8px] text-black shrink-0" style={{ background: avatarColors[index % avatarColors.length] }}>
-                                                                            {d.nome.charAt(0).toUpperCase()}
-                                                                        </div>
-                                                                        <span className="truncate max-w-[80px] xl:max-w-[110px] text-[10px] xl:text-xs" title={d.nome}>{d.nome}</span>
-                                                                    </td>
-                                                                    <td className="py-2.5 text-right text-white text-[10px] xl:text-xs font-medium">{formatBRL(d.caixa)}</td>
-                                                                    <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{d.pct}%</td>
-                                                                    <td className="py-2.5 text-right text-[#22D3EE] font-black text-[10px] xl:text-xs">{formatBRL(d.comissao)}</td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                        <tr className="border-t border-white/10">
-                                                            <td colSpan={3} className="pt-2.5 text-[10px] text-[#555] font-medium">Total SDRs</td>
-                                                            <td className="pt-2.5 text-right text-[#22D3EE] font-black text-xs">{formatBRL(metrics.comissaoSdrTotal || 0)}</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                </div>
-                            </div>
-                        ) : null}
-
-                    </div>
-                </div>
-            </div>
-
-            </div> {/* End of grid container */}
         </div>
     );
 }
