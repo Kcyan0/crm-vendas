@@ -124,24 +124,35 @@ export async function GET(request: Request) {
 
         let caixaQuery = supabase
             .from('vendas')
-            .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa, numero_parcelas, data_recebimento')
+            .select('id_lead, id_closer, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_recebimento')
             .eq('status_pagamento', 'pago')
             .gte('data_recebimento', caixaStartBoundary)
             .lte('data_recebimento', endDate);
         const { data: caixaPeriod } = await caixaQuery;
 
+        // ─── Group by id_oportunidade (same deduplication as metrics API) ────────
+        // Without this, a deal with "entrada + parcelas" rows would double-count
+        const mapCaixaPerf: Record<number, { id_lead: number; id_closer: number; rows: any[] }> = {};
         (caixaPeriod || []).forEach((v: any) => {
-            if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
-            const cxVal = caixaInPeriod(v, startDate, endDate);
+            if (!validLeadIds.has(v.id_lead)) return;
+            const oportId = v.id_oportunidade ?? v.id_lead;
+            if (!mapCaixaPerf[oportId]) mapCaixaPerf[oportId] = { id_lead: v.id_lead, id_closer: v.id_closer, rows: [] };
+            mapCaixaPerf[oportId].rows.push(v);
+        });
+
+        Object.values(mapCaixaPerf).forEach((deal) => {
+            // Sum all installment rows for this opportunity in the period
+            let cxVal = 0;
+            for (const v of deal.rows) cxVal += caixaInPeriod(v, startDate, endDate);
             if (cxVal <= 0) return;
 
             // Credit closer
-            const closerId = v.id_closer;
+            const closerId = deal.id_closer;
             if (closerId && performanceCloser[closerId]) {
                 performanceCloser[closerId].caixa += cxVal;
             }
             // Credit SDR (via lead attribution)
-            const sdrId = leadToSdr[v.id_lead];
+            const sdrId = leadToSdr[deal.id_lead];
             if (sdrId && performanceSDR[sdrId]) {
                 performanceSDR[sdrId].caixa = (performanceSDR[sdrId].caixa || 0) + cxVal;
             }
