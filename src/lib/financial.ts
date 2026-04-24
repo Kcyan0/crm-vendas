@@ -5,8 +5,9 @@ export function baseGateway(forma: string): string {
 
 /**
  * Calculate how much of a venda row's caixa falls within [startDate, endDate].
- * Uses data_recebimento (plain YYYY-MM-DD) to spread installments across months.
- * The comparison is purely date-based (no timezone math on the installment dates).
+ * Uses data_recebimento (plain YYYY-MM-DD) as the date of the FIRST installment.
+ * Each subsequent installment lands on the same day of month, 1 month later.
+ * Comparison is date-aware (YYYY-MM-DD), so day-level filters work correctly.
  */
 export function caixaInPeriod(row: any, startDate: string, endDate: string): number {
     const parcelas = row.numero_parcelas || 1;
@@ -16,28 +17,27 @@ export function caixaInPeriod(row: any, startDate: string, endDate: string): num
     const valorParcela = totalLiq / parcelas;
 
     // data_recebimento is stored as YYYY-MM-DD (local date, no TZ)
-    // Split to avoid any UTC-midnight ambiguity in new Date(string)
     const rawDate = (row.data_recebimento || (row.data_venda || '').substring(0, 10));
     if (!rawDate) return 0;
-    
-    // Ignore invalid formats just in case
+
     const dateParts = rawDate.split('-');
     if (dateParts.length < 3) return 0;
-    
+
     const [y, m, d] = dateParts.map(Number);
 
     let total = 0;
     for (let i = 0; i < parcelas; i++) {
-        // Compute Y-M-D of this installment (add i months, keeping same day)
+        // Compute Y-M-D of this installment: same day, i months later
         let instY = y;
-        let instM = m - 1 + i; // zero-indexed month
+        let instM = m - 1 + i; // zero-indexed
         instY += Math.floor(instM / 12);
         instM = instM % 12;
-        const instMonthStr = `${instY}-${String(instM + 1).padStart(2, '0')}`;
-        const startMonth = startDate.substring(0, 7); // YYYY-MM
-        const endMonth   = endDate.substring(0, 7);   // YYYY-MM
 
-        if (instMonthStr >= startMonth && instMonthStr <= endMonth) {
+        // Build YYYY-MM-DD string for this installment
+        const instDateStr = `${instY}-${String(instM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+        // Compare as strings — lexicographic date comparison works for YYYY-MM-DD
+        if (instDateStr >= startDate && instDateStr <= endDate) {
             total += valorParcela;
         }
     }
