@@ -349,7 +349,7 @@ export default function Dashboard() {
                         style={{ height: '42px' }}
                     >
                         <Settings size={16} />
-                        {isEditMode ? '✔ Salvar Layout' : '⚙️ Layout'}
+                        {isEditMode ? 'Salvar Layout' : 'Layout'}
                     </button>
                     <div className="flex flex-col sm:flex-row items-center gap-3 p-2 rounded-xl" style={{ background: DARK, border: `1px solid ${BORDER}` }}>
                     <div className="flex flex-col w-full sm:w-auto">
