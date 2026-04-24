@@ -138,11 +138,11 @@ export function DashboardGrid({
         sdrsPeriodo: {
             colSpan: "col-span-1 md:col-span-2",
             render: () => (
-                <div className="glass-panel p-4 sm:p-5 border border-white/5 rounded-xl flex flex-col h-full min-h-[300px]">
+                <div className="glass-panel p-4 sm:p-5 border border-white/5 rounded-xl flex flex-col">
                     <h3 className="text-xs sm:text-sm font-bold text-white mb-4">SDRs (Período)</h3>
-                    <div className="flex-1 w-full relative">
+                    <div className="w-full" style={{ height: 260 }}>
                         {sdrs.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={260}>
                                 <BarChart data={sdrs} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
                                     <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
@@ -155,7 +155,7 @@ export function DashboardGrid({
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados no período</div>
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados no período</div>
                         )}
                     </div>
                 </div>
@@ -164,11 +164,11 @@ export function DashboardGrid({
         closersPeriodo: {
             colSpan: "col-span-1 md:col-span-2",
             render: () => (
-                <div className="glass-panel p-4 sm:p-5 border border-white/5 rounded-xl flex flex-col h-full min-h-[300px]">
+                <div className="glass-panel p-4 sm:p-5 border border-white/5 rounded-xl flex flex-col">
                     <h3 className="text-xs sm:text-sm font-bold text-white mb-4">Closers (Período)</h3>
-                    <div className="flex-1 w-full relative">
+                    <div className="w-full" style={{ height: 260 }}>
                         {closers.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={260}>
                                 <BarChart data={closers} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
                                     <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
@@ -180,7 +180,7 @@ export function DashboardGrid({
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados no período</div>
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem dados no período</div>
                         )}
                     </div>
                 </div>
@@ -283,11 +283,11 @@ export function DashboardGrid({
         recCloser: {
             colSpan: "col-span-1",
             render: () => (
-                <div className="glass-panel p-4 rounded-xl flex flex-col h-full border border-white/5">
+                <div className="glass-panel p-4 rounded-xl flex flex-col border border-white/5">
                     <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Receita por Closer</h3>
-                    <div className="flex-1 w-full min-h-[160px] relative">
+                    <div className="w-full" style={{ height: 200 }}>
                         {metrics?.receitaPorCloser && metrics.receitaPorCloser.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={200}>
                                 <BarChart data={metrics.receitaPorCloser} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
@@ -297,7 +297,7 @@ export function DashboardGrid({
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem vendas</div>
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem vendas</div>
                         )}
                     </div>
                 </div>
@@ -306,11 +306,11 @@ export function DashboardGrid({
         recSdr: {
             colSpan: "col-span-1",
             render: () => (
-                <div className="glass-panel p-4 rounded-xl flex flex-col h-full border border-white/5">
+                <div className="glass-panel p-4 rounded-xl flex flex-col border border-white/5">
                     <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Receita por SDR</h3>
-                    <div className="flex-1 w-full min-h-[160px] relative">
+                    <div className="w-full" style={{ height: 200 }}>
                         {metrics?.receitaPorSdr && metrics.receitaPorSdr.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={200}>
                                 <BarChart data={metrics.receitaPorSdr} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TEXT_SEC, fontSize: 10 }} />
@@ -320,7 +320,7 @@ export function DashboardGrid({
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem vendas</div>
+                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Sem vendas</div>
                         )}
                     </div>
                 </div>
