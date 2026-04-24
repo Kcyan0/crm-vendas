@@ -305,9 +305,9 @@ export default function Dashboard() {
         return (
             <div className="glass-panel p-4 rounded-xl flex flex-col items-center border border-white/5">
                 <h3 className="text-[10px] w-full font-bold text-white mb-1 truncate" title={title}>{title}</h3>
-                <div className="flex-1 w-full flex items-center justify-center min-h-[160px] overflow-hidden">
+                <div className="w-full" style={{ height: 140 }}>
                     {data && data.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height={140}>
                             <PieChart>
                                 <Pie data={data} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value" label={false}>
                                     {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
