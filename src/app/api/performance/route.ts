@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
+import { caixaInPeriod } from '@/lib/financial';
 
 export async function GET(request: Request) {
     try {
@@ -90,7 +91,7 @@ export async function GET(request: Request) {
             if (!closerId || !performanceCloser[closerId]) return;
 
             performanceCloser[closerId].vgv += parseFloat(v.valor_bruto) || 0;
-            performanceCloser[closerId].caixa += v.valor_liquido_caixa != null ? parseFloat(v.valor_liquido_caixa) : (parseFloat(v.valor_bruto) || 0);
+            // CAIXA is computed separately below
         });
 
         // SDR vgv/caixa — fetch sales for leads where the SDR is responsible
@@ -108,10 +109,43 @@ export async function GET(request: Request) {
             const sdrId = leadToSdr[v.id_lead];
             if (sdrId && performanceSDR[sdrId]) {
                 performanceSDR[sdrId].vgv = (performanceSDR[sdrId].vgv || 0) + (parseFloat(v.valor_bruto) || 0);
-                performanceSDR[sdrId].caixa = (performanceSDR[sdrId].caixa || 0) + (v.valor_liquido_caixa != null ? parseFloat(v.valor_liquido_caixa) : (parseFloat(v.valor_bruto) || 0));
+                // CAIXA is computed separately below
             }
         });
 
+
+
+
+        // ─── CAIXA QUERY (correct installment-aware calculation) ──────────────────
+        // Pull all paid sales going back 2 years to capture installments landing in this period
+        const caixaStartObj = new Date(`${startDate}T00:00:00Z`);
+        caixaStartObj.setFullYear(caixaStartObj.getFullYear() - 2);
+        const caixaStartBoundary = caixaStartObj.toISOString().split('T')[0];
+
+        let caixaQuery = supabase
+            .from('vendas')
+            .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa, numero_parcelas, data_recebimento')
+            .eq('status_pagamento', 'pago')
+            .gte('data_recebimento', caixaStartBoundary)
+            .lte('data_recebimento', endDate);
+        const { data: caixaPeriod } = await caixaQuery;
+
+        (caixaPeriod || []).forEach((v: any) => {
+            if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
+            const cxVal = caixaInPeriod(v, startDate, endDate);
+            if (cxVal <= 0) return;
+
+            // Credit closer
+            const closerId = v.id_closer;
+            if (closerId && performanceCloser[closerId]) {
+                performanceCloser[closerId].caixa += cxVal;
+            }
+            // Credit SDR (via lead attribution)
+            const sdrId = leadToSdr[v.id_lead];
+            if (sdrId && performanceSDR[sdrId]) {
+                performanceSDR[sdrId].caixa = (performanceSDR[sdrId].caixa || 0) + cxVal;
+            }
+        });
 
         // Reembolsos per user (all-time for conversation rate context)
         let reembolsadosQuery = supabase.from('leads').select('id_sdr_responsavel, id_closer_responsavel').eq('status_atual', 'Reembolsado');

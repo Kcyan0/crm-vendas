@@ -1,46 +1,7 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 
-// Strip "(Entrada)" / "(Parcelas)" suffixes so we get the base gateway name
-function baseGateway(forma: string): string {
-    return (forma || 'PIX').replace(/ \(Entrada\)| \(Parcelas\)/g, '').trim();
-}
-
-/**
- * Calculate how much of a venda row's caixa falls within [startDate, endDate].
- * Uses data_recebimento (plain YYYY-MM-DD) to spread installments across months.
- * The comparison is purely date-based (no timezone math on the installment dates).
- */
-function caixaInPeriod(row: any, startDate: string, endDate: string): number {
-    const parcelas = row.numero_parcelas || 1;
-    const totalLiq = row.valor_liquido_caixa != null
-        ? parseFloat(row.valor_liquido_caixa)
-        : (parseFloat(row.valor_bruto) || 0);
-    const valorParcela = totalLiq / parcelas;
-
-    // data_recebimento is stored as YYYY-MM-DD (local date, no TZ)
-    // Split to avoid any UTC-midnight ambiguity in new Date(string)
-    const rawDate = (row.data_recebimento || (row.data_venda || '').substring(0, 10));
-    if (!rawDate) return 0;
-    const [y, m, d] = rawDate.split('-').map(Number);
-
-    let total = 0;
-    for (let i = 0; i < parcelas; i++) {
-        // Compute Y-M-D of this installment (add i months, keeping same day)
-        let instY = y;
-        let instM = m - 1 + i; // zero-indexed month
-        instY += Math.floor(instM / 12);
-        instM = instM % 12;
-        const instMonthStr = `${instY}-${String(instM + 1).padStart(2, '0')}`;
-        const startMonth = startDate.substring(0, 7); // YYYY-MM
-        const endMonth   = endDate.substring(0, 7);   // YYYY-MM
-
-        if (instMonthStr >= startMonth && instMonthStr <= endMonth) {
-            total += valorParcela;
-        }
-    }
-    return total;
-}
+import { baseGateway, caixaInPeriod } from '@/lib/financial';
 
 export async function GET(request: Request) {
     try {
@@ -69,13 +30,18 @@ export async function GET(request: Request) {
             .gte('data_venda', startVendaFilter)
             .lt('data_venda', endFilter);
 
+        
+        const startDateObj = new Date(`${startDate}T00:00:00Z`);
+        startDateObj.setFullYear(startDateObj.getFullYear() - 2); // 24 months back
+        const caixaStartBoundary = startDateObj.toISOString().split('T')[0];
+
         // ─── 2. FETCH CASH (CAIXA LÍQUIDO) ────────────────────────────────────────
         // Caixa Líquido = payments received in the period (pago only) based on data_recebimento.
         const { data: vendasCaixa } = await supabase
             .from('vendas')
             .select('id_venda, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_venda, data_recebimento, forma_pagamento, id_lead')
             .eq('status_pagamento', 'pago')
-            .gte('data_recebimento', startDate)
+            .gte('data_recebimento', caixaStartBoundary)
             .lte('data_recebimento', endDate);
 
         // ─── Filter by project ────────────────────────────────────────────────────
