@@ -342,7 +342,16 @@ export default function Dashboard() {
                     <p className="mt-1 text-sm" style={{ color: TEXT_SEC }}>Visão geral financeira e de performance da operação.</p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-3 p-2 rounded-xl" style={{ background: DARK, border: `1px solid ${BORDER}` }}>
+                <div className="flex flex-col sm:flex-row items-end gap-3">
+                    <button 
+                        onClick={() => setIsEditMode(!isEditMode)}
+                        className={`flex items-center gap-2 px-4 py-2 font-bold rounded-lg border transition-all ${isEditMode ? 'bg-[#BEFF00] text-black border-[#BEFF00]' : 'bg-[#111] text-[#888] border-[#2A2A2A] hover:text-white hover:border-[#444]'}`}
+                        style={{ height: '42px' }}
+                    >
+                        <Settings size={16} />
+                        {isEditMode ? '✔ Salvar Layout' : '⚙️ Layout'}
+                    </button>
+                    <div className="flex flex-col sm:flex-row items-center gap-3 p-2 rounded-xl" style={{ background: DARK, border: `1px solid ${BORDER}` }}>
                     <div className="flex flex-col w-full sm:w-auto">
                         <span className="text-[10px] uppercase font-bold px-2" style={{ color: TEXT_SEC }}>Data Inicial</span>
                         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
@@ -355,6 +364,7 @@ export default function Dashboard() {
                             className="bg-transparent border-none text-sm font-medium text-white outline-none focus:ring-0 p-1 w-full" />
                     </div>
                     <button onClick={() => fetchMetrics(startDate, endDate)} className="w-full sm:w-auto btn-primary py-2 px-4 text-sm whitespace-nowrap sm:ml-2">Filtrar</button>
+                </div>
                 </div>
             </div>
 
