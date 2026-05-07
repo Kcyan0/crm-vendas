@@ -40,7 +40,27 @@ export async function GET(request: Request) {
             };
         });
 
-        return NextResponse.json(leads);
+        // ─── Enrich leads with pending payment info ────────────────────────────
+        const vendaLeadIds = leads.filter((l: any) => l.status_atual === 'Venda').map((l: any) => l.id_lead);
+        let pendenteMap: Record<number, number> = {};
+        if (vendaLeadIds.length > 0) {
+            const { data: pendentes } = await supabase
+                .from('vendas')
+                .select('id_lead, valor_bruto')
+                .eq('status_pagamento', 'pendente')
+                .in('id_lead', vendaLeadIds);
+            for (const p of pendentes || []) {
+                pendenteMap[p.id_lead] = (pendenteMap[p.id_lead] || 0) + (parseFloat(p.valor_bruto) || 0);
+            }
+        }
+
+        const leadsWithPendente = leads.map((l: any) => ({
+            ...l,
+            tem_pendente: !!pendenteMap[l.id_lead],
+            valor_pendente: pendenteMap[l.id_lead] || 0,
+        }));
+
+        return NextResponse.json(leadsWithPendente);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

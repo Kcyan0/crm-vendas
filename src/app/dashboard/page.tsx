@@ -10,7 +10,8 @@ import {
     Users,
     BriefcaseBusiness,
     Activity,
-    ArrowUpRight
+    ArrowUpRight,
+    Clock
 } from "lucide-react";
 import {
     BarChart,
@@ -30,6 +31,7 @@ import { useProject } from "@/context/ProjectContext";
 type Metrics = {
     receita: number;
     caixaLiquido: number;
+    pagamentosPendentes: number;
     leadsTotais: number;
     vendasTotais: number;
     conversaoAproximada: string;
@@ -254,11 +256,35 @@ export default function Dashboard() {
             const perfData = await perfRes.json();
             const perfTodayData = await perfTodayRes.json();
 
+            // ─── Single source of truth for Caixa per user ───────────────────────────
+            // /api/metrics has the canonical per-user caixa (installment-aware, deduplicated).
+            // Override the independently-calculated values from /api/performance so every
+            // UI component (commission table, donut, MetasPanel goals) shows the same number.
+            const closerCaixaMap: Record<string, number> = {};
+            (data.comissaoCloserDetalhes || []).forEach((d: any) => {
+                closerCaixaMap[d.nome] = d.caixa;
+            });
+            const sdrCaixaMap: Record<string, number> = {};
+            (data.comissaoSdrDetalhes || []).forEach((d: any) => {
+                sdrCaixaMap[d.nome] = d.caixa;
+            });
+
+            const normalizeClosers = (arr: any[]) =>
+                arr.map((c: any) => ({
+                    ...c,
+                    caixa: closerCaixaMap[c.nome] ?? c.caixa ?? 0,
+                }));
+            const normalizeSdrs = (arr: any[]) =>
+                arr.map((s: any) => ({
+                    ...s,
+                    caixa: sdrCaixaMap[s.nome] ?? s.caixa ?? 0,
+                }));
+
             setMetrics(data);
-            setSdrs(perfData.sdr || []);
-            setClosers(perfData.closer || []);
-            setSdrsToday(perfTodayData.sdr || []);
-            setClosersToday(perfTodayData.closer || []);
+            setSdrs(normalizeSdrs(perfData.sdr || []));
+            setClosers(normalizeClosers(perfData.closer || []));
+            setSdrsToday(normalizeSdrs(perfTodayData.sdr || []));
+            setClosersToday(normalizeClosers(perfTodayData.closer || []));
 
             if (data.period) {
                 if (!start) setStartDate(data.period.startDate);
@@ -279,12 +305,14 @@ export default function Dashboard() {
     const formatBRL = (val: number) =>
         new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
 
+    const AMBER = '#FB923C';
     const cards = [
-        { title: "Receita Bruta", value: formatBRL(metrics?.receita || 0), icon: TrendingUp },
-        { title: "Caixa Líquido", value: formatBRL(metrics?.caixaLiquido || 0), icon: DollarSign },
-        { title: "Leads Totais", value: metrics?.leadsTotais || 0, icon: Users },
-        { title: "Vendas Concluídas", value: metrics?.vendasTotais || 0, icon: BriefcaseBusiness },
-        { title: "Taxa de Conversão", value: `${metrics?.conversaoAproximada || 0}%`, icon: Activity },
+        { title: "Receita Bruta", value: formatBRL(metrics?.receita || 0), icon: TrendingUp, accent: LIME },
+        { title: "Caixa Líquido", value: formatBRL(metrics?.caixaLiquido || 0), icon: DollarSign, accent: LIME },
+        { title: "Pgtos. Pendentes", value: formatBRL(metrics?.pagamentosPendentes || 0), icon: Clock, accent: AMBER, badge: '⏳ A receber' },
+        { title: "Leads Totais", value: metrics?.leadsTotais || 0, icon: Users, accent: LIME },
+        { title: "Vendas Concluídas", value: metrics?.vendasTotais || 0, icon: BriefcaseBusiness, accent: LIME },
+        { title: "Taxa de Conversão", value: `${metrics?.conversaoAproximada || 0}%`, icon: Activity, accent: LIME },
     ];
 
     const CHART_COLORS = [LIME, '#22D3EE', '#A78BFA', '#FB923C', '#F472B6'];
@@ -368,20 +396,26 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* KPI Cards (mantidos iguais) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
                 {cards.map((card, idx) => {
                     const Icon = card.icon;
+                    const accent = card.accent || LIME;
+                    const isAmber = accent === AMBER;
                     return (
-                        <div key={idx} className="glass-panel p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform">
+                        <div key={idx} className="glass-panel p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform"
+                            style={isAmber ? { borderColor: 'rgba(251,146,60,0.25)' } : {}}>
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-2.5 rounded-lg" style={{ background: 'rgba(190,255,0,0.12)' }}>
-                                    <Icon style={{ color: LIME }} size={20} />
+                                <div className="p-2.5 rounded-lg" style={{ background: isAmber ? 'rgba(251,146,60,0.12)' : 'rgba(190,255,0,0.12)' }}>
+                                    <Icon style={{ color: accent }} size={20} />
                                 </div>
                                 <div className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full"
-                                    style={{ background: 'rgba(190,255,0,0.12)', color: LIME }}>
-                                    <ArrowUpRight size={12} />
-                                    <span>Acima</span>
+                                    style={{ background: isAmber ? 'rgba(251,146,60,0.12)' : 'rgba(190,255,0,0.12)', color: accent }}>
+                                    {isAmber ? (
+                                        <><span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: accent }} /><span>{(card as any).badge}</span></>
+                                    ) : (
+                                        <><ArrowUpRight size={12} /><span>Acima</span></>
+                                    )}
                                 </div>
                             </div>
                             <div>
@@ -389,7 +423,9 @@ export default function Dashboard() {
                                 {isLoading ? (
                                     <div className="h-7 w-24 rounded animate-pulse" style={{ background: '#2A2A2A' }}></div>
                                 ) : (
-                                    <p className="text-2xl font-black text-white">{metrics ? card.value : '...'}</p>
+                                    <p className="text-2xl font-black" style={{ color: isAmber && (metrics?.pagamentosPendentes || 0) > 0 ? AMBER : 'white' }}>
+                                        {metrics ? card.value : '...'}
+                                    </p>
                                 )}
                             </div>
                         </div>

@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         // Receita Bruta = sales originated in the period (pago + pendente) based on data_venda.
         const { data: vendasFat } = await supabase
             .from('vendas')
-            .select('id_venda, id_oportunidade, valor_bruto, data_venda, id_lead, forma_pagamento')
+            .select('id_venda, id_oportunidade, valor_bruto, data_venda, id_lead, forma_pagamento, status_pagamento')
             .in('status_pagamento', ['pago', 'pendente'])
             .gte('data_venda', startVendaFilter)
             .lt('data_venda', endFilter);
@@ -37,12 +37,27 @@ export async function GET(request: Request) {
 
         // ─── 2. FETCH CASH (CAIXA LÍQUIDO) ────────────────────────────────────────
         // Caixa Líquido = payments received in the period (pago only) based on data_recebimento.
-        const { data: vendasCaixa } = await supabase
-            .from('vendas')
-            .select('id_venda, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_venda, data_recebimento, forma_pagamento, id_lead')
-            .eq('status_pagamento', 'pago')
-            .gte('data_recebimento', caixaStartBoundary)
-            .lte('data_recebimento', endDate);
+        // NOTE: We run TWO queries and merge because SQL NULL comparisons always return false,
+        // so .lte('data_recebimento', endDate) silently drops rows where data_recebimento IS NULL.
+        // For those rows, caixaInPeriod falls back to data_venda — so we fetch them separately.
+        const CAIXA_SELECT_M = 'id_venda, id_oportunidade, id_closer, valor_bruto, valor_liquido_caixa, numero_parcelas, data_venda, data_recebimento, forma_pagamento, id_lead';
+
+        const [{ data: caixaWithDate }, { data: caixaNoDate }] = await Promise.all([
+            supabase
+                .from('vendas')
+                .select(CAIXA_SELECT_M)
+                .eq('status_pagamento', 'pago')
+                .gte('data_recebimento', caixaStartBoundary)
+                .lte('data_recebimento', endDate),
+            supabase
+                .from('vendas')
+                .select(CAIXA_SELECT_M)
+                .eq('status_pagamento', 'pago')
+                .is('data_recebimento', null)
+                .gte('data_venda', startVendaFilter)
+                .lt('data_venda', endFilter),
+        ]);
+        const vendasCaixa = [...(caixaWithDate || []), ...(caixaNoDate || [])];
 
         // ─── Filter by project ────────────────────────────────────────────────────
         let validLeadIds: Set<number> | null = null;
@@ -67,10 +82,10 @@ export async function GET(request: Request) {
         const groupedSalesFat = Object.values(mapFat);
 
         // ─── GROUP Caixa by id_oportunidade ───────────────────────────────────────
-        const mapCaixa: Record<number, { id_lead: number; rows: any[] }> = {};
+        const mapCaixa: Record<number, { id_lead: number; id_closer: number | null; rows: any[] }> = {};
         for (const v of filteredCaixa) {
             const oportId = v.id_oportunidade ?? v.id_lead;
-            if (!mapCaixa[oportId]) mapCaixa[oportId] = { id_lead: v.id_lead, rows: [] };
+            if (!mapCaixa[oportId]) mapCaixa[oportId] = { id_lead: v.id_lead, id_closer: v.id_closer ?? null, rows: [] };
             mapCaixa[oportId].rows.push(v);
         }
         const groupedSalesCaixa = Object.values(mapCaixa);
@@ -78,6 +93,17 @@ export async function GET(request: Request) {
         // ─── Receita (Faturamento Global) ─────────────────────────────────────────
         const receita = groupedSalesFat.reduce((sum, s) => sum + s.valor_bruto, 0);
         const vendasTotais = groupedSalesFat.length;
+
+        // ─── Pagamentos Pendentes ──────────────────────────────────────────────────
+        // Sum of valor_bruto for pendente rows, deduplicated by id_oportunidade so
+        // split payments (Entrada + Parcelas) aren't double-counted.
+        const mapPendentes: Record<number, number> = {};
+        for (const v of filteredFat) {
+            if (v.status_pagamento !== 'pendente') continue;
+            const oportId = v.id_oportunidade ?? v.id_lead;
+            mapPendentes[oportId] = (mapPendentes[oportId] || 0) + (parseFloat(v.valor_bruto) || 0);
+        }
+        const pagamentosPendentes = Object.values(mapPendentes).reduce((sum, v) => sum + v, 0);
 
         // ─── Caixa Líquido Global ─────────────────────────────────────────────────
         let caixaLiquido = 0;
@@ -172,13 +198,19 @@ export async function GET(request: Request) {
         for (const sale of groupedSalesCaixa) {
             let saleCaixa = 0;
             for (const v of sale.rows) saleCaixa += caixaInPeriod(v, startDate, endDate);
+            if (saleCaixa <= 0) continue;
 
-            const owners = leadOwnerMap[sale.id_lead];
-            if (owners?.closer) {
-                const cName = usersMap[owners.closer] || 'Desconhecido';
+            // Use id_closer from the SALE row (same logic as /api/performance)
+            // This is the source of truth — avoids mismatch with leadOwnerMap
+            const closerIdFromSale = sale.id_closer;
+            if (closerIdFromSale) {
+                const cName = usersMap[closerIdFromSale] || 'Desconhecido';
                 if (!closerStats[cName]) closerStats[cName] = { faturamento: 0, caixa: 0, count: 0 };
                 closerStats[cName].caixa += saleCaixa;
             }
+
+            // SDR attribution still uses leadOwnerMap (no id_sdr on vendas table)
+            const owners = leadOwnerMap[sale.id_lead];
             if (owners?.sdr) {
                 const sName = usersMap[owners.sdr] || 'Desconhecido';
                 if (!sdrStats[sName]) sdrStats[sName] = { faturamento: 0, caixa: 0, count: 0 };
@@ -268,6 +300,7 @@ export async function GET(request: Request) {
             comissaoCloserDetalhes,
             comissaoSdrDetalhes,
             statusLeads,
+            pagamentosPendentes,
             period: { startDate, endDate }
         });
     } catch (error: any) {

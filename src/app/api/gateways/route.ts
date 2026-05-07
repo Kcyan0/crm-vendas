@@ -1,14 +1,24 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const { data, error } = await supabase
+        const { searchParams } = new URL(request.url);
+        const projectId = searchParams.get('projectId');
+
+        let query = supabase
             .from('gateways_pagamento')
             .select('*')
             .order('ativo', { ascending: false })
             .order('nome', { ascending: true });
 
+        if (projectId) {
+            // Return only gateways scoped to this project
+            query = query.eq('id_projeto', projectId);
+        }
+        // If no projectId: return all (for global admin/settings without project)
+
+        const { data, error } = await query;
         if (error) throw error;
         return NextResponse.json(data);
     } catch (error: any) {
@@ -19,8 +29,9 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { nome, taxa_percentual, taxa_fixa, ativo, tem_entrada, taxa_entrada_percentual, taxa_entrada_fixa } = body;
+        const { nome, taxa_percentual, taxa_fixa, ativo, tem_entrada, taxa_entrada_percentual, taxa_entrada_fixa, id_projeto } = body;
         if (!nome) return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
+        if (!id_projeto) return NextResponse.json({ error: 'Projeto é obrigatório' }, { status: 400 });
 
         const isAtivo = ativo === undefined || ativo === true || String(ativo) === '1';
         const { data, error } = await supabase
@@ -32,7 +43,8 @@ export async function POST(request: Request) {
                 ativo: isAtivo, 
                 tem_entrada: !!tem_entrada,
                 taxa_entrada_percentual: parseFloat(taxa_entrada_percentual) || 0,
-                taxa_entrada_fixa: parseFloat(taxa_entrada_fixa) || 0
+                taxa_entrada_fixa: parseFloat(taxa_entrada_fixa) || 0,
+                id_projeto: parseInt(id_projeto)
             })
             .select('id_gateway')
             .single();

@@ -20,6 +20,8 @@ type Lead = {
   id_closer_responsavel: number | null;
   valor_proposta: number | null;
   data_entrada: string;
+  tem_pendente?: boolean;
+  valor_pendente?: number;
 };
 
 const KANBAN_COLUMNS = [
@@ -109,7 +111,10 @@ export default function KanbanBoard() {
 
   const fetchGateways = async (skipReset = false) => {
     try {
-      const res = await fetch("/api/gateways");
+      const projectParam = selectedProject?.id_projeto
+        ? `?projectId=${selectedProject.id_projeto}`
+        : '';
+      const res = await fetch(`/api/gateways${projectParam}`);
       const data = await res.json();
       const ativos = data.filter((g: any) => g.ativo !== false && g.ativo !== 0);
       setGateways(ativos);
@@ -438,57 +443,76 @@ export default function KanbanBoard() {
         setSaleObservacoes(lead.observacoes_gerais || "");
         setSaleDate(new Date().toISOString().split('T')[0]);
       } else {
-        // Merge rows that share the same gateway (e.g. "TMB (Entrada)" + "TMB (Parcelas)")
-        const mergedMap: Record<string, any> = {};
+        // Reconstruct pagamentos from DB rows.
+        // Rules:
+        //  - Rows with "(Entrada)" or "(Parcelas)" suffix belong to the same split
+        //    payment and must be merged by gateway name.
+        //  - Plain rows (no suffix) are independent payments — even two PIX rows
+        //    must stay separate. Key them by id_venda to avoid collapsing.
+        const splitMap: Record<string, any> = {};
+        const plainList: any[] = [];
+
         for (const row of rows) {
+          const isSplit = row.forma_pagamento.includes('(Entrada)') || row.forma_pagamento.includes('(Parcelas)');
           const baseGw = row.forma_pagamento.replace(/ \(Entrada\)| \(Parcelas\)/g, '');
-          if (!mergedMap[baseGw]) {
-            mergedMap[baseGw] = {
+
+          if (isSplit) {
+            if (!splitMap[baseGw]) {
+              splitMap[baseGw] = {
+                id: Math.random().toString(36).slice(2),
+                forma_pagamento: baseGw,
+                valor: 0,
+                numero_parcelas: '1',
+                taxa_gateway: 0,
+                taxa_entrada: '0',
+                valor_entrada: '',
+                entrada_paga_empresa: false,
+                status_pagamento: row.status_pagamento || 'pago',
+                data_recebimento_custom: ''
+              };
+            }
+            if (row.forma_pagamento.includes('(Entrada)')) {
+              splitMap[baseGw].valor += parseFloat(row.valor_bruto) || 0;
+              splitMap[baseGw].valor_entrada = (parseFloat(row.valor_bruto) || 0).toString();
+              splitMap[baseGw].taxa_gateway += parseFloat(row.taxa_gateway) || 0;
+              splitMap[baseGw].taxa_entrada = (parseFloat(row.taxa_gateway) || 0).toFixed(2);
+              splitMap[baseGw].entrada_paga_empresa = parseFloat(row.valor_liquido_caixa) < 0;
+            } else {
+              // (Parcelas) row
+              splitMap[baseGw].valor += parseFloat(row.valor_bruto) || 0;
+              splitMap[baseGw].numero_parcelas = row.numero_parcelas.toString();
+              splitMap[baseGw].taxa_gateway += parseFloat(row.taxa_gateway) || 0;
+              splitMap[baseGw].status_pagamento = row.status_pagamento || 'pago';
+              if (row.status_pagamento === 'pendente' && row.data_recebimento) {
+                splitMap[baseGw].data_recebimento_custom = row.data_recebimento;
+              }
+            }
+          } else {
+            // Plain independent row — never merge, even if same gateway
+            plainList.push({
               id: Math.random().toString(36).slice(2),
               forma_pagamento: baseGw,
-              valor: 0,
-              numero_parcelas: '1',
-              taxa_gateway: 0,
+              valor: (parseFloat(row.valor_bruto) || 0).toString(),
+              numero_parcelas: (row.numero_parcelas || 1).toString(),
+              taxa_gateway: (parseFloat(row.taxa_gateway) || 0).toFixed(2),
               taxa_entrada: '0',
               valor_entrada: '',
               entrada_paga_empresa: false,
               status_pagamento: row.status_pagamento || 'pago',
-              data_recebimento_custom: ''
-            };
-          }
-          if (row.forma_pagamento.includes('(Entrada)')) {
-            // Entrada row: mark entry value and its isolated taxa
-            mergedMap[baseGw].valor += parseFloat(row.valor_bruto) || 0;
-            mergedMap[baseGw].valor_entrada = (parseFloat(row.valor_bruto) || 0).toString();
-            mergedMap[baseGw].taxa_gateway += parseFloat(row.taxa_gateway) || 0;
-            mergedMap[baseGw].taxa_entrada = (parseFloat(row.taxa_gateway) || 0).toFixed(2);
-            // If valor_liquido_caixa is negative, the empresa paid the entrada
-            mergedMap[baseGw].entrada_paga_empresa = parseFloat(row.valor_liquido_caixa) < 0;
-          } else if (row.forma_pagamento.includes('(Parcelas)')) {
-            // Parcelas row: add to total valor and get parcelas count
-            mergedMap[baseGw].valor += parseFloat(row.valor_bruto) || 0;
-            mergedMap[baseGw].numero_parcelas = row.numero_parcelas.toString();
-            mergedMap[baseGw].taxa_gateway += parseFloat(row.taxa_gateway) || 0;
-            mergedMap[baseGw].status_pagamento = row.status_pagamento || 'pago';
-            if (row.status_pagamento === 'pendente' && row.data_recebimento) {
-              mergedMap[baseGw].data_recebimento_custom = row.data_recebimento;
-            }
-          } else {
-            // Simple row (no entrada/parcelas split)
-            mergedMap[baseGw].valor = parseFloat(row.valor_bruto) || 0;
-            mergedMap[baseGw].numero_parcelas = row.numero_parcelas.toString();
-            mergedMap[baseGw].taxa_gateway = parseFloat(row.taxa_gateway) || 0;
-            mergedMap[baseGw].status_pagamento = row.status_pagamento || 'pago';
-            if (row.status_pagamento === 'pendente' && row.data_recebimento) {
-              mergedMap[baseGw].data_recebimento_custom = row.data_recebimento;
-            }
+              data_recebimento_custom: (row.status_pagamento === 'pendente' && row.data_recebimento)
+                ? row.data_recebimento : ''
+            });
           }
         }
-        const reconstructed = Object.values(mergedMap).map((m: any) => ({
-          ...m,
-          valor: m.valor.toString(),
-          taxa_gateway: typeof m.taxa_gateway === 'number' ? m.taxa_gateway.toFixed(2) : m.taxa_gateway
-        }));
+        const reconstructed = [
+          ...Object.values(splitMap).map((m: any) => ({
+            ...m,
+            valor: m.valor.toString(),
+            taxa_gateway: typeof m.taxa_gateway === 'number' ? m.taxa_gateway.toFixed(2) : m.taxa_gateway
+          })),
+          ...plainList
+        ];
+
         setPagamentos(reconstructed);
         setSaleObservacoes(lead.observacoes_gerais || '');
         
@@ -712,9 +736,17 @@ export default function KanbanBoard() {
                     <div className="flex justify-between items-start mb-2 pr-12">
                       <h4 className="font-bold text-white leading-tight">{lead.nome}</h4>
                       {lead.valor_proposta && ['Venda', 'Reembolsado'].includes(lead.status_atual) && (
-                        <span className="text-emerald-700 font-bold text-sm bg-emerald-100 px-2 rounded-md border border-emerald-200">
-                          R$ {lead.valor_proposta}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-emerald-700 font-bold text-sm bg-emerald-100 px-2 rounded-md border border-emerald-200">
+                            R$ {lead.valor_proposta}
+                          </span>
+                          {lead.tem_pendente && (
+                            <span
+                              className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0"
+                              title={`Pagamento pendente: R$ ${(lead.valor_pendente || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                            />
+                          )}
+                        </div>
                       )}
                     </div>
 

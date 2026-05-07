@@ -36,8 +36,12 @@ export default function SettingsPage() {
     });
 
     const fetchGateways = async () => {
+        if (!selectedProject?.id_projeto) {
+            setGateways([]);
+            return;
+        }
         try {
-            const res = await fetch("/api/gateways");
+            const res = await fetch(`/api/gateways?projectId=${selectedProject.id_projeto}`);
             const data = await res.json();
             setGateways(data);
         } catch (e) {
@@ -45,7 +49,7 @@ export default function SettingsPage() {
         }
     };
 
-    useEffect(() => { fetchGateways(); }, []);
+    useEffect(() => { fetchGateways(); }, [selectedProject]);
 
     const handleOpenCreate = () => {
         setEditingGatewayId(null);
@@ -69,6 +73,7 @@ export default function SettingsPage() {
 
     const handleSaveGateway = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!selectedProject?.id_projeto) return;
         try {
             const method = editingGatewayId ? "PUT" : "POST";
             await fetch("/api/gateways", {
@@ -78,7 +83,9 @@ export default function SettingsPage() {
                     id_gateway: editingGatewayId,
                     ...formData,
                     taxa_percentual: parseFloat(formData.taxa_percentual),
-                    taxa_fixa: parseFloat(formData.taxa_fixa)
+                    taxa_fixa: parseFloat(formData.taxa_fixa),
+                    // Only send id_projeto on creation (PUT doesn't change project)
+                    ...(!editingGatewayId && { id_projeto: selectedProject.id_projeto }),
                 }),
             });
             setIsModalOpen(false);
@@ -333,52 +340,65 @@ export default function SettingsPage() {
                             <div className="p-2 bg-[#1A1A1A] text-green-700 rounded-lg">
                                 <Settings2 size={24} />
                             </div>
-                            <h3 className="text-xl font-bold text-white">Meios de Pagamento e Taxas</h3>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Meios de Pagamento e Taxas</h3>
+                                {selectedProject && (
+                                    <p className="text-xs text-[#888] mt-0.5">Projeto: <span className="text-[#BEFF00] font-bold">{selectedProject.nome}</span></p>
+                                )}
+                            </div>
                         </div>
-                        <button onClick={handleOpenCreate} className="btn-primary flex items-center gap-2 py-1.5 px-3 text-sm">
+                        <button
+                            onClick={handleOpenCreate}
+                            disabled={!selectedProject}
+                            className="btn-primary flex items-center gap-2 py-1.5 px-3 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
                             <Plus size={16} />
                             <span>Novo Gateway</span>
                         </button>
                     </div>
 
                     <div className="space-y-4">
-                        {gateways.map(gw => (
-                            <div key={gw.id_gateway} className={`p-4 rounded-xl border transition-all ${gw.ativo ? 'bg-[#111111] border-[#2A2A2A] hover:border-green-300' : 'bg-[#1A1A1A] border-[#2A2A2A] opacity-60'}`}>
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="font-bold text-white text-lg">{gw.nome}</h4>
-                                            {!gw.ativo && <span className="text-[10px] uppercase font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">Inativo</span>}
-                                        </div>
-                                        <div className="flex gap-4 mt-2">
-                                            <div className="text-sm">
-                                                <span className="text-[#888888] block text-xs font-semibold uppercase">Taxa (%)</span>
-                                                <span className="text-white font-bold">{gw.taxa_percentual.toFixed(2)}%</span>
+                        {!selectedProject ? (
+                            <div className="text-center py-8 border-2 border-dashed border-[#2A2A2A] rounded-xl text-[#888888] text-sm">
+                                Selecione um projeto para ver e gerenciar seus gateways.
+                            </div>
+                        ) : gateways.length === 0 ? (
+                            <div className="text-center p-8 text-[#888888] border border-dashed border-slate-300 rounded-xl">
+                                Nenhum gateway cadastrado para este projeto.
+                            </div>
+                        ) : (
+                            gateways.map(gw => (
+                                <div key={gw.id_gateway} className={`p-4 rounded-xl border transition-all ${gw.ativo ? 'bg-[#111111] border-[#2A2A2A] hover:border-green-300' : 'bg-[#1A1A1A] border-[#2A2A2A] opacity-60'}`}>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-bold text-white text-lg">{gw.nome}</h4>
+                                                {!gw.ativo && <span className="text-[10px] uppercase font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">Inativo</span>}
                                             </div>
-                                            <div className="text-sm">
-                                                <span className="text-[#888888] block text-xs font-semibold uppercase">Taxa Fixa (R$)</span>
-                                                <span className="text-white font-bold">R$ {gw.taxa_fixa.toFixed(2)}</span>
-                                            </div>
-                                            {gw.tem_entrada && (
+                                            <div className="flex gap-4 mt-2">
                                                 <div className="text-sm">
-                                                    <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded mt-1">Aceita Entrada</span>
-                                                    <span className="text-[#888888] block text-xs font-semibold uppercase mt-1">Taxa Entrada: <span className="text-white">{gw.taxa_entrada_percentual?.toFixed(2) || '0.00'}%</span></span>
+                                                    <span className="text-[#888888] block text-xs font-semibold uppercase">Taxa (%)</span>
+                                                    <span className="text-white font-bold">{gw.taxa_percentual.toFixed(2)}%</span>
                                                 </div>
-                                            )}
+                                                <div className="text-sm">
+                                                    <span className="text-[#888888] block text-xs font-semibold uppercase">Taxa Fixa (R$)</span>
+                                                    <span className="text-white font-bold">R$ {gw.taxa_fixa.toFixed(2)}</span>
+                                                </div>
+                                                {gw.tem_entrada && (
+                                                    <div className="text-sm">
+                                                        <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded mt-1">Aceita Entrada</span>
+                                                        <span className="text-[#888888] block text-xs font-semibold uppercase mt-1">Taxa Entrada: <span className="text-white">{gw.taxa_entrada_percentual?.toFixed(2) || '0.00'}%</span></span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => handleOpenEdit(gw)} className="p-2 text-green-500 hover:bg-[#111111] rounded-lg transition-colors text-sm font-bold">Editar</button>
-                                        <button onClick={() => handleDelete(gw.id_gateway)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleOpenEdit(gw)} className="p-2 text-green-500 hover:bg-[#111111] rounded-lg transition-colors text-sm font-bold">Editar</button>
+                                            <button onClick={() => handleDelete(gw.id_gateway)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-
-                        {gateways.length === 0 && (
-                            <div className="text-center p-8 text-[#888888] border border-dashed border-slate-300 rounded-xl">
-                                Nenhum Gateway Cadastrado.
-                            </div>
+                            ))
                         )}
                     </div>
                 </div>

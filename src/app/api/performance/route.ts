@@ -117,18 +117,35 @@ export async function GET(request: Request) {
 
 
         // ─── CAIXA QUERY (correct installment-aware calculation) ──────────────────
-        // Pull all paid sales going back 2 years to capture installments landing in this period
+        // Pull all paid sales going back 2 years to capture installments landing in this period.
+        // NOTE: We run TWO queries and merge because SQL NULL comparisons always return false,
+        // so .lte('data_recebimento', endDate) silently drops rows where data_recebimento IS NULL.
+        // For those rows, caixaInPeriod falls back to data_venda — so we fetch them separately.
         const caixaStartObj = new Date(`${startDate}T00:00:00Z`);
         caixaStartObj.setFullYear(caixaStartObj.getFullYear() - 2);
         const caixaStartBoundary = caixaStartObj.toISOString().split('T')[0];
 
-        let caixaQuery = supabase
+        const CAIXA_SELECT = 'id_lead, id_closer, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_recebimento, data_venda';
+
+        // Query A: sales with an explicit data_recebimento in range (includes installments)
+        const caixaQueryA = supabase
             .from('vendas')
-            .select('id_lead, id_closer, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_recebimento')
+            .select(CAIXA_SELECT)
             .eq('status_pagamento', 'pago')
             .gte('data_recebimento', caixaStartBoundary)
             .lte('data_recebimento', endDate);
-        const { data: caixaPeriod } = await caixaQuery;
+
+        // Query B: sales where data_recebimento is NULL — use data_venda as the date
+        const caixaQueryB = supabase
+            .from('vendas')
+            .select(CAIXA_SELECT)
+            .eq('status_pagamento', 'pago')
+            .is('data_recebimento', null)
+            .gte('data_venda', `${startDate}T00:00:00`)
+            .lte('data_venda', `${endDate}T23:59:59`);
+
+        const [{ data: caixaWithDate }, { data: caixaNoDate }] = await Promise.all([caixaQueryA, caixaQueryB]);
+        const caixaPeriod = [...(caixaWithDate || []), ...(caixaNoDate || [])];
 
         // ─── Group by id_oportunidade (same deduplication as metrics API) ────────
         // Without this, a deal with "entrada + parcelas" rows would double-count
