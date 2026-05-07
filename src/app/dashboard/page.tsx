@@ -52,6 +52,7 @@ type Metrics = {
     comissaoCloserDetalhes?: { nome: string; caixa: number; pct: number; comissao: number }[];
     comissaoSdrDetalhes?: { nome: string; caixa: number; pct: number; comissao: number }[];
     statusLeads?: { status: string; count: number; pct: number }[];
+    pendentesPorCloser?: { nome: string; valor: number }[];
 };
 
 const DARK = '#1A1A1A';

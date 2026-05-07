@@ -104,6 +104,7 @@ export async function GET(request: Request) {
             mapPendentes[oportId] = (mapPendentes[oportId] || 0) + (parseFloat(v.valor_bruto) || 0);
         }
         const pagamentosPendentes = Object.values(mapPendentes).reduce((sum, v) => sum + v, 0);
+        // Note: pendentesPorCloser is computed AFTER leadOwnerMap is built below.
 
         // ─── Caixa Líquido Global ─────────────────────────────────────────────────
         let caixaLiquido = 0;
@@ -235,6 +236,27 @@ export async function GET(request: Request) {
         const comissaoCloserTotal = comissaoCloserDetalhes.reduce((s, d) => s + d.comissao, 0);
         const comissaoSdrTotal    = comissaoSdrDetalhes.reduce((s, d) => s + d.comissao, 0);
 
+        // ─── Pendentes por Closer ─────────────────────────────────────────────────────
+        // Uses the same filteredFat rows (pendentes only) + leadOwnerMap to attribute
+        // each pending payment to the closer responsible for that lead.
+        // Deduplicates by id_oportunidade to avoid double-counting split rows.
+        const pendOportSeen = new Set<number>();
+        const pendByCloser: Record<string, number> = {};
+        for (const v of filteredFat) {
+            if (v.status_pagamento !== 'pendente') continue;
+            const oportId = v.id_oportunidade ?? v.id_lead;
+            if (pendOportSeen.has(oportId)) continue;
+            pendOportSeen.add(oportId);
+            const owners = leadOwnerMap[v.id_lead];
+            if (owners?.closer) {
+                const cName = usersMap[owners.closer] || 'Desconhecido';
+                pendByCloser[cName] = (pendByCloser[cName] || 0) + (parseFloat(v.valor_bruto) || 0);
+            }
+        }
+        const pendentesPorCloser = Object.entries(pendByCloser)
+            .map(([nome, valor]) => ({ nome, valor }))
+            .sort((a, b) => b.valor - a.valor);
+
         // ─── Ticket Médio donuts ──────────────────────────────────────────────────
         const tmFaturamentoCloser = Object.entries(closerStats).map(([name, s]) => ({ name, value: s.count > 0 ? s.faturamento / s.count : 0 })).sort((a, b) => b.value - a.value);
         const tmCaixaCloser       = Object.entries(closerStats).map(([name, s]) => ({ name, value: s.count > 0 ? s.caixa / s.count : 0 })).sort((a, b) => b.value - a.value);
@@ -301,6 +323,7 @@ export async function GET(request: Request) {
             comissaoSdrDetalhes,
             statusLeads,
             pagamentosPendentes,
+            pendentesPorCloser,
             period: { startDate, endDate }
         });
     } catch (error: any) {
