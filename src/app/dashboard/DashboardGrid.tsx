@@ -33,7 +33,8 @@ import {
 const DEFAULT_LAYOUT = [
     'statusLeads', 'sdrsPeriodo', 'closersPeriodo', 'conversaoSdr', 'conversaoCloser',
     'tmFatCloser', 'tmCaixaCloser', 'tmFatSdr', 'tmCaixaSdr',
-    'recFat', 'recCaixa', 'recCloser', 'recSdr', 'reembolsos', 'comissaoCloser', 'comissaoSdr'
+    'recFat', 'recCaixa', 'recCloser', 'recSdr', 'reembolsos', 'comissaoCloser', 'comissaoSdr',
+    'pagamentosPendentes'
 ];
 
 export function DashboardGrid({
@@ -280,6 +281,39 @@ export function DashboardGrid({
         tmCaixaSdr: { colSpan: "col-span-1", render: () => renderTicketDonut("Ticket Médio (Caixa) por SDR", metrics?.tmCaixaSdr) },
         recFat: { colSpan: "col-span-1", render: () => renderTicketDonut("Rec. Formas de Pagamento (Fat.)", metrics?.receitaPorPagamentoFaturamento) },
         recCaixa: { colSpan: "col-span-1", render: () => renderTicketDonut("Rec. Formas de Pagamento (Caixa)", metrics?.receitaPorPagamentoCaixa) },
+        pagamentosPendentes: {
+            colSpan: "col-span-1",
+            render: () => {
+                const valor = metrics?.pagamentosPendentes || 0;
+                const AMBER = '#FB923C';
+                return (
+                    <div className="glass-panel p-4 rounded-xl flex flex-col border h-full"
+                        style={{ borderColor: 'rgba(251,146,60,0.25)', background: 'rgba(251,146,60,0.04)' }}>
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 rounded-lg" style={{ background: 'rgba(251,146,60,0.12)' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FB923C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                    </svg>
+                                </div>
+                                <h3 className="text-xs font-bold text-white">Pgtos. Pendentes</h3>
+                            </div>
+                            {valor > 0 && (
+                                <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                    style={{ background: 'rgba(251,146,60,0.15)', color: AMBER }}>
+                                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: AMBER }} />
+                                    A receber
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-[10px] mb-4" style={{ color: TEXT_SEC }}>Vendas confirmadas ainda não liquidadas.</p>
+                        <p className="text-2xl font-black mt-auto" style={{ color: valor > 0 ? AMBER : 'white' }}>
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}
+                        </p>
+                    </div>
+                );
+            }
+        },
         recCloser: {
             colSpan: "col-span-1",
             render: () => (

@@ -305,14 +305,12 @@ export default function Dashboard() {
     const formatBRL = (val: number) =>
         new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
 
-    const AMBER = '#FB923C';
     const cards = [
-        { title: "Receita Bruta", value: formatBRL(metrics?.receita || 0), icon: TrendingUp, accent: LIME },
-        { title: "Caixa Líquido", value: formatBRL(metrics?.caixaLiquido || 0), icon: DollarSign, accent: LIME },
-        { title: "Pgtos. Pendentes", value: formatBRL(metrics?.pagamentosPendentes || 0), icon: Clock, accent: AMBER, badge: '⏳ A receber' },
-        { title: "Leads Totais", value: metrics?.leadsTotais || 0, icon: Users, accent: LIME },
-        { title: "Vendas Concluídas", value: metrics?.vendasTotais || 0, icon: BriefcaseBusiness, accent: LIME },
-        { title: "Taxa de Conversão", value: `${metrics?.conversaoAproximada || 0}%`, icon: Activity, accent: LIME },
+        { title: "Receita Bruta", value: formatBRL(metrics?.receita || 0), icon: TrendingUp },
+        { title: "Caixa Líquido", value: formatBRL(metrics?.caixaLiquido || 0), icon: DollarSign },
+        { title: "Leads Totais", value: metrics?.leadsTotais || 0, icon: Users },
+        { title: "Vendas Concluídas", value: metrics?.vendasTotais || 0, icon: BriefcaseBusiness },
+        { title: "Taxa de Conversão", value: `${metrics?.conversaoAproximada || 0}%`, icon: Activity },
     ];
 
     const CHART_COLORS = [LIME, '#22D3EE', '#A78BFA', '#FB923C', '#F472B6'];
@@ -397,25 +395,19 @@ export default function Dashboard() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
                 {cards.map((card, idx) => {
                     const Icon = card.icon;
-                    const accent = card.accent || LIME;
-                    const isAmber = accent === AMBER;
                     return (
-                        <div key={idx} className="glass-panel p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform"
-                            style={isAmber ? { borderColor: 'rgba(251,146,60,0.25)' } : {}}>
+                        <div key={idx} className="glass-panel p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform">
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-2.5 rounded-lg" style={{ background: isAmber ? 'rgba(251,146,60,0.12)' : 'rgba(190,255,0,0.12)' }}>
-                                    <Icon style={{ color: accent }} size={20} />
+                                <div className="p-2.5 rounded-lg" style={{ background: 'rgba(190,255,0,0.12)' }}>
+                                    <Icon style={{ color: LIME }} size={20} />
                                 </div>
                                 <div className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full"
-                                    style={{ background: isAmber ? 'rgba(251,146,60,0.12)' : 'rgba(190,255,0,0.12)', color: accent }}>
-                                    {isAmber ? (
-                                        <><span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: accent }} /><span>{(card as any).badge}</span></>
-                                    ) : (
-                                        <><ArrowUpRight size={12} /><span>Acima</span></>
-                                    )}
+                                    style={{ background: 'rgba(190,255,0,0.12)', color: LIME }}>
+                                    <ArrowUpRight size={12} />
+                                    <span>Acima</span>
                                 </div>
                             </div>
                             <div>
@@ -423,9 +415,7 @@ export default function Dashboard() {
                                 {isLoading ? (
                                     <div className="h-7 w-24 rounded animate-pulse" style={{ background: '#2A2A2A' }}></div>
                                 ) : (
-                                    <p className="text-2xl font-black" style={{ color: isAmber && (metrics?.pagamentosPendentes || 0) > 0 ? AMBER : 'white' }}>
-                                        {metrics ? card.value : '...'}
-                                    </p>
+                                    <p className="text-2xl font-black text-white">{metrics ? card.value : '...'}</p>
                                 )}
                             </div>
                         </div>
