@@ -152,6 +152,19 @@ function CalendarContent() {
     }
   }, [searchParams]);
 
+  // Abrir modal pré-preenchido quando vindo do Kanban via ?leadId=X
+  useEffect(() => {
+    const leadId = searchParams.get("leadId");
+    if (!leadId || leads.length === 0) return;
+    const t = new Date();
+    const d = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    setEditingId(null);
+    setFormData(prev => ({ ...prev, titulo: '', data: d, hora: '09:00', duracao_minutos: '60', status_chamada: 'agendada', id_lead: leadId, id_sdr: '', id_closer: '', observacoes: '' }));
+    setIsModalOpen(true);
+    // Limpa o param da URL sem recarregar
+    window.history.replaceState({}, '', '/calendar');
+  }, [leads, searchParams]);
+
   // Gerar grade mensal
   const getDaysInMonth = () => {
     const year = currentDate.getFullYear();

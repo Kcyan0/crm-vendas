@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Plus, Phone, Instagram, Clock, Download } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV } from '@/lib/exportUtils';
@@ -36,6 +37,7 @@ const KANBAN_COLUMNS = [
 
 export default function KanbanBoard() {
   const { selectedProject } = useProject();
+  const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -730,8 +732,18 @@ export default function KanbanBoard() {
                     onDoubleClick={() => handleOpenDetail(lead)}
                     className="glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 border-[#2A2A2A] hover:border-orange-300 transition-all select-none group relative bg-[#1A1A1A]"
                   >
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); handleOpenDetail(lead); }} className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]">Ver</button>
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenDetail(lead); }}
+                        className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]"
+                      >Ver</button>
+                      {!['Venda', 'Loss', 'Reembolsado'].includes(lead.status_atual) && lead.status_atual !== 'Nao prosseguiu' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); router.push(`/calendar?leadId=${lead.id_lead}`); }}
+                          className="text-[#888888] hover:text-[#BEFF00] px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A] whitespace-nowrap"
+                          title="Adicionar à agenda"
+                        >📅</button>
+                      )}
                     </div>
                     <div className="flex justify-between items-start mb-2 pr-12">
                       <h4 className="font-bold text-white leading-tight">{lead.nome}</h4>
