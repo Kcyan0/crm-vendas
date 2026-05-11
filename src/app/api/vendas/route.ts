@@ -10,15 +10,25 @@ export async function GET(request: Request) {
         const projectId = url.searchParams.get('projectId');
 
         if (pendentes === 'true' && month && projectId) {
-            // Return pending vendas for calendar view
+            // Return pending vendas for calendar view — filtered by project
             const [year, m] = month.split('-').map(Number);
             const startDate = new Date(year, m - 1, 1).toISOString().split('T')[0];
             const endDate = new Date(year, m, 0).toISOString().split('T')[0];
+
+            // First get valid lead IDs for this project
+            const { data: projLeads } = await supabase
+                .from('leads')
+                .select('id_lead')
+                .eq('id_projeto', projectId);
+            const validLeadIds = (projLeads || []).map((l: any) => l.id_lead);
+
+            if (validLeadIds.length === 0) return NextResponse.json([]);
 
             const { data, error } = await supabase
                 .from('vendas')
                 .select('id_venda, id_lead, forma_pagamento, valor_bruto, data_recebimento, leads(nome)')
                 .eq('status_pagamento', 'pendente')
+                .in('id_lead', validLeadIds)
                 .gte('data_recebimento', startDate)
                 .lte('data_recebimento', endDate);
 
