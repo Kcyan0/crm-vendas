@@ -11,7 +11,8 @@ import {
     BriefcaseBusiness,
     Activity,
     ArrowUpRight,
-    Clock
+    Clock,
+    BarChart2
 } from "lucide-react";
 import {
     BarChart,
@@ -309,6 +310,7 @@ export default function Dashboard() {
     const cards = [
         { title: "Receita Bruta", value: formatBRL(metrics?.receita || 0), icon: TrendingUp },
         { title: "Caixa Líquido", value: formatBRL(metrics?.caixaLiquido || 0), icon: DollarSign },
+        { title: "Ticket Médio", value: formatBRL(metrics?.ticketMedio || 0), icon: BarChart2 },
         { title: "Leads Totais", value: metrics?.leadsTotais || 0, icon: Users },
         { title: "Vendas Concluídas", value: metrics?.vendasTotais || 0, icon: BriefcaseBusiness },
         { title: "Taxa de Conversão", value: `${metrics?.conversaoAproximada || 0}%`, icon: Activity },
@@ -396,7 +398,7 @@ export default function Dashboard() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
                 {cards.map((card, idx) => {
                     const Icon = card.icon;
                     return (
