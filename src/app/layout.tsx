@@ -32,7 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               };
               var modes = {
                 preto:  ['#111111','#0A0A0A','#1A1A1A','#222222','#2A2A2A','#FFFFFF','#888888','#555555','rgba(255,255,255,0.07)','#2A2A2A','#1E1E1E'],
-                cinza:  ['#F0F2F5','#E4E6EA','#FFFFFF','#F5F7FA','#EBEDF0','#111111','#666666','#999999','rgba(0,0,0,0.08)','#D0D4DA','#D0D4DA'],
+                cinza:  ['#C8CDD6','#BEC4CD','#D4D9E2','#C0C5CE','#B8BDC6','#111111','#444444','#666666','rgba(0,0,0,0.15)','#A0A5AE','#A8ADB6'],
                 branco: ['#FFFFFF','#FAFAFA','#F4F5F7','#EEEEF2','#E5E5EA','#0A0A0A','#555555','#888888','rgba(0,0,0,0.10)','#E0E0E0','#E8E8E8'],
               };
               var r = document.documentElement;

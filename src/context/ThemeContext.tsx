@@ -36,10 +36,10 @@ export const MODES: Record<ModeId, {
     },
     cinza: {
         label: "Cinza",
-        bgApp: "#F0F2F5", bgSidebar: "#E4E6EA", bgSurface: "#FFFFFF",
-        bgSurface2: "#F5F7FA", bgSurface3: "#EBEDF0",
-        textPri: "#111111", textSec: "#666666", textMuted: "#999999",
-        border: "rgba(0,0,0,0.08)", borderStr: "#D0D4DA", sidebarBorder: "#D0D4DA",
+        bgApp: "#C8CDD6", bgSidebar: "#BEC4CD", bgSurface: "#D4D9E2",
+        bgSurface2: "#C0C5CE", bgSurface3: "#B8BDC6",
+        textPri: "#111111", textSec: "#444444", textMuted: "#666666",
+        border: "rgba(0,0,0,0.15)", borderStr: "#A0A5AE", sidebarBorder: "#A8ADB6",
     },
     branco: {
         label: "Branco",
