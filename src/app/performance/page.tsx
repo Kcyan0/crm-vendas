@@ -32,7 +32,7 @@ type CloserPerformance = {
 type StatusLead = { status: string; count: number; pct: number };
 
 const STATUS_COLORS: Record<string, string> = {
-    'Venda':       '#BEFF00',
+    'Venda':       'var(--accent)',
     'Loss':        '#f472b6',
     'Remarcado':   '#facc15',
     'No-show':     '#fb923c',
@@ -147,13 +147,13 @@ export default function PerformancePage() {
             <div className="flex gap-2 border-b border-[#2A2A2A]">
                 <button
                     onClick={() => setActiveTab('metricas')}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === 'metricas' ? 'border-[#BEFF00] text-[#BEFF00]' : 'border-transparent text-[#666] hover:text-white'}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === 'metricas' ? 'border-accent text-accent' : 'border-transparent text-[#666] hover:text-white'}`}
                 >
                     <TrendingUp size={15} /> Métricas
                 </button>
                 <button
                     onClick={() => setActiveTab('status')}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === 'status' ? 'border-[#BEFF00] text-[#BEFF00]' : 'border-transparent text-[#666] hover:text-white'}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === 'status' ? 'border-accent text-accent' : 'border-transparent text-[#666] hover:text-white'}`}
                 >
                     <PieChart size={15} /> Status dos Leads
                 </button>
@@ -252,7 +252,7 @@ export default function PerformancePage() {
             {activeTab === 'status' && (
                 <div className="glass-panel p-6 bg-[#1A1A1A] border-[#2A2A2A]">
                     <div className="flex items-center gap-3 mb-1">
-                        <PieChart size={20} className="text-[#BEFF00]" />
+                        <PieChart size={20} className="text-accent" />
                         <h3 className="text-xl font-bold text-white">Status dos Leads</h3>
                     </div>
                     <p className="text-[#888] text-sm mb-6">Distribuição dos leads por status no período selecionado.</p>

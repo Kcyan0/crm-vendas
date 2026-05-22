@@ -32,7 +32,7 @@ type OverviewData = {
     period: { startDate: string; endDate: string };
 };
 
-const COLORS = ['#BEFF00', '#00E5FF', '#FF6B6B', '#FFB347', '#A78BFA', '#34D399', '#F472B6', '#60A5FA'];
+const COLORS = ['var(--accent)', '#00E5FF', '#FF6B6B', '#FFB347', '#A78BFA', '#34D399', '#F472B6', '#60A5FA'];
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 const today = new Date();
@@ -46,7 +46,7 @@ const PRESETS = [
     { label: 'Últimos 3 meses', start: new Date(today.getFullYear(), today.getMonth() - 2, 1).toISOString().split('T')[0], end: lastDay },
 ];
 
-function KpiCard({ icon: Icon, label, value, sub, color = '#BEFF00' }: {
+function KpiCard({ icon: Icon, label, value, sub, color = 'var(--accent)' }: {
     icon: any; label: string; value: string; sub?: string; color?: string;
 }) {
     return (
@@ -110,7 +110,7 @@ function DonutChart({ data, title, subtitle, format }: {
                     ))}
                     <div className="border-t border-[#2A2A2A] mt-1 pt-1 flex justify-between px-1">
                         <span className="text-[10px] font-bold text-[#555] uppercase">Total</span>
-                        <span className="text-xs font-black text-[#BEFF00]">{format(total)}</span>
+                        <span className="text-xs font-black text-accent">{format(total)}</span>
                     </div>
                 </div>
             </div>
@@ -160,7 +160,7 @@ export default function OverviewPage() {
                 {/* Period picker */}
                 <div className="flex items-center gap-3 flex-wrap">
                     <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-3 py-2">
-                        <Calendar size={14} className="text-[#BEFF00]" />
+                        <Calendar size={14} className="text-accent" />
                         <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                             className="bg-transparent text-white text-sm outline-none w-32" />
                         <span className="text-[#555] text-sm">–</span>
@@ -170,7 +170,7 @@ export default function OverviewPage() {
 
                     <div className="relative">
                         <button onClick={() => setPresetOpen(v => !v)}
-                            className="flex items-center gap-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl px-3 py-2 hover:border-[#BEFF00] transition">
+                            className="flex items-center gap-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl px-3 py-2 hover:border-accent transition">
                             Período <ChevronDown size={14} />
                         </button>
                         {presetOpen && (
@@ -186,7 +186,7 @@ export default function OverviewPage() {
                     </div>
 
                     <button onClick={fetchData} disabled={loading}
-                        className="flex items-center gap-2 bg-[#BEFF00] text-[#0A0A0A] font-bold text-sm rounded-xl px-4 py-2 hover:bg-[#A8E800] transition">
+                        className="flex items-center gap-2 bg-accent text-[#0A0A0A] font-bold text-sm rounded-xl px-4 py-2 hover:bg-[#A8E800] transition">
                         {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                         Atualizar
                     </button>
@@ -195,13 +195,13 @@ export default function OverviewPage() {
 
             {loading && !data ? (
                 <div className="flex items-center justify-center h-64">
-                    <Loader2 size={36} className="animate-spin text-[#BEFF00]" />
+                    <Loader2 size={36} className="animate-spin text-accent" />
                 </div>
             ) : (
                 <>
                     {/* KPI Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                        <KpiCard icon={DollarSign} label="Receita Total" value={fmt(data?.totalReceita || 0)} sub={`${data?.totalVendas || 0} venda(s) no período`} color="#BEFF00" />
+                        <KpiCard icon={DollarSign} label="Receita Total" value={fmt(data?.totalReceita || 0)} sub={`${data?.totalVendas || 0} venda(s) no período`} color="var(--accent)" />
                         <KpiCard icon={TrendingUp} label="Ticket Médio" value={fmt(data?.totalTicket || 0)} sub="Receita Total / Vendas" color="#00E5FF" />
                         <KpiCard icon={ShoppingCart} label="Caixa Líquido" value={fmt(data?.totalCaixa || 0)} sub="Caixa gerado no período" color="#A78BFA" />
                         <KpiCard icon={Users} label="Leads no Período" value={String(data?.totalLeads || 0)} sub="Leads com entrada no período" color="#FFB347" />
@@ -250,7 +250,7 @@ export default function OverviewPage() {
                                 <XAxis dataKey="nome" tick={{ fill: '#888', fontSize: 12 }} />
                                 <YAxis tick={{ fill: '#888', fontSize: 12 }} />
                                 <Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #333', borderRadius: 10 }} />
-                                <Bar dataKey="leads" name="Leads" fill="#BEFF00" radius={[6, 6, 0, 0]} />
+                                <Bar dataKey="leads" name="Leads" fill="var(--accent)" radius={[6, 6, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -280,7 +280,7 @@ export default function OverviewPage() {
                                             <td className="py-3 pr-4 text-sm text-[#aaa]">{p.leads}</td>
                                             <td className="py-3 pr-4 text-sm text-[#aaa]">{p.vendas}</td>
                                             <td className="py-3 pr-4">
-                                                <span className={`text-sm font-bold ${p.conversao >= 30 ? 'text-[#BEFF00]' : p.conversao >= 10 ? 'text-orange-400' : 'text-red-400'}`}>
+                                                <span className={`text-sm font-bold ${p.conversao >= 30 ? 'text-accent' : p.conversao >= 10 ? 'text-orange-400' : 'text-red-400'}`}>
                                                     {p.conversao}%
                                                 </span>
                                             </td>

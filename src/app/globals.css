@@ -16,6 +16,8 @@
   --text-secondary: #888888;
   --accent: #BEFF00;
   --accent-hover: #A8E800;
+  --accent-rgb: 190,255,0;
+  --accent-text: #0A0A0A;
   --border-color: rgba(255, 255, 255, 0.07);
 }
 
@@ -39,7 +41,7 @@ body {
 
 .glass-panel:hover {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
-  border-color: rgba(190, 255, 0, 0.15);
+  border-color: rgba(var(--accent-rgb), 0.15);
 }
 
 /* Kanban columns */
@@ -53,7 +55,7 @@ body {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #111111; }
 ::-webkit-scrollbar-thumb { background: #333333; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #BEFF00; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
 /* Inputs */
 input,
@@ -74,17 +76,17 @@ input::placeholder { color: #555555; }
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #BEFF00;
-  box-shadow: 0 0 0 3px rgba(190, 255, 0, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
 }
 
 /* Dark options inside select */
 option { background: #1A1A1A; color: #FFFFFF; }
 
-/* Primary button — lime neon */
+/* Primary button — accent neon */
 button.btn-primary {
-  background: #BEFF00;
-  color: #0A0A0A;
+  background: var(--accent);
+  color: var(--accent-text);
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
@@ -95,8 +97,29 @@ button.btn-primary {
 }
 
 button.btn-primary:hover {
-  background: #CEFF33;
+  background: var(--accent-hover);
   transform: translateY(-1px);
 }
 
 button.btn-primary:active { transform: translateY(0); }
+
+/* ── Accent Utility Classes ───────────────────────────────────────────────── */
+/* These replace Tailwind arbitrary-value classes like text-[#BEFF00]         */
+.text-accent          { color: var(--accent) !important; }
+.bg-accent            { background-color: var(--accent) !important; }
+.border-accent        { border-color: var(--accent) !important; }
+.fill-accent          { fill: var(--accent) !important; }
+.stroke-accent        { stroke: var(--accent) !important; }
+
+.hover\:text-accent:hover   { color: var(--accent) !important; }
+.hover\:bg-accent:hover     { background-color: var(--accent) !important; }
+.hover\:border-accent:hover { border-color: var(--accent) !important; }
+
+.focus\:border-accent:focus { border-color: var(--accent) !important; }
+.focus\:ring-accent:focus   {
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15) !important;
+}
+
+.bg-accent-12  { background-color: rgba(var(--accent-rgb), 0.12) !important; }
+.bg-accent-5   { background-color: rgba(var(--accent-rgb), 0.05) !important; }
+.border-accent-30 { border-color: rgba(var(--accent-rgb), 0.30) !important; }

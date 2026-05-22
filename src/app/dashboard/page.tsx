@@ -58,7 +58,7 @@ type Metrics = {
 
 const DARK = '#1A1A1A';
 const BORDER = 'rgba(255,255,255,0.07)';
-const LIME = '#BEFF00';
+const LIME = 'var(--accent)';
 const TEXT_SEC = '#888888';
 
 // ─── MetasPanel component ────────────────────────────────────────────────────
@@ -149,8 +149,8 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
         <div className="glass-panel p-4 sm:p-5 mb-6 border border-white/5 bg-[#151515] rounded-2xl">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg" style={{ background: 'rgba(190,255,0,0.12)' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#BEFF00" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="p-1.5 rounded-lg" style={{ background: 'rgba(var(--accent-rgb),0.12)' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
                         </svg>
                     </div>
@@ -179,7 +179,7 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                         const groupMetas = metasIndividuais.filter(m => m.tipo === tipo);
                         if (groupMetas.length === 0) return null;
                         const colors = tipo === 'SDR'
-                            ? ['#BEFF00','#A3E635','#84CC16','#65A30D','#4D7C0F']
+                            ? ['var(--accent)','#A3E635','#84CC16','#65A30D','#4D7C0F']
                             : ['#22D3EE','#38BDF8','#60A5FA','#818CF8','#A78BFA'];
                         return (
                             <div key={tipo}>
@@ -374,7 +374,7 @@ export default function Dashboard() {
                 <div className="flex flex-col sm:flex-row items-end gap-3">
                     <button 
                         onClick={() => setIsEditMode(!isEditMode)}
-                        className={`flex items-center gap-2 px-4 py-2 font-bold rounded-lg border transition-all ${isEditMode ? 'bg-[#BEFF00] text-black border-[#BEFF00]' : 'bg-[#111] text-[#888] border-[#2A2A2A] hover:text-white hover:border-[#444]'}`}
+                        className={`flex items-center gap-2 px-4 py-2 font-bold rounded-lg border transition-all ${isEditMode ? 'bg-accent text-black border-accent' : 'bg-[#111] text-[#888] border-[#2A2A2A] hover:text-white hover:border-[#444]'}`}
                         style={{ height: '42px' }}
                     >
                         <Settings size={16} />
@@ -404,11 +404,11 @@ export default function Dashboard() {
                     return (
                         <div key={idx} className="glass-panel p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform">
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-2.5 rounded-lg" style={{ background: 'rgba(190,255,0,0.12)' }}>
+                                <div className="p-2.5 rounded-lg" style={{ background: 'rgba(var(--accent-rgb),0.12)' }}>
                                     <Icon style={{ color: LIME }} size={20} />
                                 </div>
                                 <div className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full"
-                                    style={{ background: 'rgba(190,255,0,0.12)', color: LIME }}>
+                                    style={{ background: 'rgba(var(--accent-rgb),0.12)', color: LIME }}>
                                     <ArrowUpRight size={12} />
                                     <span>Acima</span>
                                 </div>

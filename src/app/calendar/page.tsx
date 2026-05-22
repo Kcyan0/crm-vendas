@@ -42,7 +42,7 @@ type PendingVenda = {
 
 const STATUS_COLORS: Record<string, string> = {
   agendada: "bg-blue-500",
-  realizada: "bg-[#BEFF00]",
+  realizada: "bg-accent",
   "no-show": "bg-red-500",
   reagendada: "bg-orange-400",
 };
@@ -299,12 +299,12 @@ function CalendarContent() {
               <button
                 onClick={handleSync}
                 disabled={googleLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#1A1A1A] border border-[#2A2A2A] text-[#BEFF00] hover:border-[#BEFF00] transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#1A1A1A] border border-[#2A2A2A] text-accent hover:border-accent transition-all"
               >
                 {googleLoading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                 Sincronizar
               </button>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#BEFF00]/10 border border-[#BEFF00]/30 text-[#BEFF00]">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-accent-12 border border-accent-30 text-accent">
                 <Check size={15} />
                 Google Conectado
               </div>
@@ -312,7 +312,7 @@ function CalendarContent() {
           ) : (
             <a
               href="/api/google/auth"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#1A1A1A] border border-[#2A2A2A] text-white hover:border-[#BEFF00] hover:text-[#BEFF00] transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#1A1A1A] border border-[#2A2A2A] text-white hover:border-accent hover:text-accent transition-all"
             >
               <Link2 size={15} />
               Conectar Google Calendar
@@ -320,7 +320,7 @@ function CalendarContent() {
           )}
           <button
             onClick={() => { setEditingId(null); const t = today; const d = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; setFormData({titulo:'',data:d,hora:'09:00',duracao_minutos:'60',status_chamada:'agendada',id_lead:'',id_sdr:'',id_closer:'',observacoes:''}); setIsModalOpen(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-[#BEFF00] text-[#0A0A0A] hover:bg-[#A8E800] transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-accent text-[#0A0A0A] hover:bg-[#A8E800] transition-all"
           >
             <Plus size={15} />
             Nova Chamada
@@ -353,7 +353,7 @@ function CalendarContent() {
 
           {/* Grade */}
           {loading ? (
-            <div className="flex-1 flex items-center justify-center"><Loader2 size={30} className="animate-spin text-[#BEFF00]" /></div>
+            <div className="flex-1 flex items-center justify-center"><Loader2 size={30} className="animate-spin text-accent" /></div>
           ) : (
             <div className="grid grid-cols-7 gap-1 flex-1">
               {days.map((day, idx) => {
@@ -364,9 +364,9 @@ function CalendarContent() {
                   <div
                     key={idx}
                     onClick={() => handleDayClick(day)}
-                    className={`rounded-xl p-2 cursor-pointer transition-all flex flex-col min-h-[80px] border ${isToday ? "border-[#BEFF00]/50 bg-[#BEFF00]/5" : "border-transparent hover:border-[#2A2A2A] hover:bg-[#222]"}`}
+                    className={`rounded-xl p-2 cursor-pointer transition-all flex flex-col min-h-[80px] border ${isToday ? "border-accent/50 bg-accent-5" : "border-transparent hover:border-[#2A2A2A] hover:bg-[#222]"}`}
                   >
-                    <span className={`text-sm font-bold mb-1 self-end ${isToday ? "text-[#BEFF00]" : "text-[#888]"}`}>{day.getDate()}</span>
+                    <span className={`text-sm font-bold mb-1 self-end ${isToday ? "text-accent" : "text-[#888]"}`}>{day.getDate()}</span>
                     <div className="flex flex-col gap-0.5">
                       {dayChamadas.slice(0, 2).map((c) => (
                         <div
@@ -402,7 +402,7 @@ function CalendarContent() {
         <div className="w-72 flex flex-col gap-4">
           <div className="glass-panel bg-[#1A1A1A] p-4 flex-1">
             <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-              <CalendarIcon size={16} className="text-[#BEFF00]" />
+              <CalendarIcon size={16} className="text-accent" />
               Próximas Chamadas
             </h4>
             <div className="flex flex-col gap-3">
@@ -554,7 +554,7 @@ function CalendarContent() {
                 ) : <div />}
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-[#888] hover:text-white transition text-sm">Cancelar</button>
-                  <button type="submit" disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-[#BEFF00] text-[#0A0A0A] font-bold rounded-xl hover:bg-[#A8E800] transition text-sm">
+                  <button type="submit" disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-accent text-[#0A0A0A] font-bold rounded-xl hover:bg-[#A8E800] transition text-sm">
                     {saving && <Loader2 size={14} className="animate-spin" />}
                     {editingId ? "Salvar" : "Criar Chamada"}
                   </button>
@@ -570,7 +570,7 @@ function CalendarContent() {
 
 export default function CalendarPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 size={30} className="animate-spin text-[#BEFF00]" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 size={30} className="animate-spin text-accent" /></div>}>
       <CalendarContent />
     </Suspense>
   );

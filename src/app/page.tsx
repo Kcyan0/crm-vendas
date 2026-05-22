@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, Plus, Phone, Instagram, Clock, Download } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV } from '@/lib/exportUtils';
+import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
 
 type Lead = {
   id_lead: number;
@@ -71,7 +72,7 @@ export default function KanbanBoard() {
   const [saleLead, setSaleLead] = useState<Lead | null>(null);
   const [saleObservacoes, setSaleObservacoes] = useState("");
   const [showCaixaBreakdown, setShowCaixaBreakdown] = useState(false);
-  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [saleDate, setSaleDate] = useState(() => todayBrasilia());
 
   // Detail panel state
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -326,12 +327,9 @@ export default function KanbanBoard() {
 
   const handleOpenCreate = () => {
     setEditingLeadId(null);
-    const now = new Date();
-    // Ajuste fuso local para YYYY-MM-DDTHH:mm
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     setFormData({
       nome: "", telefone: "", instagram: "", email: "", origem: "", id_sdr_responsavel: "", id_closer_responsavel: "", observacoes_gerais: "",
-      data_entrada: now.toISOString().slice(0, 16)
+      data_entrada: nowBrasiliaLocal()
     });
     setIsModalOpen(true);
   };
@@ -340,10 +338,9 @@ export default function KanbanBoard() {
     setEditingLeadId(lead.id_lead);
 
     const dEntrada = lead.data_entrada ? new Date(lead.data_entrada) : new Date();
-    if (lead.data_entrada && !lead.data_entrada.includes('Z')) {
-      // Handle timezone correction for SQLite string if needed, basic mapping:
-      dEntrada.setMinutes(dEntrada.getMinutes() - dEntrada.getTimezoneOffset());
-    }
+    const dataEntradaLocal = lead.data_entrada
+      ? dbDateToBrasiliaLocal(lead.data_entrada)
+      : nowBrasiliaLocal();
 
     setFormData({
       nome: lead.nome || "",
@@ -354,7 +351,7 @@ export default function KanbanBoard() {
       id_sdr_responsavel: lead.id_sdr_responsavel?.toString() || "",
       id_closer_responsavel: lead.id_closer_responsavel?.toString() || "",
       observacoes_gerais: lead.observacoes_gerais || "",
-      data_entrada: lead.data_entrada ? lead.data_entrada.replace(' ', 'T').slice(0, 16) : dEntrada.toISOString().slice(0, 16)
+      data_entrada: dataEntradaLocal
     });
     setIsModalOpen(true);
   };
@@ -425,7 +422,7 @@ export default function KanbanBoard() {
       setSaleObservacoes("");
       setShowCaixaBreakdown(false);
       setPagamentos([newPagamento(gateways[0]?.nome || "")]);
-      setSaleDate(new Date().toISOString().split('T')[0]);
+      setSaleDate(todayBrasilia());
       fetchLeads();
     } catch (err: any) {
       console.error('Sale save error:', err);
@@ -443,7 +440,7 @@ export default function KanbanBoard() {
         const defaultGw = gateways[0]?.nome || "PIX";
         setPagamentos([newPagamento(defaultGw)]);
         setSaleObservacoes(lead.observacoes_gerais || "");
-        setSaleDate(new Date().toISOString().split('T')[0]);
+        setSaleDate(todayBrasilia());
       } else {
         // Reconstruct pagamentos from DB rows.
         // Rules:
@@ -663,7 +660,7 @@ export default function KanbanBoard() {
             onClick={handleExportCSV}
             title="Exportar leads para planilha CSV"
             className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-colors"
-            style={{ background: '#BEFF00', color: '#0A0A0A', border: '1px solid transparent' }}
+            style={{ background: 'var(--accent)', color: '#0A0A0A', border: '1px solid transparent' }}
           >
             <Download size={16} />
             <span>Exportar</span>
@@ -718,7 +715,7 @@ export default function KanbanBoard() {
             >
               <div className="p-4 border-b border-[#222222] flex justify-between items-center bg-[#1A1A1A]/80 rounded-t-xl">
                 <h3 className="font-bold text-white tracking-tight">{col}</h3>
-                <span className="text-xs px-2.5 py-1 rounded-full font-black" style={{ background: '#BEFF00', color: '#0A0A0A' }}>
+                <span className="text-xs px-2.5 py-1 rounded-full font-black" style={{ background: 'var(--accent)', color: '#0A0A0A' }}>
                   {columnLeads.length}
                 </span>
               </div>
@@ -740,7 +737,7 @@ export default function KanbanBoard() {
                       {!['Venda', 'Loss', 'Reembolsado'].includes(lead.status_atual) && lead.status_atual !== 'Nao prosseguiu' && (
                         <button
                           onClick={(e) => { e.stopPropagation(); router.push(`/calendar?leadId=${lead.id_lead}`); }}
-                          className="text-[#888888] hover:text-[#BEFF00] px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A] whitespace-nowrap"
+                          className="text-[#888888] hover:text-accent px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A] whitespace-nowrap"
                           title="Adicionar à agenda"
                         >📅</button>
                       )}
@@ -1110,7 +1107,7 @@ export default function KanbanBoard() {
                           <button
                             type="button"
                             onClick={() => handlePagamentoChange(p.id, 'status_pagamento', 'pago')}
-                            className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pago' ? 'bg-[#BEFF00] text-[#0A0A0A]' : 'bg-[#111] text-[#666] hover:text-white'}`}
+                            className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pago' ? 'bg-accent text-[#0A0A0A]' : 'bg-[#111] text-[#666] hover:text-white'}`}
                           >✓ Pago</button>
                           <button
                             type="button"
@@ -1322,7 +1319,7 @@ export default function KanbanBoard() {
             {/* Header */}
             <div className="flex items-start justify-between p-5 pb-4 border-b border-[#222]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#BEFF00] flex items-center justify-center text-black font-black text-lg shrink-0">
+                <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-black font-black text-lg shrink-0">
                   {detailLead.nome.charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -1444,7 +1441,7 @@ export default function KanbanBoard() {
                     <div className="bg-[#111] rounded-xl border border-[#222] overflow-hidden">
                       <div className="flex justify-between items-center px-4 py-2.5 border-b border-[#222]">
                         <span className="text-[#888] text-xs font-medium">Valor Total da Venda</span>
-                        <span className="text-[#BEFF00] font-black text-sm">{fmt(totalBruto)}</span>
+                        <span className="text-accent font-black text-sm">{fmt(totalBruto)}</span>
                       </div>
                       <div className="flex justify-between items-center px-4 py-2.5">
                         <div className="flex items-center gap-2">
@@ -1480,7 +1477,7 @@ export default function KanbanBoard() {
                 value={detailLead.status_atual}
                 onChange={e => handleDetailStatusChange(e.target.value)}
                 disabled={detailStatusSaving}
-                className="flex-1 bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-[#BEFF00]"
+                className="flex-1 bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent"
               >
                 {KANBAN_COLUMNS.map(col => <option key={col} value={col}>{col === 'Loss' ? 'Loss' : col}</option>)}
               </select>

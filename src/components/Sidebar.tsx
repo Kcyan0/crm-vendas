@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X, Globe } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X, Globe, Palette } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { createClient } from "@/lib/supabase/browser";
+import { useTheme, THEMES, ThemeId } from "@/context/ThemeContext";
+import { useState } from "react";
 
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {
     const pathname = usePathname();
     const router = useRouter();
     const { projetos, selectedProject, setSelectedProject, isLoading, user } = useProject();
+    const { theme, setTheme } = useTheme();
+    const [showThemePicker, setShowThemePicker] = useState(false);
 
     const handleLogout = async () => {
         const supabase = createClient();
@@ -28,6 +32,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
         { name: "Configurações", icon: SettingsIcon, path: "/settings" },
     ];
 
+    const THEME_ORDER: ThemeId[] = ["verde", "ciano", "roxo", "laranja", "vermelho", "branco"];
 
     return (
         <>
@@ -54,12 +59,12 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                 {/* Logo */}
             <div className="px-6 mb-8">
                 <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0" style={{ border: '2px solid rgba(190,255,0,0.3)' }}>
+                    <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0" style={{ border: '2px solid rgba(var(--accent-rgb), 0.3)' }}>
                         <img src="/logo.png" alt="H SALES Logo" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex flex-col leading-tight">
                         <span className="text-white font-black text-lg tracking-tight leading-none">H SALES</span>
-                        <span className="text-xs font-medium uppercase" style={{ color: '#BEFF00', letterSpacing: '0.15em' }}>CRM</span>
+                        <span className="text-xs font-medium uppercase text-accent" style={{ letterSpacing: '0.15em' }}>CRM</span>
                     </div>
                 </div>
             </div>
@@ -70,7 +75,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                     href="/overview"
                     className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-150 w-full"
                     style={pathname === '/overview'
-                        ? { background: '#BEFF00', color: '#0A0A0A' }
+                        ? { background: 'var(--accent)', color: 'var(--accent-text)' }
                         : { color: '#888888' }
                     }
                     onMouseEnter={e => {
@@ -94,7 +99,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
             {/* Project selector */}
             <div className="px-4 mb-4">
                 <div className="rounded-xl p-2 flex items-center gap-2" style={{ background: '#1A1A1A', border: '1px solid #2A2A2A' }}>
-                    <FolderKanban size={15} style={{ color: '#BEFF00', flexShrink: 0 }} />
+                    <FolderKanban size={15} className="text-accent flex-shrink-0" />
                     {isLoading ? (
                         <div className="h-5 w-full rounded animate-pulse" style={{ background: '#2A2A2A' }}></div>
                     ) : (
@@ -126,7 +131,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                             href={link.path}
                             className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150"
                             style={isActive
-                                ? { background: '#BEFF00', color: '#0A0A0A' }
+                                ? { background: 'var(--accent)', color: 'var(--accent-text)' }
                                 : { color: '#888888' }
                             }
                             onMouseEnter={e => {
@@ -151,8 +156,55 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
 
             {/* Footer */}
             <div className="p-4" style={{ borderTop: '1px solid #1E1E1E' }}>
+
+                {/* ── Aparência / Theme Picker ── */}
+                <div className="mb-3">
+                    <button
+                        onClick={() => setShowThemePicker(v => !v)}
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-xl w-full transition-all hover:bg-[#1A1A1A]"
+                        style={{ color: '#666666' }}
+                    >
+                        <Palette size={18} />
+                        <span className="font-semibold text-sm flex-1 text-left">Aparência</span>
+                        <div
+                            className="w-3 h-3 rounded-full border border-white/20 flex-shrink-0"
+                            style={{ background: 'var(--accent)' }}
+                        />
+                    </button>
+
+                    {showThemePicker && (
+                        <div className="mt-2 px-4 pb-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {THEME_ORDER.map(tid => {
+                                    const def = THEMES[tid];
+                                    const isActive = theme === tid;
+                                    return (
+                                        <button
+                                            key={tid}
+                                            title={def.label}
+                                            onClick={() => setTheme(tid)}
+                                            className="w-6 h-6 rounded-full transition-all duration-150 flex-shrink-0"
+                                            style={{
+                                                background: def.accent,
+                                                outline: isActive ? `2px solid ${def.accent}` : '2px solid transparent',
+                                                outlineOffset: '2px',
+                                                transform: isActive ? 'scale(1.2)' : 'scale(1)',
+                                                boxShadow: isActive ? `0 0 8px ${def.accent}60` : 'none',
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            <p className="text-[10px] mt-2" style={{ color: '#555' }}>
+                                {THEMES[theme].label}
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {/* User info */}
                 <div className="flex items-center gap-3 px-2 py-2 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center border border-[#2A2A2A] text-[#BEFF00] font-bold text-xs">
+                    <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center border border-[#2A2A2A] font-bold text-xs text-accent">
                         {user?.email?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     <div className="flex flex-col overflow-hidden">

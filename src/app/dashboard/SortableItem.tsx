@@ -37,7 +37,7 @@ export function SortableItem({ id, block, isEditMode }: { id: string; block: any
                 {content}
             </div>
             {isEditMode && (
-                <div className="absolute inset-0 border-2 border-dashed border-[#BEFF00]/30 rounded-xl pointer-events-none z-40 bg-[#BEFF00]/5 transition-opacity" />
+                <div className="absolute inset-0 border-2 border-dashed border-accent-30 rounded-xl pointer-events-none z-40 bg-accent-5 transition-opacity" />
             )}
         </div>
     );

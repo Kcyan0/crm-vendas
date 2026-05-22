@@ -39,14 +39,14 @@ export default function LoginPage() {
       {/* Lado Esquerdo - Branding */}
       <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 bg-[#0A0A0A] border-b md:border-b-0 md:border-r border-[rgba(255,255,255,0.05)] relative overflow-hidden">
         {/* Neon Glow effect */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#BEFF00] rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-accent rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
         
         <div className="max-w-md w-full flex flex-col items-center text-center z-10">
-          <div className="w-32 h-32 rounded-3xl overflow-hidden mb-8 border-4 border-[rgba(190,255,0,0.2)] shadow-[0_0_40px_rgba(190,255,0,0.1)]">
+          <div className="w-32 h-32 rounded-3xl overflow-hidden mb-8 border-4 border-[rgba(var(--accent-rgb),0.2)] shadow-[0_0_40px_rgba(var(--accent-rgb),0.1)]">
             <img src="/logo.png" alt="H SALES Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-4xl font-black mb-4 tracking-tight">
-            H SALES <span className="text-[#BEFF00]">CRM</span>
+            H SALES <span className="text-accent">CRM</span>
           </h1>
           <p className="text-[#888] text-lg mb-8 leading-relaxed">
             Painel de Alta Performance para SDRs e Closers. Logue para acessar os projetos do seu e-mail.
@@ -81,7 +81,7 @@ export default function LoginPage() {
                   placeholder="seu@email.com"
                   required
                   disabled={loading}
-                  className="w-full pl-10 pr-4 py-3 bg-[#222] border-none text-white rounded-xl focus:ring-2 focus:ring-[#BEFF00] focus:outline-none transition-all placeholder:text-[#555]"
+                  className="w-full pl-10 pr-4 py-3 bg-[#222] border-none text-white rounded-xl focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder:text-[#555]"
                 />
               </div>
             </div>
@@ -99,7 +99,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   required
                   disabled={loading}
-                  className="w-full pl-10 pr-4 py-3 bg-[#222] border-none text-white rounded-xl focus:ring-2 focus:ring-[#BEFF00] focus:outline-none transition-all placeholder:text-[#555]"
+                  className="w-full pl-10 pr-4 py-3 bg-[#222] border-none text-white rounded-xl focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder:text-[#555]"
                 />
               </div>
             </div>
@@ -107,7 +107,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-4 bg-[#BEFF00] hover:bg-[#A8E800] text-[#0A0A0A] font-black py-4 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="mt-4 bg-accent hover:bg-[#A8E800] text-[#0A0A0A] font-black py-4 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 size={20} className="animate-spin" /> : 'Entrar no Sistema'}
             </button>

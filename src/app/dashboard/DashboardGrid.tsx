@@ -110,7 +110,7 @@ export function DashboardGrid({
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-3 gap-x-6">
                         {metrics.statusLeads.map(({ status, count, pct }: any) => {
                             const STATUS_COLORS: Record<string, string> = {
-                                'Venda': '#BEFF00', 'Loss': '#f472b6', 'Remarcado': '#facc15',
+                                'Venda': 'var(--accent)', 'Loss': '#f472b6', 'Remarcado': '#facc15',
                                 'No-show': '#fb923c', 'Novo': '#60a5fa', 'Reembolsado': '#a78bfa', 'Follow-up': '#34d399'
                             };
                             const color = STATUS_COLORS[status] || '#888';
@@ -211,7 +211,7 @@ export function DashboardGrid({
                                     const reembolsos = sdr.reembolsos || 0;
                                     const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
                                     const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
-                                    const c = ['#fff', '#BEFF00', '#22D3EE', '#A78BFA', '#F472B6'][idx % 5];
+                                    const c = ['#fff', 'var(--accent)', '#22D3EE', '#A78BFA', '#F472B6'][idx % 5];
                                     return (
                                         <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
                                             <td className="py-2.5 flex items-center gap-2 text-white">
@@ -255,7 +255,7 @@ export function DashboardGrid({
                                     const reembolsos = closer.reembolsos || 0;
                                     const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
                                     const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
-                                    const c = ['#A78BFA', '#22D3EE', '#BEFF00', '#F472B6', '#fff'][idx % 5];
+                                    const c = ['#A78BFA', '#22D3EE', 'var(--accent)', '#F472B6', '#fff'][idx % 5];
                                     return (
                                         <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
                                             <td className="py-2.5 flex items-center gap-2 text-white">
@@ -304,7 +304,7 @@ export function DashboardGrid({
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
                                         {detalhes.map((d: any, index: number) => {
-                                            const c = ['#A78BFA', '#22D3EE', '#BEFF00', '#F472B6', '#fff'][index % 5];
+                                            const c = ['#A78BFA', '#22D3EE', 'var(--accent)', '#F472B6', '#fff'][index % 5];
                                             return (
                                                 <tr key={d.nome} className="hover:bg-white/[0.02] transition-colors">
                                                     <td className="py-2.5 flex items-center gap-2 text-white">
@@ -423,7 +423,7 @@ export function DashboardGrid({
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {metrics.comissaoCloserDetalhes.map((d: any, index: number) => {
-                                    const c = ['#A78BFA', '#22D3EE', '#BEFF00', '#F472B6', '#fff'][index % 5];
+                                    const c = ['#A78BFA', '#22D3EE', 'var(--accent)', '#F472B6', '#fff'][index % 5];
                                     return (
                                         <tr key={d.nome} className="hover:bg-white/[0.02] transition-colors">
                                             <td className="py-2.5 flex items-center gap-2 text-white">
@@ -464,7 +464,7 @@ export function DashboardGrid({
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {metrics.comissaoSdrDetalhes.map((d: any, index: number) => {
-                                    const c = ['#22D3EE', '#BEFF00', '#F472B6', '#A78BFA', '#fff'][index % 5];
+                                    const c = ['#22D3EE', 'var(--accent)', '#F472B6', '#A78BFA', '#fff'][index % 5];
                                     return (
                                         <tr key={d.nome} className="hover:bg-white/[0.02] transition-colors">
                                             <td className="py-2.5 flex items-center gap-2 text-white">

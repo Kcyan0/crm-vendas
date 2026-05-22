@@ -202,8 +202,8 @@ export default function SettingsPage() {
             <div className="glass-panel p-6 bg-[#1A1A1A] border-[#2A2A2A] mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg" style={{ background: 'rgba(190,255,0,0.12)' }}>
-                            <Target size={22} style={{ color: '#BEFF00' }} />
+                        <div className="p-2 rounded-lg" style={{ background: 'rgba(var(--accent-rgb),0.12)' }}>
+                            <Target size={22} style={{ color: 'var(--accent)' }} />
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-white">Metas do Time</h3>
@@ -214,14 +214,14 @@ export default function SettingsPage() {
                         <select
                             value={metaMes}
                             onChange={e => setMetaMes(Number(e.target.value))}
-                            className="bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                            className="bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
                         >
                             {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                         </select>
                         <select
                             value={metaAno}
                             onChange={e => setMetaAno(Number(e.target.value))}
-                            className="bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                            className="bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
                         >
                             {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
@@ -242,7 +242,7 @@ export default function SettingsPage() {
                                     step="500"
                                     value={teamMeta.meta_faturamento}
                                     onChange={e => setTeamMeta(prev => ({ ...prev, meta_faturamento: parseFloat(e.target.value) || 0 }))}
-                                    className="w-full bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                                    className="w-full bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-accent"
                                     placeholder="Ex: 55000"
                                 />
                                 <p className="text-[10px] text-[#666] mt-1">Receita bruta total do time</p>
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                                     step="500"
                                     value={teamMeta.meta_caixa}
                                     onChange={e => setTeamMeta(prev => ({ ...prev, meta_caixa: parseFloat(e.target.value) || 0 }))}
-                                    className="w-full bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                                    className="w-full bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-accent"
                                     placeholder="Ex: 45000"
                                 />
                                 <p className="text-[10px] text-[#666] mt-1">Caixa líquido após taxas</p>
@@ -288,7 +288,7 @@ export default function SettingsPage() {
                         {(['SDR', 'CLOSER'] as const).map(tipo => {
                             const group = userMetas.filter(u => u.tipo === tipo);
                             if (group.length === 0) return null;
-                            const dotColor = tipo === 'SDR' ? '#BEFF00' : '#22D3EE';
+                            const dotColor = tipo === 'SDR' ? 'var(--accent)' : '#22D3EE';
                             return (
                                 <div key={tipo}>
                                     <h4 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: '#888' }}>{tipo === 'SDR' ? 'SDRs' : 'Closers'}</h4>
@@ -306,14 +306,14 @@ export default function SettingsPage() {
                                                         <label className="block text-[10px] uppercase font-bold text-[#888] mb-1">Meta Faturamento</label>
                                                         <input type="number" step="500" value={user.meta_faturamento}
                                                             onChange={e => handleUserMetaChange(user.id_usuario, 'meta_faturamento', e.target.value)}
-                                                            className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                                                            className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
                                                             placeholder="Ex: 20000" />
                                                     </div>
                                                     <div>
                                                         <label className="block text-[10px] uppercase font-bold text-[#888] mb-1">Meta Caixa</label>
                                                         <input type="number" step="500" value={user.meta_caixa}
                                                             onChange={e => handleUserMetaChange(user.id_usuario, 'meta_caixa', e.target.value)}
-                                                            className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#BEFF00]"
+                                                            className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
                                                             placeholder="Ex: 16000" />
                                                     </div>
                                                 </div>
@@ -343,7 +343,7 @@ export default function SettingsPage() {
                             <div>
                                 <h3 className="text-xl font-bold text-white">Meios de Pagamento e Taxas</h3>
                                 {selectedProject && (
-                                    <p className="text-xs text-[#888] mt-0.5">Projeto: <span className="text-[#BEFF00] font-bold">{selectedProject.nome}</span></p>
+                                    <p className="text-xs text-[#888] mt-0.5">Projeto: <span className="text-accent font-bold">{selectedProject.nome}</span></p>
                                 )}
                             </div>
                         </div>
