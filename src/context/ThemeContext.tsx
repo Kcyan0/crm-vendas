@@ -10,13 +10,14 @@ export const THEMES: Record<ThemeId, {
     accentHover: string;
     accentRgb: string;
     accentText: string;
+    logoBg: string;
 }> = {
-    verde:    { label: "Verde Neon", accent: "#BEFF00", accentHover: "#A8E800", accentRgb: "190,255,0",   accentText: "#0A0A0A" },
-    ciano:    { label: "Azul Ciano", accent: "#22D3EE", accentHover: "#06B6D4", accentRgb: "34,211,238",  accentText: "#0A0A0A" },
-    roxo:     { label: "Roxo",       accent: "#A78BFA", accentHover: "#8B5CF6", accentRgb: "167,139,250", accentText: "#0A0A0A" },
-    laranja:  { label: "Laranja",    accent: "#FB923C", accentHover: "#F97316", accentRgb: "251,146,60",  accentText: "#0A0A0A" },
-    vermelho: { label: "Vermelho",   accent: "#EF4444", accentHover: "#DC2626", accentRgb: "239,68,68",   accentText: "#FFFFFF" },
-    branco:   { label: "Branco",     accent: "#FFFFFF", accentHover: "#E5E5E5", accentRgb: "255,255,255", accentText: "#0A0A0A" },
+    verde:    { label: "Verde Neon", accent: "#BEFF00", accentHover: "#A8E800", accentRgb: "190,255,0",   accentText: "#0A0A0A", logoBg: "#BEFF00" },
+    ciano:    { label: "Azul Ciano", accent: "#22D3EE", accentHover: "#06B6D4", accentRgb: "34,211,238",  accentText: "#0A0A0A", logoBg: "#22D3EE" },
+    roxo:     { label: "Roxo",       accent: "#A78BFA", accentHover: "#8B5CF6", accentRgb: "167,139,250", accentText: "#0A0A0A", logoBg: "#A78BFA" },
+    laranja:  { label: "Laranja",    accent: "#FB923C", accentHover: "#F97316", accentRgb: "251,146,60",  accentText: "#0A0A0A", logoBg: "#FB923C" },
+    vermelho: { label: "Vermelho",   accent: "#EF4444", accentHover: "#DC2626", accentRgb: "239,68,68",   accentText: "#FFFFFF", logoBg: "#EF4444" },
+    branco:   { label: "Branco",     accent: "#FFFFFF", accentHover: "#E5E5E5", accentRgb: "255,255,255", accentText: "#0A0A0A", logoBg: "#1A1A1A" },
 };
 
 const LS_KEY = "feracrm_theme";
@@ -36,6 +37,7 @@ function applyThemeToDom(t: ThemeId) {
     root.style.setProperty("--accent-hover", def.accentHover);
     root.style.setProperty("--accent-rgb", def.accentRgb);
     root.style.setProperty("--accent-text", def.accentText);
+    root.style.setProperty("--logo-bg", def.logoBg);
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

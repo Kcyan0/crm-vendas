@@ -25,7 +25,7 @@ export default function RootLayout({
           (function() {
             try {
               var t = localStorage.getItem('feracrm_theme');
-              var themes = { verde:['#BEFF00','#A8E800','190,255,0','#0A0A0A'], ciano:['#22D3EE','#06B6D4','34,211,238','#0A0A0A'], roxo:['#A78BFA','#8B5CF6','167,139,250','#0A0A0A'], laranja:['#FB923C','#F97316','251,146,60','#0A0A0A'], vermelho:['#EF4444','#DC2626','239,68,68','#FFFFFF'], branco:['#FFFFFF','#E5E5E5','255,255,255','#0A0A0A'] };
+              var themes = { verde:['#BEFF00','#A8E800','190,255,0','#0A0A0A','#BEFF00'], ciano:['#22D3EE','#06B6D4','34,211,238','#0A0A0A','#22D3EE'], roxo:['#A78BFA','#8B5CF6','167,139,250','#0A0A0A','#A78BFA'], laranja:['#FB923C','#F97316','251,146,60','#0A0A0A','#FB923C'], vermelho:['#EF4444','#DC2626','239,68,68','#FFFFFF','#EF4444'], branco:['#FFFFFF','#E5E5E5','255,255,255','#0A0A0A','#1A1A1A'] };
               var def = themes[t] || themes['verde'];
               var r = document.documentElement;
               r.setAttribute('data-theme', t || 'verde');
@@ -33,6 +33,7 @@ export default function RootLayout({
               r.style.setProperty('--accent-hover', def[1]);
               r.style.setProperty('--accent-rgb', def[2]);
               r.style.setProperty('--accent-text', def[3]);
+              r.style.setProperty('--logo-bg', def[4]);
             } catch(e) {}
           })();
         `}} />
