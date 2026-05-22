@@ -50,16 +50,16 @@ function KpiCard({ icon: Icon, label, value, sub, color = 'var(--accent)' }: {
     icon: any; label: string; value: string; sub?: string; color?: string;
 }) {
     return (
-        <div className="glass-panel bg-[#1A1A1A] p-5 flex flex-col gap-3">
+        <div className="glass-panel bg-surface p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#888] uppercase tracking-wider">{label}</span>
+                <span className="text-xs font-bold text-sec uppercase tracking-wider">{label}</span>
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: color + '20' }}>
                     <Icon size={16} style={{ color }} />
                 </div>
             </div>
             <div>
                 <p className="text-2xl font-black text-white">{value}</p>
-                {sub && <p className="text-xs text-[#666] mt-1">{sub}</p>}
+                {sub && <p className="text-xs text-sec mt-1">{sub}</p>}
             </div>
         </div>
     );
@@ -73,10 +73,10 @@ function DonutChart({ data, title, subtitle, format }: {
 }) {
     const total = data.reduce((s, d) => s + d.value, 0);
     return (
-        <div className="glass-panel bg-[#1A1A1A] p-5 flex flex-col">
+        <div className="glass-panel bg-surface p-5 flex flex-col">
             <div className="mb-4">
                 <h4 className="text-base font-bold text-white">{title}</h4>
-                <p className="text-xs text-[#666] mt-0.5">{subtitle}</p>
+                <p className="text-xs text-sec mt-0.5">{subtitle}</p>
             </div>
             <div className="flex gap-4 flex-1 min-h-0">
                 <div className="flex-1 min-w-0" style={{ minHeight: 180 }}>
@@ -91,12 +91,12 @@ function DonutChart({ data, title, subtitle, format }: {
                             >
                                 {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                             </Pie>
-                            <Tooltip formatter={(v: any) => format(v)} contentStyle={{ background: '#1A1A1A', border: '1px solid #333', borderRadius: 10 }} />
+                            <Tooltip formatter={(v: any) => format(v)} contentStyle={{ background: 'var(--bg-surface)', border: '1px solid #333', borderRadius: 10 }} />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
                 <div className="flex flex-col justify-center gap-2 min-w-[160px]">
-                    <div className="flex justify-between text-[10px] font-bold text-[#555] uppercase mb-1 px-1">
+                    <div className="flex justify-between text-[10px] font-bold text-muted uppercase mb-1 px-1">
                         <span>Projeto</span><span>Valor</span>
                     </div>
                     {data.map((d, i) => (
@@ -108,8 +108,8 @@ function DonutChart({ data, title, subtitle, format }: {
                             <span className="text-xs font-bold text-white shrink-0">{format(d.value)}</span>
                         </div>
                     ))}
-                    <div className="border-t border-[#2A2A2A] mt-1 pt-1 flex justify-between px-1">
-                        <span className="text-[10px] font-bold text-[#555] uppercase">Total</span>
+                    <div className="border-t border-str mt-1 pt-1 flex justify-between px-1">
+                        <span className="text-[10px] font-bold text-muted uppercase">Total</span>
                         <span className="text-xs font-black text-accent">{format(total)}</span>
                     </div>
                 </div>
@@ -154,30 +154,30 @@ export default function OverviewPage() {
             <div className="flex items-end justify-between flex-wrap gap-4">
                 <div>
                     <h2 className="text-3xl font-black text-white tracking-tight">Visão Geral</h2>
-                    <p className="text-[#888] mt-1 text-sm">Métricas consolidadas de todos os projetos que você tem acesso.</p>
+                    <p className="text-sec mt-1 text-sm">Métricas consolidadas de todos os projetos que você tem acesso.</p>
                 </div>
 
                 {/* Period picker */}
                 <div className="flex items-center gap-3 flex-wrap">
-                    <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-3 py-2">
+                    <div className="flex items-center gap-2 bg-surface border border-str rounded-xl px-3 py-2">
                         <Calendar size={14} className="text-accent" />
                         <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                             className="bg-transparent text-white text-sm outline-none w-32" />
-                        <span className="text-[#555] text-sm">–</span>
+                        <span className="text-muted text-sm">–</span>
                         <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
                             className="bg-transparent text-white text-sm outline-none w-32" />
                     </div>
 
                     <div className="relative">
                         <button onClick={() => setPresetOpen(v => !v)}
-                            className="flex items-center gap-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl px-3 py-2 hover:border-accent transition">
+                            className="flex items-center gap-2 bg-surface border border-str text-white text-sm rounded-xl px-3 py-2 hover:border-accent transition">
                             Período <ChevronDown size={14} />
                         </button>
                         {presetOpen && (
-                            <div className="absolute right-0 top-full mt-1 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl overflow-hidden z-10 min-w-[160px]">
+                            <div className="absolute right-0 top-full mt-1 bg-surface border border-str rounded-xl overflow-hidden z-10 min-w-[160px]">
                                 {PRESETS.map(p => (
                                     <button key={p.label} onClick={() => applyPreset(p.start, p.end)}
-                                        className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-[#2A2A2A] transition">
+                                        className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-surface-3 transition">
                                         {p.label}
                                     </button>
                                 ))}
@@ -241,36 +241,36 @@ export default function OverviewPage() {
                     </div>
 
                     {/* Bar chart leads */}
-                    <div className="glass-panel bg-[#1A1A1A] p-5">
+                    <div className="glass-panel bg-surface p-5">
                         <h4 className="text-base font-bold text-white mb-1">Leads por Projeto</h4>
-                        <p className="text-xs text-[#666] mb-4">Leads totais no período.</p>
+                        <p className="text-xs text-sec mb-4">Leads totais no período.</p>
                         <ResponsiveContainer width="100%" height={220}>
                             <BarChart data={projects} barSize={36}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#222" />
                                 <XAxis dataKey="nome" tick={{ fill: '#888', fontSize: 12 }} />
                                 <YAxis tick={{ fill: '#888', fontSize: 12 }} />
-                                <Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #333', borderRadius: 10 }} />
+                                <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1px solid #333', borderRadius: 10 }} />
                                 <Bar dataKey="leads" name="Leads" fill="var(--accent)" radius={[6, 6, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
 
                     {/* Conversion table */}
-                    <div className="glass-panel bg-[#1A1A1A] p-5">
+                    <div className="glass-panel bg-surface p-5">
                         <h4 className="text-base font-bold text-white mb-1">Conversão por Projeto</h4>
-                        <p className="text-xs text-[#666] mb-4">Performance de cada item.</p>
+                        <p className="text-xs text-sec mb-4">Performance de cada item.</p>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead>
-                                    <tr className="border-b border-[#2A2A2A]">
+                                    <tr className="border-b border-str">
                                         {['Projeto', 'Leads', 'Vendas', 'Taxa de Conv.', 'Ticket Fat.', 'Ticket Caixa', 'Chargeback'].map(h => (
-                                            <th key={h} className="pb-3 pr-4 text-[10px] font-bold text-[#555] uppercase tracking-wider">{h}</th>
+                                            <th key={h} className="pb-3 pr-4 text-[10px] font-bold text-muted uppercase tracking-wider">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[#1E1E1E]">
+                                <tbody className="divide-y divide-[var(--sidebar-border)]">
                                     {projects.map((p, i) => (
-                                        <tr key={p.id_projeto} className="hover:bg-[#111] transition">
+                                        <tr key={p.id_projeto} className="hover:bg-app transition">
                                             <td className="py-3 pr-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
@@ -287,7 +287,7 @@ export default function OverviewPage() {
                                             <td className="py-3 pr-4 text-sm text-[#aaa]">{fmt(p.ticketFaturamento)}</td>
                                             <td className="py-3 pr-4 text-sm text-[#aaa]">{fmt(p.ticketCaixa)}</td>
                                             <td className="py-3">
-                                                <span className={`text-sm font-bold ${p.chargebackRate > 10 ? 'text-red-400' : p.chargebackRate > 5 ? 'text-orange-400' : 'text-[#666]'}`}>
+                                                <span className={`text-sm font-bold ${p.chargebackRate > 10 ? 'text-red-400' : p.chargebackRate > 5 ? 'text-orange-400' : 'text-sec'}`}>
                                                     {p.chargebackRate}%
                                                 </span>
                                             </td>
@@ -295,7 +295,7 @@ export default function OverviewPage() {
                                     ))}
                                     {projects.length === 0 && (
                                         <tr>
-                                            <td colSpan={7} className="py-8 text-center text-[#555] text-sm">Nenhum dado no período selecionado.</td>
+                                            <td colSpan={7} className="py-8 text-center text-muted text-sm">Nenhum dado no período selecionado.</td>
                                         </tr>
                                     )}
                                 </tbody>

@@ -56,10 +56,10 @@ type Metrics = {
     pendentesPorCloser?: { nome: string; valor: number }[];
 };
 
-const DARK = '#1A1A1A';
+const DARK = 'var(--bg-surface)';
 const BORDER = 'rgba(255,255,255,0.07)';
 const LIME = 'var(--accent)';
-const TEXT_SEC = '#888888';
+const TEXT_SEC = 'var(--text-sec)';
 
 // ─── MetasPanel component ────────────────────────────────────────────────────
 type MetaUser = { id_usuario: number; nome: string; tipo: string; meta_faturamento: number; meta_caixa: number; };
@@ -117,7 +117,7 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                 </span>
             </div>
             {/* ProgressBar container com overflow hidden para que as bordas da base e do extra não saiam quadradas nas pontas */}
-            <div className={`${slim ? 'h-1.5' : 'h-2.5'} bg-[#111] rounded-full flex overflow-hidden`}>
+            <div className={`${slim ? 'h-1.5' : 'h-2.5'} bg-app rounded-full flex overflow-hidden`}>
                 <div className="h-full transition-all duration-700 relative" style={{ width: `${widthBase}%`, background: color }}>
                     {/* O Pino de Chegada */}
                     {over && <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white z-10 shadow-[0_0_8px_rgba(255,255,255,0.8)]" title="Alcance da Meta" />} 
@@ -155,7 +155,7 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                         </svg>
                     </div>
                     <span className="font-bold text-white text-sm">Acompanhamento de Metas</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full text-[#888] bg-white/5">Meta Geral do Time</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full text-sec bg-white/5">Meta Geral do Time</span>
                 </div>
                 <button
                     onClick={() => setExpanded(v => !v)}
@@ -196,7 +196,7 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                                         const uPctFat = user.meta_faturamento > 0 ? parseFloat(((perf.fat / user.meta_faturamento) * 100).toFixed(1)) : 0;
                                         const uPctCaixa = user.meta_caixa > 0 ? parseFloat(((perf.caixa / user.meta_caixa) * 100).toFixed(1)) : 0;
                                         return (
-                                            <div key={user.id_usuario} className="p-3 bg-[#111] rounded-xl border border-white/5">
+                                            <div key={user.id_usuario} className="p-3 bg-app rounded-xl border border-white/5">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black text-black shrink-0"
                                                         style={{ background: colors[i % colors.length] }}>
@@ -207,11 +207,11 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                                                 <div className="space-y-1.5">
                                                     <div className="flex items-center gap-3">
                                                         <ProgressBar label="Fat." current={perf.fat} goal={user.meta_faturamento} pct={uPctFat} color={colors[i % colors.length]} slim />
-                                                        <span className="text-[9px] text-[#555] whitespace-nowrap">{formatBRL(perf.fat)} / {formatBRL(user.meta_faturamento)}</span>
+                                                        <span className="text-[9px] text-muted whitespace-nowrap">{formatBRL(perf.fat)} / {formatBRL(user.meta_faturamento)}</span>
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <ProgressBar label="Caixa" current={perf.caixa} goal={user.meta_caixa} pct={uPctCaixa} color={getCaixaColor(colors[i % colors.length])} slim />
-                                                        <span className="text-[9px] text-[#555] whitespace-nowrap">{formatBRL(perf.caixa)} / {formatBRL(user.meta_caixa)}</span>
+                                                        <span className="text-[9px] text-muted whitespace-nowrap">{formatBRL(perf.caixa)} / {formatBRL(user.meta_caixa)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -324,7 +324,7 @@ export default function Dashboard() {
 
     const tooltipStyle = {
         contentStyle: {
-            background: '#1A1A1A',
+            background: 'var(--bg-surface)',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '8px',
             color: '#FFFFFF',
@@ -378,7 +378,7 @@ export default function Dashboard() {
                 <div className="flex flex-col sm:flex-row items-end gap-3">
                     <button 
                         onClick={() => setIsEditMode(!isEditMode)}
-                        className={`flex items-center gap-2 px-4 py-2 font-bold rounded-lg border transition-all ${isEditMode ? 'bg-accent text-black border-accent' : 'bg-[#111] text-[#888] border-[#2A2A2A] hover:text-white hover:border-[#444]'}`}
+                        className={`flex items-center gap-2 px-4 py-2 font-bold rounded-lg border transition-all ${isEditMode ? 'bg-accent text-black border-accent' : 'bg-app text-sec border-str hover:text-white hover:border-[#444]'}`}
                         style={{ height: '42px' }}
                     >
                         <Settings size={16} />
@@ -420,7 +420,7 @@ export default function Dashboard() {
                             <div>
                                 <h3 className="font-medium text-sm mb-1" style={{ color: TEXT_SEC }}>{card.title}</h3>
                                 {isLoading ? (
-                                    <div className="h-7 w-24 rounded animate-pulse" style={{ background: '#2A2A2A' }}></div>
+                                    <div className="h-7 w-24 rounded animate-pulse" style={{ background: 'var(--bg-surface-3)' }}></div>
                                 ) : (
                                     <p className="text-2xl font-black text-white">{metrics ? card.value : '...'}</p>
                                 )}

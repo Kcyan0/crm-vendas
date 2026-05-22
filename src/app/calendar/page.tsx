@@ -280,13 +280,13 @@ function CalendarContent() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Calendário</h2>
-          <p className="text-[#888] mt-1">Agende e gerencie chamadas sincronizadas com o Google Calendar.</p>
+          <p className="text-sec mt-1">Agende e gerencie chamadas sincronizadas com o Google Calendar.</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap justify-end">
           <select 
             value={filterMemberId} 
             onChange={(e) => setFilterMemberId(e.target.value)}
-            className="bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl px-3 py-2 outline-none"
+            className="bg-surface border border-str text-white text-sm rounded-xl px-3 py-2 outline-none"
           >
             <option value="all">Visão Geral (Todos)</option>
             {team.map(m => (
@@ -299,7 +299,7 @@ function CalendarContent() {
               <button
                 onClick={handleSync}
                 disabled={googleLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#1A1A1A] border border-[#2A2A2A] text-accent hover:border-accent transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-surface border border-str text-accent hover:border-accent transition-all"
               >
                 {googleLoading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                 Sincronizar
@@ -312,7 +312,7 @@ function CalendarContent() {
           ) : (
             <a
               href="/api/google/auth"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#1A1A1A] border border-[#2A2A2A] text-white hover:border-accent hover:text-accent transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-surface border border-str text-white hover:border-accent hover:text-accent transition-all"
             >
               <Link2 size={15} />
               Conectar Google Calendar
@@ -330,16 +330,16 @@ function CalendarContent() {
 
       <div className="flex gap-5 flex-1 min-h-0">
         {/* Calendário principal */}
-        <div className="flex-1 flex flex-col glass-panel bg-[#1A1A1A] p-5">
+        <div className="flex-1 flex flex-col glass-panel bg-surface p-5">
           {/* Navegação de mês */}
           <div className="flex items-center justify-between mb-5">
-            <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-2 rounded-xl hover:bg-[#2A2A2A] text-white transition">
+            <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-2 rounded-xl hover:bg-surface-3 text-white transition">
               <ChevronLeft size={20} />
             </button>
             <h3 className="text-xl font-bold text-white">
               {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h3>
-            <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-2 rounded-xl hover:bg-[#2A2A2A] text-white transition">
+            <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-2 rounded-xl hover:bg-surface-3 text-white transition">
               <ChevronRight size={20} />
             </button>
           </div>
@@ -347,7 +347,7 @@ function CalendarContent() {
           {/* Header dos dias */}
           <div className="grid grid-cols-7 mb-2">
             {WEEKDAYS.map((w) => (
-              <div key={w} className="text-center text-[11px] font-bold text-[#555] uppercase py-1">{w}</div>
+              <div key={w} className="text-center text-[11px] font-bold text-muted uppercase py-1">{w}</div>
             ))}
           </div>
 
@@ -364,9 +364,9 @@ function CalendarContent() {
                   <div
                     key={idx}
                     onClick={() => handleDayClick(day)}
-                    className={`rounded-xl p-2 cursor-pointer transition-all flex flex-col min-h-[80px] border ${isToday ? "border-accent/50 bg-accent-5" : "border-transparent hover:border-[#2A2A2A] hover:bg-[#222]"}`}
+                    className={`rounded-xl p-2 cursor-pointer transition-all flex flex-col min-h-[80px] border ${isToday ? "border-accent/50 bg-accent-5" : "border-transparent hover:border-str hover:bg-surface-2"}`}
                   >
-                    <span className={`text-sm font-bold mb-1 self-end ${isToday ? "text-accent" : "text-[#888]"}`}>{day.getDate()}</span>
+                    <span className={`text-sm font-bold mb-1 self-end ${isToday ? "text-accent" : "text-sec"}`}>{day.getDate()}</span>
                     <div className="flex flex-col gap-0.5">
                       {dayChamadas.slice(0, 2).map((c) => (
                         <div
@@ -388,7 +388,7 @@ function CalendarContent() {
                         </div>
                       ))}
                       {(dayChamadas.length + getPendingForDay(day).length) > 4 && (
-                        <div className="text-[10px] text-[#888] font-semibold">+{dayChamadas.length + getPendingForDay(day).length - 4} mais</div>
+                        <div className="text-[10px] text-sec font-semibold">+{dayChamadas.length + getPendingForDay(day).length - 4} mais</div>
                       )}
                     </div>
                   </div>
@@ -400,14 +400,14 @@ function CalendarContent() {
 
         {/* Sidebar de próximos eventos */}
         <div className="w-72 flex flex-col gap-4">
-          <div className="glass-panel bg-[#1A1A1A] p-4 flex-1">
+          <div className="glass-panel bg-surface p-4 flex-1">
             <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
               <CalendarIcon size={16} className="text-accent" />
               Próximas Chamadas
             </h4>
             <div className="flex flex-col gap-3">
               {upcomingChamadas.length === 0 && (
-                <p className="text-[#555] text-sm text-center mt-8">Nenhuma chamada agendada</p>
+                <p className="text-muted text-sm text-center mt-8">Nenhuma chamada agendada</p>
               )}
               {upcomingChamadas.map((c) => {
                 const dt = new Date(c.data_hora_inicio);
@@ -415,7 +415,7 @@ function CalendarContent() {
                   <div
                     key={c.id_chamada}
                     onClick={() => handleEditChamada(c)}
-                    className="p-3 rounded-xl bg-[#111] border border-[#2A2A2A] cursor-pointer hover:border-[#3A3A3A] transition-all"
+                    className="p-3 rounded-xl bg-app border border-str cursor-pointer hover:border-[#3A3A3A] transition-all"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-white text-sm font-semibold truncate">{c.titulo}</p>
@@ -423,12 +423,12 @@ function CalendarContent() {
                         {STATUS_LABELS[c.status_chamada]}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 mt-1.5 text-[#666] text-xs">
+                    <div className="flex items-center gap-1 mt-1.5 text-sec text-xs">
                       <Clock size={11} />
                       {dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} às {dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                     {c.lead && (
-                      <div className="flex items-center gap-1 mt-1 text-[#555] text-xs">
+                      <div className="flex items-center gap-1 mt-1 text-muted text-xs">
                         <User size={11} />
                         {c.lead.nome}
                       </div>
@@ -441,7 +441,7 @@ function CalendarContent() {
 
           {/* Pagamentos Pendentes */}
           {pendingVendas.length > 0 && (
-            <div className="glass-panel bg-[#1A1A1A] p-4">
+            <div className="glass-panel bg-surface p-4">
               <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
                 <span className="text-amber-400">💰</span> A Receber
               </h4>
@@ -450,7 +450,7 @@ function CalendarContent() {
                   <div key={v.id_venda} className="p-2.5 rounded-xl bg-amber-400/5 border border-amber-400/20">
                     <p className="text-amber-300 text-xs font-semibold truncate">{v.lead?.nome || 'Lead'}</p>
                     <p className="text-white text-sm font-bold">{new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v.valor_bruto)}</p>
-                    <p className="text-[#888] text-[10px] mt-0.5">{v.forma_pagamento} · {new Date(v.data_recebimento + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
+                    <p className="text-sec text-[10px] mt-0.5">{v.forma_pagamento} · {new Date(v.data_recebimento + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
                   </div>
                 ))}
               </div>
@@ -458,18 +458,18 @@ function CalendarContent() {
           )}
 
           {/* Legenda */}
-          <div className="glass-panel bg-[#1A1A1A] p-4">
-            <h4 className="text-xs font-bold text-[#888] mb-3 uppercase tracking-wider">Status</h4>
+          <div className="glass-panel bg-surface p-4">
+            <h4 className="text-xs font-bold text-sec mb-3 uppercase tracking-wider">Status</h4>
             <div className="flex flex-col gap-2">
               {Object.entries(STATUS_LABELS).map(([key, label]) => (
                 <div key={key} className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${STATUS_COLORS[key]}`} />
-                  <span className="text-xs text-[#888]">{label}</span>
+                  <span className="text-xs text-sec">{label}</span>
                 </div>
               ))}
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-amber-400" />
-                <span className="text-xs text-[#888]">Pagamento Pendente</span>
+                <span className="text-xs text-sec">Pagamento Pendente</span>
               </div>
             </div>
           </div>
@@ -479,37 +479,37 @@ function CalendarContent() {
       {/* Modal de Chamada */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="glass-panel bg-[#1A1A1A] w-full max-w-lg p-6 relative">
+          <div className="glass-panel bg-surface w-full max-w-lg p-6 relative">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">{editingId ? "Editar Chamada" : "Nova Chamada"}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-[#666] hover:text-white transition"><X size={20} /></button>
+              <button onClick={() => setIsModalOpen(false)} className="text-sec hover:text-white transition"><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#888] uppercase tracking-wider mb-1">Título *</label>
+                <label className="block text-xs font-bold text-sec uppercase tracking-wider mb-1">Título *</label>
                 <input required type="text" className="w-full" placeholder="Ex: Call com lead" value={formData.titulo} onChange={(e) => setFormData({ ...formData, titulo: e.target.value })} />
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold text-[#888] uppercase tracking-wider mb-1">Data *</label>
+                  <label className="block text-xs font-bold text-sec uppercase tracking-wider mb-1">Data *</label>
                   <input required type="date" className="w-full" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#888] uppercase tracking-wider mb-1">Horário *</label>
+                  <label className="block text-xs font-bold text-sec uppercase tracking-wider mb-1">Horário *</label>
                   <input required type="time" className="w-full" value={formData.hora} onChange={(e) => setFormData({ ...formData, hora: e.target.value })} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#888] uppercase tracking-wider mb-1">Duração (min)</label>
+                  <label className="block text-xs font-bold text-sec uppercase tracking-wider mb-1">Duração (min)</label>
                   <input type="number" className="w-full" value={formData.duracao_minutos} onChange={(e) => setFormData({ ...formData, duracao_minutos: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#888] uppercase tracking-wider mb-1">Status</label>
-                  <select className="w-full bg-[#1A1A1A]" value={formData.status_chamada} onChange={(e) => setFormData({ ...formData, status_chamada: e.target.value })}>
+                  <label className="block text-xs font-bold text-sec uppercase tracking-wider mb-1">Status</label>
+                  <select className="w-full bg-surface" value={formData.status_chamada} onChange={(e) => setFormData({ ...formData, status_chamada: e.target.value })}>
                     <option value="agendada">Agendada</option>
                     <option value="realizada">Realizada</option>
                     <option value="no-show">No-Show</option>
@@ -519,8 +519,8 @@ function CalendarContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#888] uppercase tracking-wider mb-1">Lead (opcional)</label>
-                <select className="w-full bg-[#1A1A1A]" value={formData.id_lead} onChange={(e) => setFormData({ ...formData, id_lead: e.target.value })}>
+                <label className="block text-xs font-bold text-sec uppercase tracking-wider mb-1">Lead (opcional)</label>
+                <select className="w-full bg-surface" value={formData.id_lead} onChange={(e) => setFormData({ ...formData, id_lead: e.target.value })}>
                   <option value="">— Sem lead —</option>
                   {leads.map((l) => <option key={l.id_lead} value={l.id_lead}>{l.nome}</option>)}
                 </select>
@@ -528,15 +528,15 @@ function CalendarContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#888] uppercase tracking-wider mb-1">SDR</label>
-                  <select className="w-full bg-[#1A1A1A]" value={formData.id_sdr} onChange={(e) => setFormData({ ...formData, id_sdr: e.target.value })}>
+                  <label className="block text-xs font-bold text-sec uppercase tracking-wider mb-1">SDR</label>
+                  <select className="w-full bg-surface" value={formData.id_sdr} onChange={(e) => setFormData({ ...formData, id_sdr: e.target.value })}>
                     <option value="">— Nenhum —</option>
                     {team.map((m) => <option key={m.id_usuario} value={m.id_usuario}>{m.nome}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#888] uppercase tracking-wider mb-1">Closer</label>
-                  <select className="w-full bg-[#1A1A1A]" value={formData.id_closer} onChange={(e) => setFormData({ ...formData, id_closer: e.target.value })}>
+                  <label className="block text-xs font-bold text-sec uppercase tracking-wider mb-1">Closer</label>
+                  <select className="w-full bg-surface" value={formData.id_closer} onChange={(e) => setFormData({ ...formData, id_closer: e.target.value })}>
                     <option value="">— Nenhum —</option>
                     {team.map((m) => <option key={m.id_usuario} value={m.id_usuario}>{m.nome}</option>)}
                   </select>
@@ -544,16 +544,16 @@ function CalendarContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#888] uppercase tracking-wider mb-1">Observações</label>
+                <label className="block text-xs font-bold text-sec uppercase tracking-wider mb-1">Observações</label>
                 <textarea className="w-full h-20 resize-none" placeholder="Detalhes da chamada..." value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} />
               </div>
 
-              <div className="flex justify-between items-center pt-4 border-t border-[#2A2A2A]">
+              <div className="flex justify-between items-center pt-4 border-t border-str">
                 {editingId ? (
                   <button type="button" onClick={handleDelete} className="text-sm text-red-400 hover:text-red-300 font-semibold transition">Excluir</button>
                 ) : <div />}
                 <div className="flex gap-3">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-[#888] hover:text-white transition text-sm">Cancelar</button>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sec hover:text-white transition text-sm">Cancelar</button>
                   <button type="submit" disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-accent text-[#0A0A0A] font-bold rounded-xl hover:bg-[#A8E800] transition text-sm">
                     {saving && <Loader2 size={14} className="animate-spin" />}
                     {editingId ? "Salvar" : "Criar Chamada"}

@@ -194,12 +194,12 @@ export default function SettingsPage() {
             <div className="flex justify-between items-end mb-8">
                 <div>
                     <h2 className="text-3xl font-bold text-white tracking-tight">Configurações Gerais</h2>
-                    <p className="text-[#888888] mt-1">Gerencie Gateways, Formas de Pagamento e Metas do time.</p>
+                    <p className="text-sec mt-1">Gerencie Gateways, Formas de Pagamento e Metas do time.</p>
                 </div>
             </div>
 
             {/* ── Metas do Time ─────────────────────────── */}
-            <div className="glass-panel p-6 bg-[#1A1A1A] border-[#2A2A2A] mb-8">
+            <div className="glass-panel p-6 bg-surface border-str mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg" style={{ background: 'rgba(var(--accent-rgb),0.12)' }}>
@@ -207,21 +207,21 @@ export default function SettingsPage() {
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-white">Metas do Time</h3>
-                            <p className="text-[#888888] text-sm">SDR + Closer juntos. A meta é da equipe inteira.</p>
+                            <p className="text-sec text-sm">SDR + Closer juntos. A meta é da equipe inteira.</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <select
                             value={metaMes}
                             onChange={e => setMetaMes(Number(e.target.value))}
-                            className="bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
+                            className="bg-app border border-str text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
                         >
                             {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                         </select>
                         <select
                             value={metaAno}
                             onChange={e => setMetaAno(Number(e.target.value))}
-                            className="bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
+                            className="bg-app border border-str text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
                         >
                             {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
@@ -229,35 +229,35 @@ export default function SettingsPage() {
                 </div>
 
                 {!selectedProject ? (
-                    <div className="text-center py-8 border-2 border-dashed border-[#2A2A2A] rounded-xl text-[#888888] text-sm">
+                    <div className="text-center py-8 border-2 border-dashed border-str rounded-xl text-sec text-sm">
                         Selecione um projeto para configurar as metas.
                     </div>
                 ) : (
                     <div className="max-w-md">
                         <div className="grid grid-cols-2 gap-4 mb-5">
                             <div>
-                                <label className="block text-xs font-bold text-[#888888] uppercase mb-1.5">Meta de Faturamento</label>
+                                <label className="block text-xs font-bold text-sec uppercase mb-1.5">Meta de Faturamento</label>
                                 <input
                                     type="number"
                                     step="500"
                                     value={teamMeta.meta_faturamento}
                                     onChange={e => setTeamMeta(prev => ({ ...prev, meta_faturamento: parseFloat(e.target.value) || 0 }))}
-                                    className="w-full bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-accent"
+                                    className="w-full bg-app border border-str text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-accent"
                                     placeholder="Ex: 55000"
                                 />
-                                <p className="text-[10px] text-[#666] mt-1">Receita bruta total do time</p>
+                                <p className="text-[10px] text-sec mt-1">Receita bruta total do time</p>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-[#888888] uppercase mb-1.5">Meta de Caixa</label>
+                                <label className="block text-xs font-bold text-sec uppercase mb-1.5">Meta de Caixa</label>
                                 <input
                                     type="number"
                                     step="500"
                                     value={teamMeta.meta_caixa}
                                     onChange={e => setTeamMeta(prev => ({ ...prev, meta_caixa: parseFloat(e.target.value) || 0 }))}
-                                    className="w-full bg-[#111] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-accent"
+                                    className="w-full bg-app border border-str text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-accent"
                                     placeholder="Ex: 45000"
                                 />
-                                <p className="text-[10px] text-[#666] mt-1">Caixa líquido após taxas</p>
+                                <p className="text-[10px] text-sec mt-1">Caixa líquido após taxas</p>
                             </div>
                         </div>
                         <button
@@ -274,14 +274,14 @@ export default function SettingsPage() {
 
             {/* ── Metas Individuais ──────────────────────── */}
             {userMetas.length > 0 && (
-                <div className="glass-panel p-6 bg-[#1A1A1A] border-[#2A2A2A] mb-8">
+                <div className="glass-panel p-6 bg-surface border-str mb-8">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="p-2 rounded-lg" style={{ background: 'rgba(34,211,238,0.12)' }}>
                             <Target size={22} style={{ color: '#22D3EE' }} />
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-white">Metas Individuais</h3>
-                            <p className="text-[#888888] text-sm">Meta de Faturamento e Caixa por membro — não somadas à Meta Geral.</p>
+                            <p className="text-sec text-sm">Meta de Faturamento e Caixa por membro — não somadas à Meta Geral.</p>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -294,7 +294,7 @@ export default function SettingsPage() {
                                     <h4 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: '#888' }}>{tipo === 'SDR' ? 'SDRs' : 'Closers'}</h4>
                                     <div className="space-y-3">
                                         {group.map(user => (
-                                            <div key={user.id_usuario} className="p-4 bg-[#111] border border-[#2A2A2A] rounded-xl">
+                                            <div key={user.id_usuario} className="p-4 bg-app border border-str rounded-xl">
                                                 <div className="flex items-center gap-2 mb-3">
                                                     <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] text-black" style={{ background: dotColor }}>
                                                         {user.nome.charAt(0).toUpperCase()}
@@ -303,17 +303,17 @@ export default function SettingsPage() {
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3 mb-3">
                                                     <div>
-                                                        <label className="block text-[10px] uppercase font-bold text-[#888] mb-1">Meta Faturamento</label>
+                                                        <label className="block text-[10px] uppercase font-bold text-sec mb-1">Meta Faturamento</label>
                                                         <input type="number" step="500" value={user.meta_faturamento}
                                                             onChange={e => handleUserMetaChange(user.id_usuario, 'meta_faturamento', e.target.value)}
-                                                            className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
+                                                            className="w-full bg-surface border border-str text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
                                                             placeholder="Ex: 20000" />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-[10px] uppercase font-bold text-[#888] mb-1">Meta Caixa</label>
+                                                        <label className="block text-[10px] uppercase font-bold text-sec mb-1">Meta Caixa</label>
                                                         <input type="number" step="500" value={user.meta_caixa}
                                                             onChange={e => handleUserMetaChange(user.id_usuario, 'meta_caixa', e.target.value)}
-                                                            className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
+                                                            className="w-full bg-surface border border-str text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-accent"
                                                             placeholder="Ex: 16000" />
                                                     </div>
                                                 </div>
@@ -334,16 +334,16 @@ export default function SettingsPage() {
 
             {/* ── Gateways ──────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="glass-panel text-left p-6 h-fit bg-[#1A1A1A] border-[#2A2A2A]">
+                <div className="glass-panel text-left p-6 h-fit bg-surface border-str">
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-[#1A1A1A] text-green-700 rounded-lg">
+                            <div className="p-2 bg-surface text-green-700 rounded-lg">
                                 <Settings2 size={24} />
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold text-white">Meios de Pagamento e Taxas</h3>
                                 {selectedProject && (
-                                    <p className="text-xs text-[#888] mt-0.5">Projeto: <span className="text-accent font-bold">{selectedProject.nome}</span></p>
+                                    <p className="text-xs text-sec mt-0.5">Projeto: <span className="text-accent font-bold">{selectedProject.nome}</span></p>
                                 )}
                             </div>
                         </div>
@@ -359,16 +359,16 @@ export default function SettingsPage() {
 
                     <div className="space-y-4">
                         {!selectedProject ? (
-                            <div className="text-center py-8 border-2 border-dashed border-[#2A2A2A] rounded-xl text-[#888888] text-sm">
+                            <div className="text-center py-8 border-2 border-dashed border-str rounded-xl text-sec text-sm">
                                 Selecione um projeto para ver e gerenciar seus gateways.
                             </div>
                         ) : gateways.length === 0 ? (
-                            <div className="text-center p-8 text-[#888888] border border-dashed border-slate-300 rounded-xl">
+                            <div className="text-center p-8 text-sec border border-dashed border-slate-300 rounded-xl">
                                 Nenhum gateway cadastrado para este projeto.
                             </div>
                         ) : (
                             gateways.map(gw => (
-                                <div key={gw.id_gateway} className={`p-4 rounded-xl border transition-all ${gw.ativo ? 'bg-[#111111] border-[#2A2A2A] hover:border-green-300' : 'bg-[#1A1A1A] border-[#2A2A2A] opacity-60'}`}>
+                                <div key={gw.id_gateway} className={`p-4 rounded-xl border transition-all ${gw.ativo ? 'bg-app border-str hover:border-green-300' : 'bg-surface border-str opacity-60'}`}>
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <div className="flex items-center gap-2">
@@ -377,23 +377,23 @@ export default function SettingsPage() {
                                             </div>
                                             <div className="flex gap-4 mt-2">
                                                 <div className="text-sm">
-                                                    <span className="text-[#888888] block text-xs font-semibold uppercase">Taxa (%)</span>
+                                                    <span className="text-sec block text-xs font-semibold uppercase">Taxa (%)</span>
                                                     <span className="text-white font-bold">{gw.taxa_percentual.toFixed(2)}%</span>
                                                 </div>
                                                 <div className="text-sm">
-                                                    <span className="text-[#888888] block text-xs font-semibold uppercase">Taxa Fixa (R$)</span>
+                                                    <span className="text-sec block text-xs font-semibold uppercase">Taxa Fixa (R$)</span>
                                                     <span className="text-white font-bold">R$ {gw.taxa_fixa.toFixed(2)}</span>
                                                 </div>
                                                 {gw.tem_entrada && (
                                                     <div className="text-sm">
                                                         <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded mt-1">Aceita Entrada</span>
-                                                        <span className="text-[#888888] block text-xs font-semibold uppercase mt-1">Taxa Entrada: <span className="text-white">{gw.taxa_entrada_percentual?.toFixed(2) || '0.00'}%</span></span>
+                                                        <span className="text-sec block text-xs font-semibold uppercase mt-1">Taxa Entrada: <span className="text-white">{gw.taxa_entrada_percentual?.toFixed(2) || '0.00'}%</span></span>
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
-                                            <button onClick={() => handleOpenEdit(gw)} className="p-2 text-green-500 hover:bg-[#111111] rounded-lg transition-colors text-sm font-bold">Editar</button>
+                                            <button onClick={() => handleOpenEdit(gw)} className="p-2 text-green-500 hover:bg-app rounded-lg transition-colors text-sm font-bold">Editar</button>
                                             <button onClick={() => handleDelete(gw.id_gateway)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
                                         </div>
                                     </div>
@@ -407,28 +407,28 @@ export default function SettingsPage() {
             {/* Modal de Gateway */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                    <div className="glass-panel w-full max-w-md p-6 relative bg-[#1A1A1A] border-[#2A2A2A]">
+                    <div className="glass-panel w-full max-w-md p-6 relative bg-surface border-str">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold text-white">
                                 {editingGatewayId ? "Editar Gateway" : "Novo Gateway"}
                             </h3>
-                            <button onClick={() => setIsModalOpen(false)} className="text-[#666666] hover:text-white">✕</button>
+                            <button onClick={() => setIsModalOpen(false)} className="text-sec hover:text-white">✕</button>
                         </div>
 
                         <form onSubmit={handleSaveGateway} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-white mb-1">Nome / Operadora *</label>
-                                <input required type="text" className="w-full bg-[#1A1A1A] border border-[#2A2A2A]" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Ex: Stripe, Pagar.me..." />
+                                <input required type="text" className="w-full bg-surface border border-str" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Ex: Stripe, Pagar.me..." />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-white mb-1">Taxa por venda (%)</label>
-                                    <input type="number" step="0.01" className="w-full bg-[#1A1A1A] border border-[#2A2A2A]" value={formData.taxa_percentual} onChange={(e) => setFormData({ ...formData, taxa_percentual: e.target.value })} />
+                                    <input type="number" step="0.01" className="w-full bg-surface border border-str" value={formData.taxa_percentual} onChange={(e) => setFormData({ ...formData, taxa_percentual: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-white mb-1">Taxa Fixa (R$)</label>
-                                    <input type="number" step="0.01" className="w-full bg-[#1A1A1A] border border-[#2A2A2A]" value={formData.taxa_fixa} onChange={(e) => setFormData({ ...formData, taxa_fixa: e.target.value })} />
+                                    <input type="number" step="0.01" className="w-full bg-surface border border-str" value={formData.taxa_fixa} onChange={(e) => setFormData({ ...formData, taxa_fixa: e.target.value })} />
                                 </div>
                             </div>
 
@@ -441,7 +441,7 @@ export default function SettingsPage() {
                                     <input type="checkbox" className="w-4 h-4 rounded border-slate-300 focus:ring-blue-500" checked={formData.tem_entrada} onChange={(e) => setFormData({ ...formData, tem_entrada: e.target.checked })} />
                                     <div>
                                         <span className="font-medium">Aceita Entrada</span>
-                                        <p className="text-xs text-[#888888] mt-0.5">Permite informar um valor de entrada + parcelas ao registrar uma venda</p>
+                                        <p className="text-xs text-sec mt-0.5">Permite informar um valor de entrada + parcelas ao registrar uma venda</p>
                                     </div>
                                 </label>
                             </div>
@@ -449,18 +449,18 @@ export default function SettingsPage() {
                             {formData.tem_entrada && (
                                 <div className="grid grid-cols-2 gap-4 p-4 mt-4 bg-blue-500/5 border border-blue-500/20 rounded-xl animate-in fade-in slide-in-from-top-2">
                                     <div>
-                                        <label className="block text-xs font-medium text-[#888] uppercase tracking-wider mb-1">Taxa da Entrada (%)</label>
-                                        <input type="number" step="0.01" className="w-full bg-[#111] border border-[#2A2A2A] text-white focus:ring-blue-500" value={formData.taxa_entrada_percentual} onChange={(e) => setFormData({ ...formData, taxa_entrada_percentual: e.target.value })} />
+                                        <label className="block text-xs font-medium text-sec uppercase tracking-wider mb-1">Taxa da Entrada (%)</label>
+                                        <input type="number" step="0.01" className="w-full bg-app border border-str text-white focus:ring-blue-500" value={formData.taxa_entrada_percentual} onChange={(e) => setFormData({ ...formData, taxa_entrada_percentual: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-[#888] uppercase tracking-wider mb-1">Taxa Fixa Entrada (R$)</label>
-                                        <input type="number" step="0.01" className="w-full bg-[#111] border border-[#2A2A2A] text-white focus:ring-blue-500" value={formData.taxa_entrada_fixa} onChange={(e) => setFormData({ ...formData, taxa_entrada_fixa: e.target.value })} />
+                                        <label className="block text-xs font-medium text-sec uppercase tracking-wider mb-1">Taxa Fixa Entrada (R$)</label>
+                                        <input type="number" step="0.01" className="w-full bg-app border border-str text-white focus:ring-blue-500" value={formData.taxa_entrada_fixa} onChange={(e) => setFormData({ ...formData, taxa_entrada_fixa: e.target.value })} />
                                     </div>
                                 </div>
                             )}
 
                             <div className="flex justify-end gap-3 mt-8 pt-4">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-[#888888] hover:text-white transition-colors">Cancelar</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sec hover:text-white transition-colors">Cancelar</button>
                                 <button type="submit" className="btn-primary">{editingGatewayId ? "Salvar Alterações" : "Criar Gateway"}</button>
                             </div>
                         </form>

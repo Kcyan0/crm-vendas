@@ -130,12 +130,12 @@ export default function PerformancePage() {
                         <BarChart2 className="text-green-500" size={32} />
                         Performance do Time
                     </h2>
-                    <p className="text-[#888888] mt-1">Acompanhe as métricas de produtividade e conversão de SDRs e Closers.</p>
+                    <p className="text-sec mt-1">Acompanhe as métricas de produtividade e conversão de SDRs e Closers.</p>
                 </div>
                 {activeTab === 'metricas' && (
-                    <div className="flex items-center gap-3 bg-[#1A1A1A] p-2 rounded-xl border border-[#2A2A2A]">
+                    <div className="flex items-center gap-3 bg-surface p-2 rounded-xl border border-str">
                         <div className="flex flex-col">
-                            <span className="text-[10px] uppercase font-bold text-[#666666] px-2">Data</span>
+                            <span className="text-[10px] uppercase font-bold text-sec px-2">Data</span>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-transparent border-none text-sm font-medium text-white outline-none focus:ring-0 p-1" />
                         </div>
                         <button onClick={handleDateChange} className="btn-primary py-2 px-4 text-sm whitespace-nowrap ml-2">Filtrar</button>
@@ -144,16 +144,16 @@ export default function PerformancePage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 border-b border-[#2A2A2A]">
+            <div className="flex gap-2 border-b border-str">
                 <button
                     onClick={() => setActiveTab('metricas')}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === 'metricas' ? 'border-accent text-accent' : 'border-transparent text-[#666] hover:text-white'}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === 'metricas' ? 'border-accent text-accent' : 'border-transparent text-sec hover:text-white'}`}
                 >
                     <TrendingUp size={15} /> Métricas
                 </button>
                 <button
                     onClick={() => setActiveTab('status')}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === 'status' ? 'border-accent text-accent' : 'border-transparent text-[#666] hover:text-white'}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === 'status' ? 'border-accent text-accent' : 'border-transparent text-sec hover:text-white'}`}
                 >
                     <PieChart size={15} /> Status dos Leads
                 </button>
@@ -162,7 +162,7 @@ export default function PerformancePage() {
             {/* Tab: Métricas */}
             {activeTab === 'metricas' && (
                 <>
-                    <div className="glass-panel text-left p-6 h-fit bg-[#1A1A1A] border-[#2A2A2A]">
+                    <div className="glass-panel text-left p-6 h-fit bg-surface border-str">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Users size={24} /></div>
                             <h3 className="text-xl font-bold text-white">Métricas de SDRs</h3>
@@ -170,40 +170,40 @@ export default function PerformancePage() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-[#2A2A2A]">
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm">SDR</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm text-center">Conversas Inic.</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm text-center">1ª Resposta</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm text-center">Convites Env.</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm text-center">Leads Qualif.</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm text-center">Calls Marcadas</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-green-700 text-sm text-center bg-[#111111]/50 rounded-t-lg">Agends. Hoje <span className="text-[10px] text-[#666666] font-normal block">(Automático)</span></th>
+                                    <tr className="border-b border-str">
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm">SDR</th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm text-center">Conversas Inic.</th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm text-center">1ª Resposta</th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm text-center">Convites Env.</th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm text-center">Leads Qualif.</th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm text-center">Calls Marcadas</th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-green-700 text-sm text-center bg-app/50 rounded-t-lg">Agends. Hoje <span className="text-[10px] text-sec font-normal block">(Automático)</span></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {sdrs.map((sdr) => (
-                                        <tr key={sdr.id} className="hover:bg-[#111111]/50 transition-colors">
+                                        <tr key={sdr.id} className="hover:bg-app/50 transition-colors">
                                             <td className="py-4 px-4 font-bold text-white">
                                                 {sdr.nome}
-                                                {sdr.isManual && <span className="ml-2 text-[10px] bg-[#1A1A1A] text-[#888888] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Editado</span>}
+                                                {sdr.isManual && <span className="ml-2 text-[10px] bg-surface text-sec px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Editado</span>}
                                             </td>
-                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.conversasIniciadas} onChange={(e) => handleMetricEdit(sdr.id, true, 'conversasIniciadas', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-[#2A2A2A] focus:border-green-300 focus:bg-[#1A1A1A] rounded p-1 transition-all outline-none" /></td>
-                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.primeiraResposta} onChange={(e) => handleMetricEdit(sdr.id, true, 'primeiraResposta', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-[#2A2A2A] focus:border-green-300 focus:bg-[#1A1A1A] rounded p-1 transition-all outline-none" /></td>
-                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.convitesEnviados} onChange={(e) => handleMetricEdit(sdr.id, true, 'convitesEnviados', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-[#2A2A2A] focus:border-green-300 focus:bg-[#1A1A1A] rounded p-1 transition-all outline-none" /></td>
-                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.leadsQualificados} onChange={(e) => handleMetricEdit(sdr.id, true, 'leadsQualificados', e.target.value)} className="w-16 text-center font-bold text-indigo-600 bg-transparent border border-transparent hover:border-[#2A2A2A] focus:border-indigo-300 focus:bg-[#1A1A1A] rounded p-1 transition-all outline-none" /></td>
-                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.callMarcada} onChange={(e) => handleMetricEdit(sdr.id, true, 'callMarcada', e.target.value)} className="w-16 text-center font-bold text-emerald-600 bg-transparent border border-transparent hover:border-[#2A2A2A] focus:border-emerald-300 focus:bg-[#1A1A1A] rounded p-1 transition-all outline-none" /></td>
-                                            <td className="py-4 px-4 text-center font-bold text-green-700 bg-[#111111]/30">{sdr.agendamentosHoje}</td>
+                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.conversasIniciadas} onChange={(e) => handleMetricEdit(sdr.id, true, 'conversasIniciadas', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-str focus:border-green-300 focus:bg-surface rounded p-1 transition-all outline-none" /></td>
+                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.primeiraResposta} onChange={(e) => handleMetricEdit(sdr.id, true, 'primeiraResposta', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-str focus:border-green-300 focus:bg-surface rounded p-1 transition-all outline-none" /></td>
+                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.convitesEnviados} onChange={(e) => handleMetricEdit(sdr.id, true, 'convitesEnviados', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-str focus:border-green-300 focus:bg-surface rounded p-1 transition-all outline-none" /></td>
+                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.leadsQualificados} onChange={(e) => handleMetricEdit(sdr.id, true, 'leadsQualificados', e.target.value)} className="w-16 text-center font-bold text-indigo-600 bg-transparent border border-transparent hover:border-str focus:border-indigo-300 focus:bg-surface rounded p-1 transition-all outline-none" /></td>
+                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={sdr.callMarcada} onChange={(e) => handleMetricEdit(sdr.id, true, 'callMarcada', e.target.value)} className="w-16 text-center font-bold text-emerald-600 bg-transparent border border-transparent hover:border-str focus:border-emerald-300 focus:bg-surface rounded p-1 transition-all outline-none" /></td>
+                                            <td className="py-4 px-4 text-center font-bold text-green-700 bg-app/30">{sdr.agendamentosHoje}</td>
                                         </tr>
                                     ))}
                                     {sdrs.length === 0 && (
-                                        <tr><td colSpan={7} className="py-8 text-center text-[#666666]">Nenhum SDR encontrado ou ativo.</td></tr>
+                                        <tr><td colSpan={7} className="py-8 text-center text-sec">Nenhum SDR encontrado ou ativo.</td></tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                    <div className="glass-panel text-left p-6 h-fit bg-[#1A1A1A] border-[#2A2A2A]">
+                    <div className="glass-panel text-left p-6 h-fit bg-surface border-str">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><TrendingUp size={24} /></div>
                             <h3 className="text-xl font-bold text-white">Métricas de Closers</h3>
@@ -211,35 +211,35 @@ export default function PerformancePage() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-[#2A2A2A]">
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm">Closer</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm text-center">Total Calls</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm text-center">Calls Agendadas</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-[#888888] text-sm text-center">Reagendamentos</th>
+                                    <tr className="border-b border-str">
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm">Closer</th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm text-center">Total Calls</th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm text-center">Calls Agendadas</th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-sec text-sm text-center">Reagendamentos</th>
                                         <th className="pb-3 pt-2 px-4 font-semibold text-rose-500 text-sm text-center">No Shows</th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-emerald-600 text-sm text-center bg-emerald-50/50 rounded-tl-lg">Vendas <span className="text-[10px] text-[#666666] font-normal block">(Automático)</span></th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-emerald-700 text-sm text-right bg-emerald-50/50">VGV <span className="text-[10px] text-[#666666] font-normal block">(Automático)</span></th>
-                                        <th className="pb-3 pt-2 px-4 font-semibold text-emerald-800 text-sm text-right bg-emerald-50/50 rounded-tr-lg">Caixa <span className="text-[10px] text-[#666666] font-normal block">(Automático)</span></th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-emerald-600 text-sm text-center bg-emerald-50/50 rounded-tl-lg">Vendas <span className="text-[10px] text-sec font-normal block">(Automático)</span></th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-emerald-700 text-sm text-right bg-emerald-50/50">VGV <span className="text-[10px] text-sec font-normal block">(Automático)</span></th>
+                                        <th className="pb-3 pt-2 px-4 font-semibold text-emerald-800 text-sm text-right bg-emerald-50/50 rounded-tr-lg">Caixa <span className="text-[10px] text-sec font-normal block">(Automático)</span></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {closers.map((closer) => (
-                                        <tr key={closer.id} className="hover:bg-[#111111]/50 transition-colors">
+                                        <tr key={closer.id} className="hover:bg-app/50 transition-colors">
                                             <td className="py-4 px-4 font-bold text-white">
                                                 {closer.nome}
-                                                {closer.isManual && <span className="ml-2 text-[10px] bg-[#1A1A1A] text-[#888888] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Editado</span>}
+                                                {closer.isManual && <span className="ml-2 text-[10px] bg-surface text-sec px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Editado</span>}
                                             </td>
-                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={closer.totalCalls} onChange={(e) => handleMetricEdit(closer.id, false, 'totalCalls', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-[#2A2A2A] focus:border-emerald-300 focus:bg-[#1A1A1A] rounded p-1 transition-all outline-none" /></td>
-                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={closer.callsAgendadas} onChange={(e) => handleMetricEdit(closer.id, false, 'callsAgendadas', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-[#2A2A2A] focus:border-emerald-300 focus:bg-[#1A1A1A] rounded p-1 transition-all outline-none" /></td>
-                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={closer.reagendamentos} onChange={(e) => handleMetricEdit(closer.id, false, 'reagendamentos', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-[#2A2A2A] focus:border-emerald-300 focus:bg-[#1A1A1A] rounded p-1 transition-all outline-none" /></td>
-                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={closer.noShows} onChange={(e) => handleMetricEdit(closer.id, false, 'noShows', e.target.value)} className="w-16 text-center font-bold text-rose-500 bg-transparent border border-transparent hover:border-[#2A2A2A] focus:border-rose-300 focus:bg-[#1A1A1A] rounded p-1 transition-all outline-none" /></td>
+                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={closer.totalCalls} onChange={(e) => handleMetricEdit(closer.id, false, 'totalCalls', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-str focus:border-emerald-300 focus:bg-surface rounded p-1 transition-all outline-none" /></td>
+                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={closer.callsAgendadas} onChange={(e) => handleMetricEdit(closer.id, false, 'callsAgendadas', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-str focus:border-emerald-300 focus:bg-surface rounded p-1 transition-all outline-none" /></td>
+                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={closer.reagendamentos} onChange={(e) => handleMetricEdit(closer.id, false, 'reagendamentos', e.target.value)} className="w-16 text-center font-medium text-[#AAAAAA] bg-transparent border border-transparent hover:border-str focus:border-emerald-300 focus:bg-surface rounded p-1 transition-all outline-none" /></td>
+                                            <td className="py-2 px-2 text-center"><input type="number" min="0" value={closer.noShows} onChange={(e) => handleMetricEdit(closer.id, false, 'noShows', e.target.value)} className="w-16 text-center font-bold text-rose-500 bg-transparent border border-transparent hover:border-str focus:border-rose-300 focus:bg-surface rounded p-1 transition-all outline-none" /></td>
                                             <td className="py-4 px-4 text-center font-bold text-emerald-600 bg-emerald-50/30">{closer.vendas}</td>
                                             <td className="py-4 px-4 text-right font-bold text-emerald-700 bg-emerald-50/30">{formatCurrency(closer.vgv)}</td>
                                             <td className="py-4 px-4 text-right font-black text-emerald-800 bg-emerald-50/30">{formatCurrency(closer.caixa)}</td>
                                         </tr>
                                     ))}
                                     {closers.length === 0 && (
-                                        <tr><td colSpan={8} className="py-8 text-center text-[#666666]">Nenhum Closer encontrado ou ativo.</td></tr>
+                                        <tr><td colSpan={8} className="py-8 text-center text-sec">Nenhum Closer encontrado ou ativo.</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -250,15 +250,15 @@ export default function PerformancePage() {
 
             {/* Tab: Status dos Leads */}
             {activeTab === 'status' && (
-                <div className="glass-panel p-6 bg-[#1A1A1A] border-[#2A2A2A]">
+                <div className="glass-panel p-6 bg-surface border-str">
                     <div className="flex items-center gap-3 mb-1">
                         <PieChart size={20} className="text-accent" />
                         <h3 className="text-xl font-bold text-white">Status dos Leads</h3>
                     </div>
-                    <p className="text-[#888] text-sm mb-6">Distribuição dos leads por status no período selecionado.</p>
+                    <p className="text-sec text-sm mb-6">Distribuição dos leads por status no período selecionado.</p>
 
                     {statusLeads.length === 0 ? (
-                        <p className="text-[#555] text-center py-12">Nenhum lead encontrado.</p>
+                        <p className="text-muted text-center py-12">Nenhum lead encontrado.</p>
                     ) : (
                         <div className="flex flex-col gap-5 max-w-2xl">
                             {statusLeads.map(({ status, count, pct }) => {
@@ -270,9 +270,9 @@ export default function PerformancePage() {
                                             <span className="text-white text-sm font-semibold leading-tight">
                                                 {status === 'Loss' ? 'Loss / Não prosseguiu' : status}
                                             </span>
-                                            <span className="text-[#888] text-sm">({count})</span>
+                                            <span className="text-sec text-sm">({count})</span>
                                         </div>
-                                        <div className="flex-1 h-3.5 bg-[#111] rounded-full overflow-hidden">
+                                        <div className="flex-1 h-3.5 bg-app rounded-full overflow-hidden">
                                             <div
                                                 className="h-full rounded-full transition-all duration-700"
                                                 style={{ width: `${pct}%`, backgroundColor: color }}

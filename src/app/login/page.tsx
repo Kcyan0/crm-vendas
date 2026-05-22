@@ -35,9 +35,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#111111] text-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-app text-white">
       {/* Lado Esquerdo - Branding */}
-      <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 bg-[#0A0A0A] border-b md:border-b-0 md:border-r border-[rgba(255,255,255,0.05)] relative overflow-hidden">
+      <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 bg-sidebar border-b md:border-b-0 md:border-r border-[rgba(255,255,255,0.05)] relative overflow-hidden">
         {/* Neon Glow effect */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-accent rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
         
@@ -48,7 +48,7 @@ export default function LoginPage() {
           <h1 className="text-4xl font-black mb-4 tracking-tight">
             H SALES <span className="text-accent">CRM</span>
           </h1>
-          <p className="text-[#888] text-lg mb-8 leading-relaxed">
+          <p className="text-sec text-lg mb-8 leading-relaxed">
             Painel de Alta Performance para SDRs e Closers. Logue para acessar os projetos do seu e-mail.
           </p>
         </div>
@@ -58,7 +58,7 @@ export default function LoginPage() {
       <div className="w-full md:w-1/2 flex items-center justify-center p-8">
         <div className="max-w-md w-full glass-panel p-8">
           <h2 className="text-2xl font-bold mb-2">Bem-vindo de volta</h2>
-          <p className="text-[#888] mb-8 text-sm">Insira suas credenciais para acessar sua conta.</p>
+          <p className="text-sec mb-8 text-sm">Insira suas credenciais para acessar sua conta.</p>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl mb-6 flex items-start gap-3">
@@ -71,7 +71,7 @@ export default function LoginPage() {
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-[#AAA] ml-1 uppercase text-[11px] tracking-wider">E-mail</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#666]">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-sec">
                   <Mail size={18} />
                 </div>
                 <input
@@ -81,7 +81,7 @@ export default function LoginPage() {
                   placeholder="seu@email.com"
                   required
                   disabled={loading}
-                  className="w-full pl-10 pr-4 py-3 bg-[#222] border-none text-white rounded-xl focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder:text-[#555]"
+                  className="w-full pl-10 pr-4 py-3 bg-surface-2 border-none text-white rounded-xl focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder:text-muted"
                 />
               </div>
             </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-[#AAA] ml-1 uppercase text-[11px] tracking-wider">Senha</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#666]">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-sec">
                   <Lock size={18} />
                 </div>
                 <input
@@ -99,7 +99,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   required
                   disabled={loading}
-                  className="w-full pl-10 pr-4 py-3 bg-[#222] border-none text-white rounded-xl focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder:text-[#555]"
+                  className="w-full pl-10 pr-4 py-3 bg-surface-2 border-none text-white rounded-xl focus:ring-2 focus:ring-accent focus:outline-none transition-all placeholder:text-muted"
                 />
               </div>
             </div>
@@ -113,7 +113,7 @@ export default function LoginPage() {
             </button>
           </form>
           
-          <div className="mt-8 text-center text-xs text-[#666]">
+          <div className="mt-8 text-center text-xs text-sec">
             Protegido por criptografia Supabase de ponta a ponta.
           </div>
         </div>

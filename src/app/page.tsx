@@ -637,24 +637,24 @@ export default function KanbanBoard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h2 className="text-3xl font-black text-white tracking-tight">Quadro de Leads</h2>
-          <p className="text-[#888888] mt-1 text-sm">Arraste os cards para atualizar o status no pipeline.</p>
+          <p className="text-sec mt-1 text-sm">Arraste os cards para atualizar o status no pipeline.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           <div className="relative w-full md:w-auto flex-1 md:flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-sec" size={18} />
             <input
               type="text"
               placeholder="Buscar lead..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-white focus:outline-none w-full"
+              className="pl-10 pr-4 py-2 bg-surface border border-str rounded-xl text-white focus:outline-none w-full"
             />
           </div>
-          <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-2">
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-transparent border-none text-sm text-[#888888] outline-none focus:ring-0 p-2" title="Data Inicial" />
+          <div className="flex items-center gap-2 bg-surface border border-str rounded-xl px-2">
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-transparent border-none text-sm text-sec outline-none focus:ring-0 p-2" title="Data Inicial" />
             <span className="text-[#333]">-</span>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-transparent border-none text-sm text-[#888888] outline-none focus:ring-0 p-2" title="Data Final" />
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-transparent border-none text-sm text-sec outline-none focus:ring-0 p-2" title="Data Final" />
           </div>
           <button
             onClick={handleExportCSV}
@@ -666,7 +666,7 @@ export default function KanbanBoard() {
             <span>Exportar</span>
           </button>
           <select
-            className="bg-[#1A1A1A] border border-[#2A2A2A] text-[#888888] text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400"
+            className="bg-surface border border-str text-sec text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400"
             value={filterSdr}
             onChange={e => setFilterSdr(e.target.value)}
           >
@@ -676,7 +676,7 @@ export default function KanbanBoard() {
             ))}
           </select>
           <select
-            className="bg-[#1A1A1A] border border-[#2A2A2A] text-[#888888] text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400"
+            className="bg-surface border border-str text-sec text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400"
             value={filterCloser}
             onChange={e => setFilterCloser(e.target.value)}
           >
@@ -713,7 +713,7 @@ export default function KanbanBoard() {
               onDrop={(e) => handleDrop(e, col)}
               onDragOver={handleDragOver}
             >
-              <div className="p-4 border-b border-[#222222] flex justify-between items-center bg-[#1A1A1A]/80 rounded-t-xl">
+              <div className="p-4 border-b border-[#222222] flex justify-between items-center bg-surface/80 rounded-t-xl">
                 <h3 className="font-bold text-white tracking-tight">{col}</h3>
                 <span className="text-xs px-2.5 py-1 rounded-full font-black" style={{ background: 'var(--accent)', color: '#0A0A0A' }}>
                   {columnLeads.length}
@@ -727,17 +727,17 @@ export default function KanbanBoard() {
                     draggable
                     onDragStart={(e) => handleDragStart(e, lead.id_lead)}
                     onDoubleClick={() => handleOpenDetail(lead)}
-                    className="glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 border-[#2A2A2A] hover:border-orange-300 transition-all select-none group relative bg-[#1A1A1A]"
+                    className="glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 border-str hover:border-orange-300 transition-all select-none group relative bg-surface"
                   >
                     <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleOpenDetail(lead); }}
-                        className="text-[#888888] hover:text-white px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A]"
+                        className="text-sec hover:text-white px-2 py-1 text-xs bg-surface rounded shadow-sm border border-str"
                       >Ver</button>
                       {!['Venda', 'Loss', 'Reembolsado'].includes(lead.status_atual) && lead.status_atual !== 'Nao prosseguiu' && (
                         <button
                           onClick={(e) => { e.stopPropagation(); router.push(`/calendar?leadId=${lead.id_lead}`); }}
-                          className="text-[#888888] hover:text-accent px-2 py-1 text-xs bg-[#1A1A1A] rounded shadow-sm border border-[#2A2A2A] whitespace-nowrap"
+                          className="text-sec hover:text-accent px-2 py-1 text-xs bg-surface rounded shadow-sm border border-str whitespace-nowrap"
                           title="Adicionar à agenda"
                         >📅</button>
                       )}
@@ -761,14 +761,14 @@ export default function KanbanBoard() {
 
                     <div className="space-y-2 mt-3">
                       {lead.telefone && (
-                        <div className="flex items-center gap-2 text-xs text-[#666666]">
-                          <Phone size={14} className="text-[#888888]" />
+                        <div className="flex items-center gap-2 text-xs text-sec">
+                          <Phone size={14} className="text-sec" />
                           <span>{lead.telefone}</span>
                         </div>
                       )}
                       {lead.instagram && (
-                        <div className="flex items-center gap-2 text-xs text-[#666666]">
-                          <Instagram size={14} className="text-[#888888]" />
+                        <div className="flex items-center gap-2 text-xs text-sec">
+                          <Instagram size={14} className="text-sec" />
                           <span>{lead.instagram}</span>
                         </div>
                       )}
@@ -794,14 +794,14 @@ export default function KanbanBoard() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1 text-[10px] text-[#666666] font-medium">
+                      <div className="flex items-center gap-1 text-[10px] text-sec font-medium">
                         <Clock size={12} />
                         <span>{formatDateBr(lead.data_entrada)}</span>
                       </div>
                       {lead.status_atual === 'Venda' && (
                         <button
                           onClick={(e) => handleOpenEditSale(e, lead)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-orange-400 hover:text-white border border-orange-400/40 px-2 py-0.5 rounded bg-[#1A1A1A]"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-orange-400 hover:text-white border border-orange-400/40 px-2 py-0.5 rounded bg-surface"
                         >Editar Venda</button>
                       )}
                     </div>
@@ -809,7 +809,7 @@ export default function KanbanBoard() {
                 ))}
 
                 {columnLeads.length === 0 && (
-                  <div className="h-24 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-[#666666] text-sm font-medium">
+                  <div className="h-24 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-sec text-sm font-medium">
                     Arraste leads para cá
                   </div>
                 )}
@@ -822,12 +822,12 @@ export default function KanbanBoard() {
       {/* Modal Novo Lead */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-0 md:p-4 text-left">
-          <div className="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 md:p-6 relative bg-[#1A1A1A] rounded-t-2xl md:rounded-2xl">
+          <div className="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 md:p-6 relative bg-surface rounded-t-2xl md:rounded-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-white">{editingLeadId ? "Editar Lead" : "Adicionar Novo Lead"}</h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-[#666666] hover:text-white"
+                className="text-sec hover:text-white"
               >
                 ✕
               </button>
@@ -858,7 +858,7 @@ export default function KanbanBoard() {
                   <label className="block text-sm font-medium text-white mb-1">Data de Entrada</label>
                   <input
                     type="datetime-local"
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A]"
+                    className="w-full bg-surface border border-str"
                     value={formData.data_entrada}
                     onChange={(e) => setFormData({ ...formData, data_entrada: e.target.value })}
                   />
@@ -885,7 +885,7 @@ export default function KanbanBoard() {
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">Origem</label>
                   <select
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A]"
+                    className="w-full bg-surface border border-str"
                     value={formData.origem}
                     onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
                   >
@@ -902,7 +902,7 @@ export default function KanbanBoard() {
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">SDR Responsável</label>
                   <select
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A]"
+                    className="w-full bg-surface border border-str"
                     value={formData.id_sdr_responsavel}
                     onChange={(e) => setFormData({ ...formData, id_sdr_responsavel: e.target.value })}
                   >
@@ -915,7 +915,7 @@ export default function KanbanBoard() {
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">Closer Responsável</label>
                   <select
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A]"
+                    className="w-full bg-surface border border-str"
                     value={formData.id_closer_responsavel}
                     onChange={(e) => setFormData({ ...formData, id_closer_responsavel: e.target.value })}
                   >
@@ -947,7 +947,7 @@ export default function KanbanBoard() {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="flex-1 md:flex-none px-4 py-2 text-[#888888] hover:text-white transition-colors"
+                    className="flex-1 md:flex-none px-4 py-2 text-sec hover:text-white transition-colors"
                   >
                     Cancelar
                   </button>
@@ -973,34 +973,34 @@ export default function KanbanBoard() {
             <div className="flex justify-between items-start mb-5">
               <div>
                 <h3 className="text-xl font-bold text-white">Registrar Venda para {saleLead.nome}</h3>
-                <p className="text-sm text-[#888888] mt-1">Adicione uma ou mais formas de pagamento para compor o valor total da venda.</p>
+                <p className="text-sm text-sec mt-1">Adicione uma ou mais formas de pagamento para compor o valor total da venda.</p>
               </div>
-              <button onClick={() => setIsSaleModalOpen(false)} className="text-[#666666] hover:text-white text-xl ml-4 mt-1">✕</button>
+              <button onClick={() => setIsSaleModalOpen(false)} className="text-sec hover:text-white text-xl ml-4 mt-1">✕</button>
             </div>
 
             <form onSubmit={handleSaveSale} className="space-y-4">
               {/* Data da Venda */}
               <div>
-                <label className="block text-xs text-[#888888] mb-1 font-bold uppercase">Data da Venda</label>
-                <input type="date" required value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className="w-full sm:w-1/2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl p-2 text-sm focus:border-orange-500 focus:outline-none" />
+                <label className="block text-xs text-sec mb-1 font-bold uppercase">Data da Venda</label>
+                <input type="date" required value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className="w-full sm:w-1/2 bg-surface border border-str text-white rounded-xl p-2 text-sm focus:border-orange-500 focus:outline-none" />
               </div>
 
               {/* Payment Rows */}
               <div className="space-y-3">
                 {pagamentos.map((p, idx) => (
-                  <div key={p.id} className="p-3 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] space-y-3">
+                  <div key={p.id} className="p-3 rounded-xl border border-str bg-surface space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase text-[#888888]">Pagamento {idx + 1}</span>
+                      <span className="text-xs font-bold uppercase text-sec">Pagamento {idx + 1}</span>
                       {pagamentos.length > 1 && (
                         <button type="button" onClick={() => removePagamento(p.id)} className="text-red-500 hover:text-red-400 text-lg leading-none">🗑</button>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-[#888888] mb-1">Forma de Pagamento</label>
+                        <label className="block text-xs text-sec mb-1">Forma de Pagamento</label>
                         <select
                           required
-                          className="w-full bg-[#111] border border-[#2A2A2A] text-white rounded-lg p-2 text-sm focus:border-orange-500 focus:outline-none"
+                          className="w-full bg-app border border-str text-white rounded-lg p-2 text-sm focus:border-orange-500 focus:outline-none"
                           value={p.forma_pagamento}
                           onChange={e => handlePagamentoChange(p.id, 'forma_pagamento', e.target.value)}
                         >
@@ -1011,9 +1011,9 @@ export default function KanbanBoard() {
                         </select>
                       </div>
                       <div className="min-w-0">
-                        <label className="block text-xs text-[#888888] mb-1">Valor Total do Pagamento</label>
-                        <div className="flex items-center gap-1 bg-[#111] border border-[#2A2A2A] rounded-lg px-2 overflow-hidden">
-                          <span className="text-[#888888] text-sm shrink-0">R$</span>
+                        <label className="block text-xs text-sec mb-1">Valor Total do Pagamento</label>
+                        <div className="flex items-center gap-1 bg-app border border-str rounded-lg px-2 overflow-hidden">
+                          <span className="text-sec text-sm shrink-0">R$</span>
                           <input
                             required
                             type="number"
@@ -1029,9 +1029,9 @@ export default function KanbanBoard() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-[#888888] mb-1">Parcelas</label>
+                        <label className="block text-xs text-sec mb-1">Parcelas</label>
                         <select
-                          className="w-full bg-[#111] border border-[#2A2A2A] text-white rounded-lg p-2 text-sm focus:border-orange-500 focus:outline-none"
+                          className="w-full bg-app border border-str text-white rounded-lg p-2 text-sm focus:border-orange-500 focus:outline-none"
                           value={p.numero_parcelas}
                           onChange={e => handlePagamentoChange(p.id, 'numero_parcelas', e.target.value)}
                         >
@@ -1039,15 +1039,15 @@ export default function KanbanBoard() {
                         </select>
                       </div>
                       <div className="min-w-0">
-                        <label className="block text-xs text-[#888888] mb-1">Taxa Gateway (R$)</label>
-                        <div className="flex items-center gap-1 bg-[#111] border border-[#2A2A2A] rounded-lg px-2 overflow-hidden">
-                          <span className="text-[#888888] text-sm shrink-0">R$</span>
+                        <label className="block text-xs text-sec mb-1">Taxa Gateway (R$)</label>
+                        <div className="flex items-center gap-1 bg-app border border-str rounded-lg px-2 overflow-hidden">
+                          <span className="text-sec text-sm shrink-0">R$</span>
                           <input
                             type="number"
                             step="0.01"
                             readOnly
                             tabIndex={-1}
-                            className="min-w-0 w-full bg-transparent border-none text-[#888888] text-sm py-2 focus:outline-none cursor-not-allowed"
+                            className="min-w-0 w-full bg-transparent border-none text-sec text-sm py-2 focus:outline-none cursor-not-allowed"
                             value={parseFloat(p.taxa_gateway) > parseFloat(p.valor) ? (parseFloat(p.valor) || 0).toFixed(2) : p.taxa_gateway}
                             title="Calculado automaticamente com base na taxa do gateway"
                           />
@@ -1056,13 +1056,13 @@ export default function KanbanBoard() {
                     </div>
                     {/* Entrada field — shown only when gateway accepts down payment */}
                     {gateways.find(gw => gw.nome === p.forma_pagamento)?.tem_entrada && (
-                      <div className="pt-3 border-t border-[#2A2A2A]">
+                      <div className="pt-3 border-t border-str">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-[10px] uppercase font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded">Entrada</span>
-                          <span className="text-xs text-[#888888]">Valor pago na entrada (à vista)</span>
+                          <span className="text-xs text-sec">Valor pago na entrada (à vista)</span>
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1 bg-[#111] border border-blue-400/30 rounded-lg px-2 overflow-hidden">
+                          <div className="flex items-center gap-1 bg-app border border-blue-400/30 rounded-lg px-2 overflow-hidden">
                             <span className="text-blue-400 text-sm shrink-0">R$</span>
                             <input
                               type="number"
@@ -1075,7 +1075,7 @@ export default function KanbanBoard() {
                             />
                           </div>
                           {p.valor_entrada && parseFloat(p.valor) > 0 && (
-                            <p className="text-xs text-[#888888] mt-1">
+                            <p className="text-xs text-sec mt-1">
                               Restante a parcelar: <span className="text-white font-medium">
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.max(0, parseFloat(p.valor) - parseFloat(p.valor_entrada)))}
                               </span> em {p.numero_parcelas}x
@@ -1086,13 +1086,13 @@ export default function KanbanBoard() {
                             <label className="flex items-center gap-2 mt-3 cursor-pointer select-none group">
                               <div
                                 onClick={() => handlePagamentoChange(p.id, 'entrada_paga_empresa', !p.entrada_paga_empresa as any)}
-                                className={`relative w-9 h-5 rounded-full transition-colors ${p.entrada_paga_empresa ? 'bg-orange-500' : 'bg-[#333]'}`}
+                                className={`relative w-9 h-5 rounded-full transition-colors ${p.entrada_paga_empresa ? 'bg-orange-500' : 'bg-surface-3'}`}
                               >
                                 <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${p.entrada_paga_empresa ? 'translate-x-4' : 'translate-x-0'}`} />
                               </div>
                               <div>
                                 <span className="text-xs font-medium text-white">Entrada paga pela empresa</span>
-                                <p className="text-[10px] text-[#888] mt-0.5">A empresa financia a entrada — valor será <span className="text-orange-400">descontado</span> do caixa</p>
+                                <p className="text-[10px] text-sec mt-0.5">A empresa financia a entrada — valor será <span className="text-orange-400">descontado</span> do caixa</p>
                               </div>
                             </label>
                           )}
@@ -1100,28 +1100,28 @@ export default function KanbanBoard() {
                       </div>
                     )}
                     {/* Status do Pagamento — Pago / Pendente */}
-                    <div className="pt-3 border-t border-[#2A2A2A] mt-1">
+                    <div className="pt-3 border-t border-str mt-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#888]">Status do recebimento:</span>
-                        <div className="flex rounded-lg overflow-hidden border border-[#2A2A2A] text-xs">
+                        <span className="text-xs text-sec">Status do recebimento:</span>
+                        <div className="flex rounded-lg overflow-hidden border border-str text-xs">
                           <button
                             type="button"
                             onClick={() => handlePagamentoChange(p.id, 'status_pagamento', 'pago')}
-                            className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pago' ? 'bg-accent text-[#0A0A0A]' : 'bg-[#111] text-[#666] hover:text-white'}`}
+                            className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pago' ? 'bg-accent text-[#0A0A0A]' : 'bg-app text-sec hover:text-white'}`}
                           >✓ Pago</button>
                           <button
                             type="button"
                             onClick={() => handlePagamentoChange(p.id, 'status_pagamento', 'pendente')}
-                            className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pendente' ? 'bg-amber-500 text-[#0A0A0A]' : 'bg-[#111] text-[#666] hover:text-white'}`}
+                            className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pendente' ? 'bg-amber-500 text-[#0A0A0A]' : 'bg-app text-sec hover:text-white'}`}
                           >⏳ Pendente</button>
                         </div>
                       </div>
                       {p.status_pagamento === 'pendente' && (
                         <div className="mt-2 flex items-center gap-2">
-                          <span className="text-[10px] text-[#888]">Data prevista:</span>
+                          <span className="text-[10px] text-sec">Data prevista:</span>
                           <input
                             type="date"
-                            className="bg-[#111] border border-amber-500/40 text-amber-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-amber-400"
+                            className="bg-app border border-amber-500/40 text-amber-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-amber-400"
                             value={p.data_recebimento_custom}
                             min={new Date().toISOString().split('T')[0]}
                             onChange={e => handlePagamentoChange(p.id, 'data_recebimento_custom', e.target.value)}
@@ -1141,18 +1141,18 @@ export default function KanbanBoard() {
               <button
                 type="button"
                 onClick={addPagamento}
-                className="w-full py-2.5 rounded-xl border border-dashed border-[#3A3A3A] text-[#888888] hover:text-white hover:border-orange-400 transition text-sm flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-xl border border-dashed border-[#3A3A3A] text-sec hover:text-white hover:border-orange-400 transition text-sm flex items-center justify-center gap-2"
               >
                 <span className="text-lg">⊕</span> Adicionar Pagamento
               </button>
 
               {/* Observacoes */}
               <div>
-                <label className="block text-sm font-medium text-[#888888] mb-1">Observações sobre a Venda</label>
+                <label className="block text-sm font-medium text-sec mb-1">Observações sobre a Venda</label>
                 <textarea
                   rows={3}
                   placeholder="Ex: Cliente pediu desconto, condição especial de pagamento..."
-                  className="w-full bg-[#111] border border-[#2A2A2A] text-white rounded-xl p-3 text-sm focus:border-orange-400 focus:outline-none resize-none"
+                  className="w-full bg-app border border-str text-white rounded-xl p-3 text-sm focus:border-orange-400 focus:outline-none resize-none"
                   value={saleObservacoes}
                   onChange={e => setSaleObservacoes(e.target.value)}
                 />
@@ -1160,24 +1160,24 @@ export default function KanbanBoard() {
 
               {/* Totals */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A]">
-                  <div className="flex items-center gap-2 text-xs text-[#888888] mb-1">
+                <div className="p-3 rounded-xl bg-surface border border-str">
+                  <div className="flex items-center gap-2 text-xs text-sec mb-1">
                     <span>💳</span> Valor Total da Venda
                   </div>
                   <div className="text-base font-black text-white">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(saleTotals.bruto)}
                   </div>
                 </div>
-                <div className="p-3 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A]">
+                <div className="p-3 rounded-xl bg-surface border border-str">
                   <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2 text-xs text-[#888888]">
+                    <div className="flex items-center gap-2 text-xs text-sec">
                       <span>💵</span> Caixa Gerado (Líquido)
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowCaixaBreakdown(v => !v)}
                       title="Ver cálculo detalhado"
-                      className="w-4 h-4 rounded-full bg-[#2A2A2A] text-[#888888] hover:bg-orange-400/20 hover:text-orange-400 flex items-center justify-center text-[9px] font-black transition-colors"
+                      className="w-4 h-4 rounded-full bg-surface-3 text-sec hover:bg-orange-400/20 hover:text-orange-400 flex items-center justify-center text-[9px] font-black transition-colors"
                     >?</button>
                   </div>
                   <div className="text-base font-black text-orange-400">
@@ -1188,10 +1188,10 @@ export default function KanbanBoard() {
 
               {/* Caixa Breakdown Panel */}
               {showCaixaBreakdown && (
-                <div className="rounded-xl bg-[#111] border border-orange-400/20 p-4 text-sm space-y-3">
+                <div className="rounded-xl bg-app border border-orange-400/20 p-4 text-sm space-y-3">
                   <div className="mb-2">
                     <p className="font-bold text-white text-sm">Cálculo do Caixa Gerado</p>
-                    <p className="text-[#888888] text-xs mt-0.5">Demonstrativo de como o valor líquido foi calculado.</p>
+                    <p className="text-sec text-xs mt-0.5">Demonstrativo de como o valor líquido foi calculado.</p>
                   </div>
                   {pagamentos.map((p, idx) => {
                     const v = parseFloat(p.valor) || 0;
@@ -1216,36 +1216,36 @@ export default function KanbanBoard() {
                             <>
                               {isEmpresa && (
                                 <div className="flex justify-between text-xs">
-                                  <span className="text-[#888]">(-) Entrada Paga pela Empresa</span>
+                                  <span className="text-sec">(-) Entrada Paga pela Empresa</span>
                                   <span className="text-red-400">-{fmt(entrada)}</span>
                                 </div>
                               )}
                               <div className="flex justify-between text-xs">
-                                <span className="text-[#888]">(+) Valor Bruto da Entrada</span>
+                                <span className="text-sec">(+) Valor Bruto da Entrada</span>
                                 <span className="text-[#bbb]">{fmt(entrada)}</span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-[#888]">(-) Taxa da Entrada ({txPEntrada > 0 || txFEntrada > 0 ? `${txPEntrada.toFixed(2)}%${txFEntrada > 0 ? ` + R$${txFEntrada}` : ''}` : '0%'})</span>
+                                <span className="text-sec">(-) Taxa da Entrada ({txPEntrada > 0 || txFEntrada > 0 ? `${txPEntrada.toFixed(2)}%${txFEntrada > 0 ? ` + R$${txFEntrada}` : ''}` : '0%'})</span>
                                 <span className="text-red-400">-{fmt(taxaEnt)}</span>
                               </div>
                               <div className="pt-2"></div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-[#888]">(+) {parcelas > 1 ? 'Valor Bruto Parcelado' : 'Parcela Única Bruta'}</span>
+                                <span className="text-sec">(+) {parcelas > 1 ? 'Valor Bruto Parcelado' : 'Parcela Única Bruta'}</span>
                                 <span className="text-[#bbb]">{fmt(v - entrada)}</span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-[#888]">(-) Taxa ({taxaPct > 0 || taxaFixed > 0 ? `${taxaPct.toFixed(2)}%${taxaFixed > 0 ? ` + R$${taxaFixed}` : ''}` : '0%'})</span>
+                                <span className="text-sec">(-) Taxa ({taxaPct > 0 || taxaFixed > 0 ? `${taxaPct.toFixed(2)}%${taxaFixed > 0 ? ` + R$${taxaFixed}` : ''}` : '0%'})</span>
                                 <span className="text-red-400">-{fmt(taxaTotal - taxaEnt)}</span>
                               </div>
                             </>
                           ) : (
                             <>
                               <div className="flex justify-between text-xs">
-                                <span className="text-[#888]">(+) {parcelas > 1 ? 'Valor Bruto Parcelado' : 'Parcela Única Bruta'}</span>
+                                <span className="text-sec">(+) {parcelas > 1 ? 'Valor Bruto Parcelado' : 'Parcela Única Bruta'}</span>
                                 <span className="text-[#bbb]">{fmt(v)}</span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-[#888]">(-) Taxa ({taxaPct > 0 || taxaFixed > 0 ? `${taxaPct.toFixed(2)}%${taxaFixed > 0 ? ` + R$${taxaFixed}` : ''}` : '0%'})</span>
+                                <span className="text-sec">(-) Taxa ({taxaPct > 0 || taxaFixed > 0 ? `${taxaPct.toFixed(2)}%${taxaFixed > 0 ? ` + R$${taxaFixed}` : ''}` : '0%'})</span>
                                 <span className="text-red-400">-{fmt(taxaTotal)}</span>
                               </div>
                             </>
@@ -1267,7 +1267,7 @@ export default function KanbanBoard() {
 
               {/* Actions */}
               <div className="flex justify-end gap-3 pt-2 border-t border-[#222222]">
-                <button type="button" onClick={() => setIsSaleModalOpen(false)} className="px-4 py-2 text-[#888888] hover:text-white transition-colors text-sm">
+                <button type="button" onClick={() => setIsSaleModalOpen(false)} className="px-4 py-2 text-sec hover:text-white transition-colors text-sm">
                   Cancelar
                 </button>
                 <button type="submit" className="btn-primary px-6 py-2 justify-center">
@@ -1286,25 +1286,25 @@ export default function KanbanBoard() {
             <div className="flex justify-between items-start mb-5">
               <div>
                 <h3 className="text-xl font-bold text-white">Registrar Reembolso</h3>
-                <p className="text-sm text-[#888888] mt-1">Informe o motivo para o registro histórico.</p>
+                <p className="text-sm text-sec mt-1">Informe o motivo para o registro histórico.</p>
               </div>
-              <button onClick={() => setIsRefundModalOpen(false)} className="text-[#666] hover:text-white text-xl">✕</button>
+              <button onClick={() => setIsRefundModalOpen(false)} className="text-sec hover:text-white text-xl">✕</button>
             </div>
             <form onSubmit={handleSaveRefund} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#888888] mb-1">Motivo do Reembolso</label>
+                <label className="block text-sm font-medium text-sec mb-1">Motivo do Reembolso</label>
                 <textarea
                   rows={4}
                   required
                   autoFocus
                   placeholder="Ex: Cliente desistiu por problema financeiro, produto não atendeu expectativas..."
-                  className="w-full bg-[#111] border border-[#2A2A2A] text-white rounded-xl p-3 text-sm focus:border-red-400 focus:outline-none resize-none"
+                  className="w-full bg-app border border-str text-white rounded-xl p-3 text-sm focus:border-red-400 focus:outline-none resize-none"
                   value={refundMotivo}
                   onChange={e => setRefundMotivo(e.target.value)}
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2 border-t border-[#222]">
-                <button type="button" onClick={() => setIsRefundModalOpen(false)} className="px-4 py-2 text-[#888] hover:text-white text-sm">Cancelar</button>
+                <button type="button" onClick={() => setIsRefundModalOpen(false)} className="px-4 py-2 text-sec hover:text-white text-sm">Cancelar</button>
                 <button type="submit" className="px-6 py-2 rounded-xl font-bold text-sm" style={{ background: '#ef4444', color: '#fff' }}>Confirmar Reembolso</button>
               </div>
             </form>
@@ -1315,7 +1315,7 @@ export default function KanbanBoard() {
       {/* ── Lead Detail Panel ───────────────────────────────────── */}
       {isDetailOpen && detailLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsDetailOpen(false)}>
-          <div className="relative w-full max-w-sm bg-[#141414] border border-[#2A2A2A] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+          <div className="relative w-full max-w-sm bg-[#141414] border border-str rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-start justify-between p-5 pb-4 border-b border-[#222]">
               <div className="flex items-center gap-3">
@@ -1324,18 +1324,18 @@ export default function KanbanBoard() {
                 </div>
                 <div>
                   <h3 className="font-black text-white text-base leading-tight">{detailLead.nome}</h3>
-                  <p className="text-[#666] text-xs mt-0.5">Detalhes do Lead</p>
+                  <p className="text-sec text-xs mt-0.5">Detalhes do Lead</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setIsDetailOpen(false); handleOpenEdit(detailLead); }}
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[#222] hover:bg-[#2A2A2A] text-white border border-[#333] transition"
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 text-white border border-[#333] transition"
                 >
                   <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                   Editar Lead
                 </button>
-                <button onClick={() => setIsDetailOpen(false)} className="text-[#555] hover:text-white text-lg leading-none">✕</button>
+                <button onClick={() => setIsDetailOpen(false)} className="text-muted hover:text-white text-lg leading-none">✕</button>
               </div>
             </div>
 
@@ -1345,10 +1345,10 @@ export default function KanbanBoard() {
             <div className="p-5 space-y-3 border-b border-[#222]">
               {detailLead.telefone && (
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[#888] text-sm"><Phone size={14}/> Telefone</div>
+                  <div className="flex items-center gap-2 text-sec text-sm"><Phone size={14}/> Telefone</div>
                   <div className="flex items-center gap-2">
                     <span className="text-white text-sm font-medium">{detailLead.telefone}</span>
-                    <button onClick={() => navigator.clipboard.writeText(detailLead.telefone)} className="text-[#555] hover:text-white transition" title="Copiar">
+                    <button onClick={() => navigator.clipboard.writeText(detailLead.telefone)} className="text-muted hover:text-white transition" title="Copiar">
                       <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" strokeWidth={2}/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                     </button>
                     <a href={`https://wa.me/55${detailLead.telefone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="text-green-500 hover:text-green-400 transition" title="WhatsApp">
@@ -1359,10 +1359,10 @@ export default function KanbanBoard() {
               )}
               {detailLead.instagram && (
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[#888] text-sm"><Instagram size={14}/> Instagram</div>
+                  <div className="flex items-center gap-2 text-sec text-sm"><Instagram size={14}/> Instagram</div>
                   <div className="flex items-center gap-2">
                     <span className="text-white text-sm font-medium">@{detailLead.instagram.replace('@','')}</span>
-                    <button onClick={() => navigator.clipboard.writeText(detailLead.instagram)} className="text-[#555] hover:text-white transition" title="Copiar">
+                    <button onClick={() => navigator.clipboard.writeText(detailLead.instagram)} className="text-muted hover:text-white transition" title="Copiar">
                       <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" strokeWidth={2}/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                     </button>
                     <a href={`https://instagram.com/${detailLead.instagram.replace('@','')}`} target="_blank" rel="noreferrer" className="text-pink-500 hover:text-pink-400 transition" title="Instagram">
@@ -1372,12 +1372,12 @@ export default function KanbanBoard() {
                 </div>
               )}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[#888] text-sm"><Clock size={14}/> Entrada</div>
+                <div className="flex items-center gap-2 text-sec text-sm"><Clock size={14}/> Entrada</div>
                 <span className="text-white text-sm font-medium">{formatDateBr(detailLead.data_entrada)}</span>
               </div>
               {detailLead.closer_nome && (
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[#888] text-sm">
+                  <div className="flex items-center gap-2 text-sec text-sm">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                     Closer
                   </div>
@@ -1386,7 +1386,7 @@ export default function KanbanBoard() {
               )}
               {detailLead.sdr_nome && (
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[#888] text-sm">
+                  <div className="flex items-center gap-2 text-sec text-sm">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                     SDR
                   </div>
@@ -1399,13 +1399,13 @@ export default function KanbanBoard() {
             {detailLead.observacoes_gerais && (
               <div className="px-5 py-4 border-b border-[#222]">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-[#888] text-sm">
+                  <div className="flex items-center gap-2 text-sec text-sm">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Briefing
                   </div>
                   <button
                     onClick={() => setBriefingExpanded(v => !v)}
-                    className="text-[10px] px-2 py-0.5 rounded-lg bg-[#222] hover:bg-[#2A2A2A] text-[#888] hover:text-white border border-[#333] transition flex items-center gap-1"
+                    className="text-[10px] px-2 py-0.5 rounded-lg bg-surface-2 hover:bg-surface-3 text-sec hover:text-white border border-[#333] transition flex items-center gap-1"
                   >
                     {briefingExpanded ? 'Recolher' : 'Expandir'}
                     <svg className={`w-2.5 h-2.5 transition-transform ${briefingExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
@@ -1421,13 +1421,13 @@ export default function KanbanBoard() {
             {detailLead.status_atual === 'Venda' && (
               <div className="px-5 py-4 border-b border-[#222]">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 text-[#888] text-sm">
+                  <div className="flex items-center gap-2 text-sec text-sm">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Informações da Venda
                   </div>
                   <button
                     onClick={() => { setIsDetailOpen(false); handleOpenEditSale({ stopPropagation: () => {} } as any, detailLead); }}
-                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-[#222] hover:bg-[#2A2A2A] text-[#aaa] hover:text-white border border-[#333] transition"
+                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-surface-2 hover:bg-surface-3 text-[#aaa] hover:text-white border border-[#333] transition"
                   >
                     <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     Editar
@@ -1438,15 +1438,15 @@ export default function KanbanBoard() {
                   const totalLiquido = detailVendas.reduce((s, v) => s + (parseFloat(v.valor_liquido_caixa) || 0), 0);
                   const fmt = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
                   return (
-                    <div className="bg-[#111] rounded-xl border border-[#222] overflow-hidden">
+                    <div className="bg-app rounded-xl border border-[#222] overflow-hidden">
                       <div className="flex justify-between items-center px-4 py-2.5 border-b border-[#222]">
-                        <span className="text-[#888] text-xs font-medium">Valor Total da Venda</span>
+                        <span className="text-sec text-xs font-medium">Valor Total da Venda</span>
                         <span className="text-accent font-black text-sm">{fmt(totalBruto)}</span>
                       </div>
                       <div className="flex justify-between items-center px-4 py-2.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-[#888] text-xs font-medium">Caixa Gerado</span>
-                          <button onClick={() => setDetailCaixaOpen(v => !v)} className="w-4 h-4 rounded-full bg-[#222] text-[#666] hover:text-orange-400 hover:bg-orange-400/10 text-[9px] font-black flex items-center justify-center transition">?</button>
+                          <span className="text-sec text-xs font-medium">Caixa Gerado</span>
+                          <button onClick={() => setDetailCaixaOpen(v => !v)} className="w-4 h-4 rounded-full bg-surface-2 text-sec hover:text-orange-400 hover:bg-orange-400/10 text-[9px] font-black flex items-center justify-center transition">?</button>
                         </div>
                         <span className="text-orange-400 font-black text-sm">{fmt(totalLiquido)}</span>
                       </div>
@@ -1454,10 +1454,10 @@ export default function KanbanBoard() {
                         <div className="px-4 pb-3 border-t border-[#222] space-y-2 pt-3">
                           {detailVendas.map((v, i) => (
                             <div key={i} className="flex justify-between text-xs">
-                              <span className="text-[#666]">{v.forma_pagamento}</span>
+                              <span className="text-sec">{v.forma_pagamento}</span>
                               <div className="text-right">
                                 <span className="text-orange-300">{fmt(parseFloat(v.valor_liquido_caixa) || 0)}</span>
-                                <span className="text-[#555] ml-1">(-{fmt(parseFloat(v.taxa_gateway) || 0)} taxa)</span>
+                                <span className="text-muted ml-1">(-{fmt(parseFloat(v.taxa_gateway) || 0)} taxa)</span>
                               </div>
                             </div>
                           ))}
@@ -1477,14 +1477,14 @@ export default function KanbanBoard() {
                 value={detailLead.status_atual}
                 onChange={e => handleDetailStatusChange(e.target.value)}
                 disabled={detailStatusSaving}
-                className="flex-1 bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent"
+                className="flex-1 bg-surface border border-str text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-accent"
               >
                 {KANBAN_COLUMNS.map(col => <option key={col} value={col}>{col === 'Loss' ? 'Loss' : col}</option>)}
               </select>
               <button onClick={handleDetailDelete} className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-red-900/20 hover:bg-red-500/20 text-red-500 border border-red-500/20 transition" title="Excluir Lead">
                 <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
-              <button onClick={() => setIsDetailOpen(false)} className="px-4 h-9 rounded-xl bg-[#1A1A1A] hover:bg-[#222] text-white border border-[#2A2A2A] text-sm font-medium transition">Fechar</button>
+              <button onClick={() => setIsDetailOpen(false)} className="px-4 h-9 rounded-xl bg-surface hover:bg-surface-2 text-white border border-str text-sm font-medium transition">Fechar</button>
             </div>
           </div>
         </div>

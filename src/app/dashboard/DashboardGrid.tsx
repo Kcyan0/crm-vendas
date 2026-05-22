@@ -106,7 +106,7 @@ export function DashboardGrid({
             render: () => metrics?.statusLeads && metrics.statusLeads.length > 0 ? (
                 <div className="glass-panel p-4 sm:p-5 bg-[#151515] border border-white/5 rounded-2xl h-full flex flex-col">
                     <h3 className="text-xs sm:text-sm font-bold text-white mb-1">Status dos Leads</h3>
-                    <p className="text-[10px] text-[#888] mb-4">Distribuição de todos os leads por status no fluxo.</p>
+                    <p className="text-[10px] text-sec mb-4">Distribuição de todos os leads por status no fluxo.</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-3 gap-x-6">
                         {metrics.statusLeads.map(({ status, count, pct }: any) => {
                             const STATUS_COLORS: Record<string, string> = {
@@ -123,9 +123,9 @@ export function DashboardGrid({
                                                 {status === 'Loss' ? 'Loss' : status}
                                             </span>
                                         </div>
-                                        <span className="text-[#666] text-[10px] ml-1">({count})</span>
+                                        <span className="text-sec text-[10px] ml-1">({count})</span>
                                     </div>
-                                    <div className="flex-1 h-2 bg-[#111] rounded-full overflow-hidden">
+                                    <div className="flex-1 h-2 bg-app rounded-full overflow-hidden">
                                         <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }} />
                                     </div>
                                     <span className="text-white font-bold shrink-0 text-[10px] text-right w-8">{pct}%</span>
@@ -192,9 +192,9 @@ export function DashboardGrid({
             render: () => (
                 <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col h-full overflow-hidden">
                     <h3 className="text-xs sm:text-sm font-bold text-white mb-1">Conversão SDR</h3>
-                    <p className="text-[10px] text-[#888888] mb-4">Performance do time de prospecção.</p>
+                    <p className="text-[10px] text-sec mb-4">Performance do time de prospecção.</p>
                     <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
-                        <table className="w-full text-left text-xs text-[#888888] min-w-[280px]">
+                        <table className="w-full text-left text-xs text-sec min-w-[280px]">
                             <thead>
                                 <tr className="border-b border-white/10 pb-2">
                                     <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
@@ -236,9 +236,9 @@ export function DashboardGrid({
             render: () => (
                 <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col h-full overflow-hidden">
                     <h3 className="text-xs sm:text-sm font-bold text-white mb-1">Conversão Closer</h3>
-                    <p className="text-[10px] text-[#888888] mb-4">Performance do time de vendas.</p>
+                    <p className="text-[10px] text-sec mb-4">Performance do time de vendas.</p>
                     <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
-                        <table className="w-full text-left text-xs text-[#888888] min-w-[280px]">
+                        <table className="w-full text-left text-xs text-sec min-w-[280px]">
                             <thead>
                                 <tr className="border-b border-white/10 pb-2">
                                     <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
@@ -292,10 +292,10 @@ export function DashboardGrid({
                             <h4 className="text-xs sm:text-sm font-bold text-white">Pagamentos Pendentes</h4>
                             <span className="text-xs font-black text-white">{formatBRL(total)}</span>
                         </div>
-                        <p className="text-[10px] text-[#888888] mb-4">Vendas confirmadas ainda não liquidadas, por closer.</p>
+                        <p className="text-[10px] text-sec mb-4">Vendas confirmadas ainda não liquidadas, por closer.</p>
                         <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
                             {detalhes.length > 0 ? (
-                                <table className="w-full text-left text-xs text-[#888888] min-w-[220px]">
+                                <table className="w-full text-left text-xs text-sec min-w-[220px]">
                                     <thead>
                                         <tr className="border-b border-white/10">
                                             <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
@@ -318,7 +318,7 @@ export function DashboardGrid({
                                             );
                                         })}
                                         <tr className="border-t border-white/10">
-                                            <td className="pt-2.5 text-[10px] text-[#555] font-medium">Total Pendente</td>
+                                            <td className="pt-2.5 text-[10px] text-muted font-medium">Total Pendente</td>
                                             <td className="pt-2.5 text-right text-white font-black text-[10px] xl:text-xs">{formatBRL(total)}</td>
                                         </tr>
                                     </tbody>
@@ -393,7 +393,7 @@ export function DashboardGrid({
                     <div className="flex-1 w-full min-h-[120px] max-h-[160px] overflow-y-auto space-y-2 custom-scrollbar">
                         {metrics?.recentRefundReasons && metrics.recentRefundReasons.length > 0 ? (
                             metrics.recentRefundReasons.map((reason: string, i: number) => (
-                                <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-[#111] border border-[#2A2A2A]">
+                                <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-app border border-str">
                                     <span className="text-red-400 mt-0.5 shrink-0 text-[10px]">⚠</span>
                                     <p className="text-[10px] text-[#cccccc]">{reason}</p>
                                 </div>
@@ -410,9 +410,9 @@ export function DashboardGrid({
             render: () => metrics?.comissaoCloserDetalhes && metrics.comissaoCloserDetalhes.length > 0 ? (
                 <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col h-full">
                     <h4 className="text-xs sm:text-sm font-bold text-white mb-1">Comissão Closer</h4>
-                    <p className="text-[10px] text-[#888888] mb-4">Calculado sobre caixa recebido.</p>
+                    <p className="text-[10px] text-sec mb-4">Calculado sobre caixa recebido.</p>
                     <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
-                        <table className="w-full text-left text-xs text-[#888888] min-w-[260px]">
+                        <table className="w-full text-left text-xs text-sec min-w-[260px]">
                             <thead>
                                 <tr className="border-b border-white/10">
                                     <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
@@ -437,7 +437,7 @@ export function DashboardGrid({
                                     );
                                 })}
                                 <tr className="border-t border-white/10">
-                                    <td colSpan={3} className="pt-2.5 text-[10px] text-[#555] font-medium">Total Closers</td>
+                                    <td colSpan={3} className="pt-2.5 text-[10px] text-muted font-medium">Total Closers</td>
                                     <td className="pt-2.5 text-right text-[#A78BFA] font-black text-xs">{formatBRL(metrics.comissaoCloserTotal || 0)}</td>
                                 </tr>
                             </tbody>
@@ -451,9 +451,9 @@ export function DashboardGrid({
             render: () => metrics?.comissaoSdrDetalhes && metrics.comissaoSdrDetalhes.length > 0 ? (
                 <div className="glass-panel p-4 sm:p-5 bg-black/20 border border-white/5 rounded-xl flex flex-col h-full">
                     <h4 className="text-xs sm:text-sm font-bold text-white mb-1">Comissão SDR</h4>
-                    <p className="text-[10px] text-[#888888] mb-4">Calculado sobre caixa recebido.</p>
+                    <p className="text-[10px] text-sec mb-4">Calculado sobre caixa recebido.</p>
                     <div className="w-full overflow-x-auto overflow-y-auto flex-1 max-h-[250px] custom-scrollbar">
-                        <table className="w-full text-left text-xs text-[#888888] min-w-[260px]">
+                        <table className="w-full text-left text-xs text-sec min-w-[260px]">
                             <thead>
                                 <tr className="border-b border-white/10">
                                     <th className="font-medium pb-2 text-[10px] xl:text-xs">Membro</th>
@@ -478,7 +478,7 @@ export function DashboardGrid({
                                     );
                                 })}
                                 <tr className="border-t border-white/10">
-                                    <td colSpan={3} className="pt-2.5 text-[10px] text-[#555] font-medium">Total SDRs</td>
+                                    <td colSpan={3} className="pt-2.5 text-[10px] text-muted font-medium">Total SDRs</td>
                                     <td className="pt-2.5 text-right text-[#22D3EE] font-black text-xs">{formatBRL(metrics.comissaoSdrTotal || 0)}</td>
                                 </tr>
                             </tbody>
