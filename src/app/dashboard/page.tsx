@@ -57,7 +57,7 @@ type Metrics = {
 };
 
 const DARK = 'var(--bg-surface)';
-const BORDER = 'rgba(255,255,255,0.07)';
+const BORDER = 'var(--border)';
 const LIME = 'var(--accent)';
 const TEXT_SEC = 'var(--text-sec)';
 
@@ -325,12 +325,12 @@ export default function Dashboard() {
     const tooltipStyle = {
         contentStyle: {
             background: 'var(--bg-surface)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--border-str)',
             borderRadius: '8px',
-            color: '#FFFFFF',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+            color: 'var(--text-pri)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
         },
-        cursor: { fill: 'rgba(255,255,255,0.03)' }
+        cursor: { fill: 'rgba(var(--accent-rgb),0.05)' }
     };
 
     const renderTicketDonut = (title: string, data: any[] | undefined) => {
@@ -371,7 +371,7 @@ export default function Dashboard() {
             {/* Header e Filtros (mantidos iguais) */}
             <div className="mb-8 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
                 <div>
-                    <h2 className="text-3xl font-black text-white tracking-tight">Dashboard Executivo</h2>
+                    <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-pri)' }}>Dashboard Executivo</h2>
                     <p className="mt-1 text-sm" style={{ color: TEXT_SEC }}>Visão geral financeira e de performance da operação.</p>
                 </div>
 
