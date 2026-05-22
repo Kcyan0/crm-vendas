@@ -968,7 +968,7 @@ export default function KanbanBoard() {
       {/* Modal Fechamento de Venda */}
       {isSaleModalOpen && saleLead && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-md p-0 md:p-4 text-left">
-          <div className="glass-panel w-full max-w-lg p-4 md:p-6 relative border border-orange-400/30 shadow-[0_0_60px_rgba(249,115,22,0.12)] bg-[#141414] rounded-t-2xl md:rounded-2xl max-h-[90vh] overflow-y-auto">
+          <div className="modal-surface glass-panel w-full max-w-lg p-4 md:p-6 relative border border-orange-400/30 shadow-[0_0_60px_rgba(249,115,22,0.12)] rounded-t-2xl md:rounded-2xl max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex justify-between items-start mb-5">
               <div>
@@ -1266,7 +1266,7 @@ export default function KanbanBoard() {
               )}
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 pt-2 border-t border-[#222222]">
+              <div className="flex justify-end gap-3 pt-2 border-t border-str">
                 <button type="button" onClick={() => setIsSaleModalOpen(false)} className="px-4 py-2 text-sec hover:text-white transition-colors text-sm">
                   Cancelar
                 </button>
@@ -1282,7 +1282,7 @@ export default function KanbanBoard() {
       {/* Refund reason modal */}
       {isRefundModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
-          <div className="glass-panel w-full max-w-md p-6 bg-[#141414] border border-red-400/30 rounded-2xl shadow-[0_0_60px_rgba(239,68,68,0.12)]">
+          <div className="modal-surface glass-panel w-full max-w-md p-6 border border-red-400/30 rounded-2xl shadow-[0_0_60px_rgba(239,68,68,0.12)]">
             <div className="flex justify-between items-start mb-5">
               <div>
                 <h3 className="text-xl font-bold text-white">Registrar Reembolso</h3>
@@ -1315,9 +1315,9 @@ export default function KanbanBoard() {
       {/* ── Lead Detail Panel ───────────────────────────────────── */}
       {isDetailOpen && detailLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsDetailOpen(false)}>
-          <div className="relative w-full max-w-sm bg-[#141414] border border-str rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+          <div className="modal-surface relative w-full max-w-sm border border-str rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-start justify-between p-5 pb-4 border-b border-[#222]">
+            <div className="flex items-start justify-between p-5 pb-4 border-b border-str">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-black font-black text-lg shrink-0">
                   {detailLead.nome.charAt(0).toUpperCase()}
@@ -1342,7 +1342,7 @@ export default function KanbanBoard() {
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto">
             {/* Info rows */}
-            <div className="p-5 space-y-3 border-b border-[#222]">
+            <div className="p-5 space-y-3 border-b border-str">
               {detailLead.telefone && (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sec text-sm"><Phone size={14}/> Telefone</div>
@@ -1397,7 +1397,7 @@ export default function KanbanBoard() {
 
             {/* Briefing */}
             {detailLead.observacoes_gerais && (
-              <div className="px-5 py-4 border-b border-[#222]">
+              <div className="px-5 py-4 border-b border-str">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2 text-sec text-sm">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -1419,7 +1419,7 @@ export default function KanbanBoard() {
 
             {/* Venda info */}
             {detailLead.status_atual === 'Venda' && (
-              <div className="px-5 py-4 border-b border-[#222]">
+              <div className="px-5 py-4 border-b border-str">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2 text-sec text-sm">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1472,7 +1472,7 @@ export default function KanbanBoard() {
             </div>{/* end scrollable content */}
 
             {/* Footer: status + actions */}
-            <div className="p-5 flex items-center gap-3 border-t border-[#222] shrink-0">
+            <div className="p-5 flex items-center gap-3 border-t border-str shrink-0">
               <select
                 value={detailLead.status_atual}
                 onChange={e => handleDetailStatusChange(e.target.value)}

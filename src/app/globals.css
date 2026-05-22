@@ -155,6 +155,15 @@ button.btn-primary:active { transform: translateY(0); }
   color: var(--accent-text) !important;
 }
 
+/* ── Modal Surface: dark in preto, white in cinza/branco ─────────────────── */
+.modal-surface {
+  background: var(--bg-surface);
+}
+[data-mode="cinza"] .modal-surface,
+[data-mode="branco"] .modal-surface {
+  background: #FFFFFF;
+}
+
 /* ── Chart Card: always dark for readability ──────────────────────────────── */
 /* Charts keep a dark background so white axis labels remain visible */
 .chart-card {
