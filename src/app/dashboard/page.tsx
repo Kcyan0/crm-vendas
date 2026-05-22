@@ -181,6 +181,10 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                         const colors = tipo === 'SDR'
                             ? ['var(--accent)','#A3E635','#84CC16','#65A30D','#4D7C0F']
                             : ['#22D3EE','#38BDF8','#60A5FA','#818CF8','#A78BFA'];
+                        // Se a cor for uma CSS variable (var(...)), usa rgba com opacity correta
+                        // Caso contrário, concatena 'BB' para 73% de opacidade em hex
+                        const getCaixaColor = (c: string) =>
+                            c.startsWith('var(') ? `rgba(var(--accent-rgb), 0.73)` : `${c}BB`;
                         return (
                             <div key={tipo}>
                                 <p className="text-[10px] uppercase font-bold tracking-wider mb-3" style={{ color: TEXT_SEC }}>
@@ -206,7 +210,7 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
                                                         <span className="text-[9px] text-[#555] whitespace-nowrap">{formatBRL(perf.fat)} / {formatBRL(user.meta_faturamento)}</span>
                                                     </div>
                                                     <div className="flex items-center gap-3">
-                                                        <ProgressBar label="Caixa" current={perf.caixa} goal={user.meta_caixa} pct={uPctCaixa} color={colors[i % colors.length] + 'BB'} slim />
+                                                        <ProgressBar label="Caixa" current={perf.caixa} goal={user.meta_caixa} pct={uPctCaixa} color={getCaixaColor(colors[i % colors.length])} slim />
                                                         <span className="text-[9px] text-[#555] whitespace-nowrap">{formatBRL(perf.caixa)} / {formatBRL(user.meta_caixa)}</span>
                                                     </div>
                                                 </div>
