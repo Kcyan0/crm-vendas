@@ -263,17 +263,21 @@ export async function GET(request: Request) {
         const tmFaturamentoSdr    = Object.entries(sdrStats).map(([name, s]) => ({ name, value: s.count > 0 ? s.faturamento / s.count : 0 })).sort((a, b) => b.value - a.value);
         const tmCaixaSdr          = Object.entries(sdrStats).map(([name, s]) => ({ name, value: s.count > 0 ? s.caixa / s.count : 0 })).sort((a, b) => b.value - a.value);
 
-        // ─── Funnel (all-time for project) ────────────────────────────────────────
+        // ─── Funnel & Chargeback (filtered by period via data_entrada) ───────────
         const funnelStages = ['Novo', 'Follow-up', 'Agendado', 'Negociação', 'Venda', 'Reembolsado', 'Loss'];
-        let allLeadsQuery = supabase.from('leads').select('status_atual, motivo_reembolso');
-        if (projectId) allLeadsQuery = (allLeadsQuery as any).eq('id_projeto', projectId);
-        const { data: allLeads } = await allLeadsQuery;
+        let periodFunnelQuery = supabase
+            .from('leads')
+            .select('status_atual, motivo_reembolso')
+            .gte('data_entrada', startVendaFilter)
+            .lt('data_entrada', endFilter);
+        if (projectId) periodFunnelQuery = (periodFunnelQuery as any).eq('id_projeto', projectId);
+        const { data: allLeads } = await periodFunnelQuery;
         const funnelData = funnelStages.map(stage => ({
             name: stage,
             value: (allLeads || []).filter((l: any) => l.status_atual === stage || (stage === 'Loss' && l.status_atual === 'Nao prosseguiu')).length
         })).filter(s => s.value > 0);
 
-        // ─── Chargeback ───────────────────────────────────────────────────────────
+        // ─── Chargeback (same period cohort) ──────────────────────────────────────
         const reembolsados = (allLeads || []).filter((l: any) => l.status_atual === 'Reembolsado');
         const chargebackRate = (groupedSalesFat.length + reembolsados.length) > 0
             ? ((reembolsados.length / (groupedSalesFat.length + reembolsados.length)) * 100).toFixed(1)

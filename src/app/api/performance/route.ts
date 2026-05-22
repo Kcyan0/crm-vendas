@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 import { caixaInPeriod } from '@/lib/financial';
+import { todayBrasilia } from '@/lib/brasilia';
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const nowLocal = new Date();
-        nowLocal.setMinutes(nowLocal.getMinutes() - nowLocal.getTimezoneOffset());
-        const todayStr = nowLocal.toISOString().split('T')[0];
+        const todayStr = todayBrasilia();
 
         const startDate = searchParams.get('startDate') || searchParams.get('date') || todayStr;
         const endDate = searchParams.get('endDate') || searchParams.get('date') || todayStr;
@@ -175,8 +174,13 @@ export async function GET(request: Request) {
             }
         });
 
-        // Reembolsos per user (all-time for conversation rate context)
-        let reembolsadosQuery = supabase.from('leads').select('id_sdr_responsavel, id_closer_responsavel').eq('status_atual', 'Reembolsado');
+        // Reembolsos per user — filtered by data_entrada in selected period
+        let reembolsadosQuery = supabase
+            .from('leads')
+            .select('id_sdr_responsavel, id_closer_responsavel')
+            .eq('status_atual', 'Reembolsado')
+            .gte('data_entrada', `${startDate}T00:00:00`)
+            .lte('data_entrada', `${endDate}T23:59:59`);
         if (projectId) reembolsadosQuery = reembolsadosQuery.eq('id_projeto', projectId);
         const { data: reembolsados } = await reembolsadosQuery;
         (reembolsados || []).forEach((l: any) => {
