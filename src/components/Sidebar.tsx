@@ -63,7 +63,12 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                         className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center transition-colors duration-300"
                         style={{ background: 'var(--logo-bg)', border: '2px solid rgba(var(--accent-rgb), 0.3)', padding: '6px' }}
                     >
-                        <img src="/logo-transparent.png" alt="H SALES Logo" className="w-full h-full object-contain" />
+                        <img
+                            src="/logo-transparent.png"
+                            alt="H SALES Logo"
+                            className="w-full h-full object-contain"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; (e.currentTarget as HTMLImageElement).style.objectFit = 'cover'; (e.currentTarget as HTMLImageElement).style.margin = '-6px'; (e.currentTarget as HTMLImageElement).style.width = 'calc(100% + 12px)'; (e.currentTarget as HTMLImageElement).style.height = 'calc(100% + 12px)'; }}
+                        />
                     </div>
                     <div className="flex flex-col leading-tight">
                         <span className="text-white font-black text-lg tracking-tight leading-none">H SALES</span>
