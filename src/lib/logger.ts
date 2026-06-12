@@ -4,6 +4,7 @@ export interface LogParams {
     id_projeto?: number | null;
     id_usuario?: number | null;
     usuario_nome?: string | null;
+    usuario_tipo?: string | null;  // 'ADMIN' | 'EXPERT' | 'CLOSER' | 'SDR'
     tipo: string;
     descricao: string;
     meta?: Record<string, any>;
@@ -14,6 +15,11 @@ export interface LogParams {
  * Never throws — logging failures must never break the main operation.
  */
 export function logActivity(params: LogParams): void {
+    const meta = {
+        ...(params.meta ?? {}),
+        // Always embed the actor's role in meta so UI can display it
+        ...(params.usuario_tipo ? { usuario_tipo: params.usuario_tipo } : {}),
+    };
     supabase
         .from('atividades_log')
         .insert({
@@ -22,7 +28,7 @@ export function logActivity(params: LogParams): void {
             usuario_nome: params.usuario_nome ?? 'Sistema',
             tipo:         params.tipo,
             descricao:    params.descricao,
-            meta:         params.meta ?? {},
+            meta,
         })
         .then(({ error }) => {
             if (error) console.error('[logActivity]', error.message);

@@ -205,6 +205,7 @@ export async function POST(request: Request) {
             id_projeto: leadLog?.id_projeto ?? null,
             id_usuario: id_closer ?? null,
             usuario_nome: body.closer_nome ?? null,
+            usuario_tipo: body.closer_tipo ?? null,
             tipo: 'venda_registrada',
             descricao: `Venda de R$ ${totalBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} registrada para "${leadLog?.nome ?? `Lead #${id_lead}`}" via ${formas}`,
             meta: { lead_id: id_lead, lead_nome: leadLog?.nome ?? null, valor_bruto: totalBruto, formas_pagamento: formas, id_oportunidade },

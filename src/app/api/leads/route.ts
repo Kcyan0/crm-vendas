@@ -88,6 +88,7 @@ export async function PUT(request: Request) {
                 id_projeto: id_projeto ? parseInt(id_projeto) : null,
                 id_usuario: body.id_usuario ?? null,
                 usuario_nome: body.usuario_nome ?? null,
+                usuario_tipo: body.usuario_tipo ?? null,
                 tipo: 'lead_editado',
                 descricao: `Lead "${nome}" atualizado`,
                 meta: { lead_id: id_lead, lead_nome: nome },
@@ -112,6 +113,7 @@ export async function PUT(request: Request) {
                 id_projeto: projetoId,
                 id_usuario: body.id_usuario ?? null,
                 usuario_nome: body.usuario_nome ?? null,
+                usuario_tipo: body.usuario_tipo ?? null,
                 tipo: 'status_alterado',
                 descricao: `"${leadNome}" movido de ${statusAnterior} → ${status_atual}`,
                 meta: { lead_id: id_lead, lead_nome: leadNome, status_de: statusAnterior, status_para: status_atual },
@@ -139,16 +141,19 @@ export async function POST(request: Request) {
         if (error) throw error;
 
         // ─── Log activity ──────────────────────────────────────────────────────
-        // Lookup SDR name for a richer log message
+        // Lookup SDR name AND tipo for richer log
         let sdrNome = body.usuario_nome ?? null;
-        if (!sdrNome && id_sdr_responsavel) {
-            const { data: u } = await supabase.from('usuarios').select('nome').eq('id_usuario', id_sdr_responsavel).single();
-            sdrNome = u?.nome ?? null;
+        let sdrTipo = body.usuario_tipo ?? null;
+        if ((!sdrNome || !sdrTipo) && id_sdr_responsavel) {
+            const { data: u } = await supabase.from('usuarios').select('nome, tipo').eq('id_usuario', id_sdr_responsavel).single();
+            if (!sdrNome) sdrNome = u?.nome ?? null;
+            if (!sdrTipo) sdrTipo = u?.tipo ?? null;
         }
         logActivity({
             id_projeto: parseInt(id_projeto),
             id_usuario: id_sdr_responsavel ? parseInt(id_sdr_responsavel) : (body.id_usuario ?? null),
             usuario_nome: sdrNome,
+            usuario_tipo: sdrTipo,
             tipo: 'lead_criado',
             descricao: `Lead "${nome}" adicionado ao pipeline`,
             meta: { lead_id: data.id_lead, lead_nome: nome, origem: origem || null },

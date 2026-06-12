@@ -30,6 +30,14 @@ const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string; bg:
 
 const TIPOS = ["todos", ...Object.keys(TIPO_CONFIG)];
 
+/* ─── Role badge config ──────────────────────────────────────────────────── */
+const ROLE_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+    ADMIN:  { label: "Admin",  color: "#a78bfa", bg: "rgba(167,139,250,0.15)" },
+    EXPERT: { label: "Expert", color: "#f59e0b", bg: "rgba(245,158,11,0.15)"  },
+    CLOSER: { label: "Closer", color: "#fb923c", bg: "rgba(251,146,60,0.15)"  },
+    SDR:    { label: "SDR",    color: "#60a5fa", bg: "rgba(96,165,250,0.15)"  },
+};
+
 /* ─── Relative time ──────────────────────────────────────────────────────── */
 function timeAgo(iso: string): string {
     const diffMs  = Date.now() - new Date(iso).getTime();
@@ -344,7 +352,7 @@ export default function AdminPage() {
                                                 {cfg.label}
                                             </span>
 
-                                            {/* User avatar + name */}
+                                            {/* User avatar + name + role badge */}
                                             {a.usuario_nome && (
                                                 <span className="flex items-center gap-1.5 text-[11px] font-medium"
                                                       style={{ color: "var(--text-sec)" }}>
@@ -353,6 +361,16 @@ export default function AdminPage() {
                                                         {initials(a.usuario_nome)}
                                                     </span>
                                                     {a.usuario_nome}
+                                                    {/* Role pill */}
+                                                    {a.meta?.usuario_tipo && ROLE_BADGE[a.meta.usuario_tipo.toUpperCase()] && (
+                                                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider"
+                                                              style={{
+                                                                  background: ROLE_BADGE[a.meta.usuario_tipo.toUpperCase()].bg,
+                                                                  color: ROLE_BADGE[a.meta.usuario_tipo.toUpperCase()].color,
+                                                              }}>
+                                                            {ROLE_BADGE[a.meta.usuario_tipo.toUpperCase()].label}
+                                                        </span>
+                                                    )}
                                                 </span>
                                             )}
 
