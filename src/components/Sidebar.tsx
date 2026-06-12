@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X, Globe, Palette, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X, Globe, Palette, ChevronDown, ShieldCheck } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { createClient } from "@/lib/supabase/browser";
 import { useTheme, THEMES, MODES, ThemeId, ModeId } from "@/context/ThemeContext";
@@ -138,6 +138,33 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                         );
                     })}
                 </nav>
+
+                {/* ─── ADMIN section ───────────────────────────────── */}
+                <div className="px-4 mb-2">
+                    <div className="flex items-center gap-2 px-2 mb-1.5">
+                        <div className="flex-1 h-px" style={{ background: 'var(--sidebar-border)' }} />
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-sec)', opacity: 0.6 }}>Admin</span>
+                        <div className="flex-1 h-px" style={{ background: 'var(--sidebar-border)' }} />
+                    </div>
+                    {(() => {
+                        const isActive = pathname === '/admin';
+                        return (
+                            <Link
+                                href="/admin"
+                                className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-150"
+                                style={isActive
+                                    ? { background: 'var(--accent)', color: 'var(--accent-text)' }
+                                    : { color: 'var(--text-sec)' }
+                                }
+                                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-pri)'; } }}
+                                onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-sec)'; } }}
+                            >
+                                <ShieldCheck size={17} />
+                                <span className="font-semibold text-sm">Log de Atividades</span>
+                            </Link>
+                        );
+                    })()}
+                </div>
 
                 {/* Footer */}
                 <div className="p-4" style={{ borderTop: '1px solid var(--sidebar-border)' }}>

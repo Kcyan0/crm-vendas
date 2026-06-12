@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
+import { logActivity } from '@/lib/logger';
 
 export async function GET(request: Request) {
     try {
@@ -82,13 +83,40 @@ export async function PUT(request: Request) {
 
             const { error } = await supabase.from('leads').update(updateData).eq('id_lead', id_lead);
             if (error) throw error;
+
+            logActivity({
+                id_projeto: id_projeto ? parseInt(id_projeto) : null,
+                id_usuario: body.id_usuario ?? null,
+                usuario_nome: body.usuario_nome ?? null,
+                tipo: 'lead_editado',
+                descricao: `Lead "${nome}" atualizado`,
+                meta: { lead_id: id_lead, lead_nome: nome },
+            });
+
             return NextResponse.json({ success: true, id_lead });
         } else {
             if (!status_atual) return NextResponse.json({ error: 'Missing status' }, { status: 400 });
+
+            // Fetch current status for the log
+            const { data: currentLead } = await supabase.from('leads').select('status_atual, nome, id_projeto').eq('id_lead', id_lead).single();
+            const statusAnterior = currentLead?.status_atual ?? '?';
+            const leadNome       = currentLead?.nome         ?? `Lead #${id_lead}`;
+            const projetoId      = currentLead?.id_projeto   ?? null;
+
             const updatePayload: any = { status_atual };
             if (body.motivo_reembolso !== undefined) updatePayload.motivo_reembolso = body.motivo_reembolso;
             const { error } = await supabase.from('leads').update(updatePayload).eq('id_lead', id_lead);
             if (error) throw error;
+
+            logActivity({
+                id_projeto: projetoId,
+                id_usuario: body.id_usuario ?? null,
+                usuario_nome: body.usuario_nome ?? null,
+                tipo: 'status_alterado',
+                descricao: `"${leadNome}" movido de ${statusAnterior} → ${status_atual}`,
+                meta: { lead_id: id_lead, lead_nome: leadNome, status_de: statusAnterior, status_para: status_atual },
+            });
+
             return NextResponse.json({ success: true, id_lead, status_atual });
         }
     } catch (error: any) {
@@ -109,6 +137,23 @@ export async function POST(request: Request) {
 
         const { data, error } = await supabase.from('leads').insert(insertData).select('id_lead').single();
         if (error) throw error;
+
+        // ─── Log activity ──────────────────────────────────────────────────────
+        // Lookup SDR name for a richer log message
+        let sdrNome = body.usuario_nome ?? null;
+        if (!sdrNome && id_sdr_responsavel) {
+            const { data: u } = await supabase.from('usuarios').select('nome').eq('id_usuario', id_sdr_responsavel).single();
+            sdrNome = u?.nome ?? null;
+        }
+        logActivity({
+            id_projeto: parseInt(id_projeto),
+            id_usuario: id_sdr_responsavel ? parseInt(id_sdr_responsavel) : (body.id_usuario ?? null),
+            usuario_nome: sdrNome,
+            tipo: 'lead_criado',
+            descricao: `Lead "${nome}" adicionado ao pipeline`,
+            meta: { lead_id: data.id_lead, lead_nome: nome, origem: origem || null },
+        });
+
         return NextResponse.json({ success: true, id_lead: data.id_lead });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -121,10 +166,21 @@ export async function DELETE(request: Request) {
         const id_lead = url.searchParams.get('id');
         if (!id_lead) return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
 
+        // Fetch lead info before deletion for the log
+        const { data: leadInfo } = await supabase.from('leads').select('nome, id_projeto').eq('id_lead', id_lead).single();
+
         await supabase.from('vendas').delete().eq('id_lead', id_lead);
         await supabase.from('oportunidades').delete().eq('id_lead', id_lead);
         const { error } = await supabase.from('leads').delete().eq('id_lead', id_lead);
         if (error) throw error;
+
+        logActivity({
+            id_projeto: leadInfo?.id_projeto ?? null,
+            tipo: 'lead_deletado',
+            descricao: `Lead "${leadInfo?.nome ?? `#${id_lead}`}" removido do sistema`,
+            meta: { lead_id: parseInt(id_lead), lead_nome: leadInfo?.nome ?? null },
+        });
+
         return NextResponse.json({ success: true });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

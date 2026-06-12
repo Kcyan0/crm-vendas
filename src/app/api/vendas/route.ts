@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
+import { logActivity } from '@/lib/logger';
 
 export async function GET(request: Request) {
     try {
@@ -195,6 +196,19 @@ export async function POST(request: Request) {
 
         const { error: vendasErr } = await supabase.from('vendas').insert(vendasToInsert);
         if (vendasErr) throw vendasErr;
+
+        // ─── Log venda ────────────────────────────────────────────────────────
+        const { data: leadLog } = await supabase.from('leads').select('nome, id_projeto').eq('id_lead', id_lead).single();
+        const totalBruto = pagamentos.reduce((s: number, p: any) => s + (parseFloat(p.valor) || 0), 0);
+        const formas = [...new Set(pagamentos.map((p: any) => (p.forma_pagamento || 'PIX').replace(/ \(Entrada\)| \(Parcelas\)/g, '').trim()))].join(', ');
+        logActivity({
+            id_projeto: leadLog?.id_projeto ?? null,
+            id_usuario: id_closer ?? null,
+            usuario_nome: body.closer_nome ?? null,
+            tipo: 'venda_registrada',
+            descricao: `Venda de R$ ${totalBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} registrada para "${leadLog?.nome ?? `Lead #${id_lead}`}" via ${formas}`,
+            meta: { lead_id: id_lead, lead_nome: leadLog?.nome ?? null, valor_bruto: totalBruto, formas_pagamento: formas, id_oportunidade },
+        });
 
         // Soma o valor bruto real de todos os pagamentos informados para atualizar o kanban
         const totalVendaBruta = pagamentos.reduce((acc: number, p: any) => acc + (parseFloat(p.valor) || 0), 0);
