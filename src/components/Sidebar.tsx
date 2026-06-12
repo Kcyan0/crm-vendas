@@ -10,7 +10,7 @@ import { useState } from "react";
 
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {
     const pathname = usePathname();
-    const { projetos, selectedProject, setSelectedProject, isLoading, user } = useProject();
+    const { projetos, selectedProject, setSelectedProject, isLoading, user, isAdmin } = useProject();
     const { theme, mode, setTheme, setMode } = useTheme();
     const [showThemePicker, setShowThemePicker] = useState(false);
 
@@ -139,7 +139,8 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                     })}
                 </nav>
 
-                {/* ─── ADMIN section ───────────────────────────────── */}
+                {/* ─── ADMIN section — only for ADMIN / EXPERT ─────── */}
+                {isAdmin && (
                 <div className="px-4 mb-2">
                     <div className="flex items-center gap-2 px-2 mb-1.5">
                         <div className="flex-1 h-px" style={{ background: 'var(--sidebar-border)' }} />
@@ -165,6 +166,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                         );
                     })()}
                 </div>
+                )}
 
                 {/* Footer */}
                 <div className="p-4" style={{ borderTop: '1px solid var(--sidebar-border)' }}>

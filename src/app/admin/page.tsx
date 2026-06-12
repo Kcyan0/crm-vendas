@@ -53,7 +53,37 @@ function formatDate(iso: string): string {
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function AdminPage() {
-    const { selectedProject } = useProject();
+    const { selectedProject, isAdmin, isLoading: roleLoading } = useProject();
+
+    /* ─── Access gate ────────────────────────────────────────────────── */
+    if (roleLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-app)" }}>
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }} />
+                    <p className="text-sm" style={{ color: "var(--text-sec)" }}>Verificando permissões…</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!isAdmin) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "var(--bg-app)" }}>
+                <div className="text-center max-w-sm">
+                    <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
+                         style={{ background: "rgba(248,113,113,0.12)" }}>
+                        <ShieldCheck size={36} style={{ color: "#f87171" }} />
+                    </div>
+                    <h2 className="text-2xl font-black mb-2" style={{ color: "var(--text-pri)" }}>Acesso Restrito</h2>
+                    <p className="text-sm leading-relaxed" style={{ color: "var(--text-sec)" }}>
+                        Essa área é exclusiva para usuários com cargo <strong style={{ color: "var(--text-pri)" }}>Admin</strong> ou <strong style={{ color: "var(--text-pri)" }}>Expert</strong>.
+                        <br />Entre em contato com o administrador do sistema.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     const [atividades, setAtividades]     = useState<Atividade[]>([]);
     const [total, setTotal]               = useState(0);

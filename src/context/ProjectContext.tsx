@@ -10,6 +10,7 @@ type Projeto = {
 
 type UserType = {
     email: string;
+    tipo?: string | null;   // 'ADMIN' | 'EXPERT' | 'CLOSER' | 'SDR' | null
 } | null;
 
 type ProjectContextType = {
@@ -18,6 +19,7 @@ type ProjectContextType = {
     setSelectedProject: (projeto: Projeto) => void;
     isLoading: boolean;
     user: UserType;
+    isAdmin: boolean;   // true for ADMIN or EXPERT roles
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -36,7 +38,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
                 const supabase = createClient();
                 const { data: { user: authUser } } = await supabase.auth.getUser();
                 if (authUser && authUser.email) {
-                    setUser({ email: authUser.email });
+                    // Look up the user's role in our usuarios table
+                    const { data: dbUser } = await supabase
+                        .from('usuarios')
+                        .select('tipo')
+                        .eq('email', authUser.email.toLowerCase().trim())
+                        .maybeSingle();
+                    setUser({ email: authUser.email, tipo: dbUser?.tipo ?? null });
                 }
                 const res = await fetch('/api/projetos');
                 const data = await res.json();
@@ -74,13 +82,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         window.location.reload();
     };
 
+    const ADMIN_ROLES = ['ADMIN', 'EXPERT'];
+    const isAdmin = !!(user && ADMIN_ROLES.includes((user.tipo ?? '').toUpperCase()));
+
     return (
         <ProjectContext.Provider value={{
             projetos,
             selectedProject,
             setSelectedProject: handleSelectProject,
             isLoading,
-            user
+            user,
+            isAdmin,
         }}>
             {children}
         </ProjectContext.Provider>
