@@ -20,6 +20,7 @@ type ProjectContextType = {
     isLoading: boolean;
     user: UserType;
     isAdmin: boolean;   // true for ADMIN or EXPERT roles
+    userName: string;   // display name for activity logs
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -38,15 +39,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
                 const supabase = createClient();
                 const { data: { user: authUser } } = await supabase.auth.getUser();
                 if (authUser && authUser.email) {
-                    // Look up the user's role in our usuarios table
+                    // Look up the user's role AND name in our usuarios table
                     const { data: dbUser } = await supabase
                         .from('usuarios')
-                        .select('tipo')
+                        .select('tipo, nome')
                         .eq('email', authUser.email.toLowerCase().trim())
                         .maybeSingle();
                     // If NOT in the team table → system owner → treat as ADMIN
                     const tipo = dbUser ? (dbUser.tipo ?? null) : 'ADMIN';
-                    setUser({ email: authUser.email, tipo });
+                    // Display name: from table if found, else email prefix
+                    const nome = dbUser?.nome ?? authUser.email.split('@')[0];
+                    setUser({ email: authUser.email, tipo, nome } as any);
                 }
                 const res = await fetch('/api/projetos');
                 const data = await res.json();
@@ -85,7 +88,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     };
 
     const ADMIN_ROLES = ['ADMIN', 'EXPERT'];
-    const isAdmin = !!(user && ADMIN_ROLES.includes((user.tipo ?? '').toUpperCase()));
+    const isAdmin = !!(user && ADMIN_ROLES.includes(((user as any).tipo ?? '').toUpperCase()));
+    const userName: string = (user as any)?.nome ?? (user?.email?.split('@')[0] ?? 'Usuário');
 
     return (
         <ProjectContext.Provider value={{
@@ -95,6 +99,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             isLoading,
             user,
             isAdmin,
+            userName,
         }}>
             {children}
         </ProjectContext.Provider>

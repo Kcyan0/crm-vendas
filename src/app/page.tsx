@@ -37,7 +37,7 @@ const KANBAN_COLUMNS = [
 ];
 
 export default function KanbanBoard() {
-  const { selectedProject } = useProject();
+  const { selectedProject, userName } = useProject();
   const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -319,7 +319,7 @@ export default function KanbanBoard() {
       await fetch("/api/leads", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_lead, status_atual: status_novo }),
+        body: JSON.stringify({ id_lead, status_atual: status_novo, usuario_nome: userName }),
       });
       await logActivity(id_lead, `Status alterado para "${status_novo}"`);
     } catch (err) {
@@ -381,7 +381,8 @@ export default function KanbanBoard() {
           is_full_update: isEdit ? true : undefined,
           id_sdr_responsavel: formData.id_sdr_responsavel ? parseInt(formData.id_sdr_responsavel) : null,
           id_closer_responsavel: formData.id_closer_responsavel ? parseInt(formData.id_closer_responsavel) : null,
-          id_projeto: selectedProject.id_projeto
+          id_projeto: selectedProject.id_projeto,
+          usuario_nome: userName,
         }),
       });
       setIsModalOpen(false);
@@ -414,7 +415,8 @@ export default function KanbanBoard() {
           observacoes: saleObservacoes,
           id_sdr: saleLead.id_sdr_responsavel,
           id_closer: saleLead.id_closer_responsavel,
-          data_venda: saleDate
+          data_venda: saleDate,
+          closer_nome: userName,
         }),
       });
 
@@ -543,7 +545,7 @@ export default function KanbanBoard() {
       await fetch('/api/leads', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_lead: refundLeadId, status_atual: 'Reembolsado', motivo_reembolso: motivo })
+        body: JSON.stringify({ id_lead: refundLeadId, status_atual: 'Reembolsado', motivo_reembolso: motivo, usuario_nome: userName })
       });
       await logActivity(refundLeadId, `Reembolsado — motivo: "${motivo}"`);
       setLeads(prev => prev.map(l => l.id_lead === refundLeadId ? { ...l, status_atual: 'Reembolsado' } : l));
@@ -611,7 +613,7 @@ export default function KanbanBoard() {
     }
     setDetailStatusSaving(true);
     try {
-      await fetch('/api/leads', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_lead: detailLead.id_lead, status_atual: newStatus }) });
+      await fetch('/api/leads', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_lead: detailLead.id_lead, status_atual: newStatus, usuario_nome: userName }) });
       setDetailLead(prev => prev ? { ...prev, status_atual: newStatus } : prev);
       setLeads(prev => prev.map(l => l.id_lead === detailLead.id_lead ? { ...l, status_atual: newStatus } : l));
       await logActivity(detailLead.id_lead, `Status alterado para "${newStatus}"`);
