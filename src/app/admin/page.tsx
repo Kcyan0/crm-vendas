@@ -97,7 +97,7 @@ export default function AdminPage() {
 
     const LIMIT = 40;
     const offset = useRef(0);
-    const intervalRef = useRef<ReturnType<typeof setInterval>>();
+    const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
     /* ─── Fetch ──────────────────────────────────────────────────────── */
     const fetchAtividades = useCallback(async (reset = true) => {
