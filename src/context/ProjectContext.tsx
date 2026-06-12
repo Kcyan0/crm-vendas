@@ -44,7 +44,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
                         .select('tipo')
                         .eq('email', authUser.email.toLowerCase().trim())
                         .maybeSingle();
-                    setUser({ email: authUser.email, tipo: dbUser?.tipo ?? null });
+                    // If NOT in the team table → system owner → treat as ADMIN
+                    const tipo = dbUser ? (dbUser.tipo ?? null) : 'ADMIN';
+                    setUser({ email: authUser.email, tipo });
                 }
                 const res = await fetch('/api/projetos');
                 const data = await res.json();
