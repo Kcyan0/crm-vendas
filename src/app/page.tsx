@@ -130,8 +130,10 @@ export default function KanbanBoard() {
     }
   };
 
-  const calcFee = (gatewayName: string, valor: string, entradaStr?: string) => {
-    const gw = gateways.find(g => g.nome === gatewayName);
+  // gwList: optional override — pass fresh gateways when the React state may be stale
+  const calcFee = (gatewayName: string, valor: string, entradaStr?: string, gwList?: any[]) => {
+    const list = gwList ?? gateways;
+    const gw = list.find((g: any) => g.nome === gatewayName);
     if (!gw) return { total: "0", entrada: "0" };
     let v = parseFloat(valor) || 0;
     let entrada = parseFloat(entradaStr || "0") || 0;
@@ -264,10 +266,17 @@ export default function KanbanBoard() {
             // Has prior vendas — open edit flow so user can review/update
             handleOpenEditSale({ stopPropagation: () => {} } as any, leadInfo);
           } else {
-          const freshGateways = gateways.length > 0 ? gateways : await fetch('/api/gateways').then(r => r.json()).then((d: any[]) => d.filter((g: any) => g.ativo !== false && g.ativo !== 0));
-          const defaultGw = freshGateways[0]?.nome || "PIX";
+          // Always fetch fresh project-scoped gateways so calcFee gets the current rates.
+          // Using gateways state would risk stale/empty data from a previous render.
+          const projectParam = selectedProject?.id_projeto ? `?projectId=${selectedProject.id_projeto}` : '';
+          const freshGws: any[] = await fetch(`/api/gateways${projectParam}`)
+            .then(r => r.json())
+            .then((d: any[]) => d.filter((g: any) => g.ativo !== false && g.ativo !== 0));
+          setGateways(freshGws); // update state so modal uses fresh rates too
+          const defaultGw = freshGws[0]?.nome || "PIX";
           const propValue = leadInfo.valor_proposta ? leadInfo.valor_proposta.toString() : "";
-          const initialFeeCalc = propValue ? calcFee(defaultGw, propValue) : { total: "0", entrada: "0" };
+          // Pass freshGws directly — React state update above won't be visible yet in this closure
+          const initialFeeCalc = propValue ? calcFee(defaultGw, propValue, undefined, freshGws) : { total: "0", entrada: "0" };
           const initialPagamento = {
             id: Math.random().toString(36).slice(2),
             forma_pagamento: defaultGw,
@@ -283,8 +292,6 @@ export default function KanbanBoard() {
           setPagamentos([initialPagamento]);
           setSaleObservacoes("");
           setSaleLead(leadInfo);
-          // Refresh gateways to get latest tax configs from settings (skipReset=true)
-          await fetchGateways(true);
           setIsSaleModalOpen(true);
           } // end else (no existing vendas)
         }
