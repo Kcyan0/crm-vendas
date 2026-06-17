@@ -14,7 +14,7 @@ export async function GET() {
         const { data: userAccounts, error: userError } = await supabaseAdmin
             .from('usuarios')
             .select('id_projeto')
-            .eq('email', user.email)
+            .ilike('email', user.email)   // case-insensitive — Auth always lowercases
             .eq('ativo', true);
 
         if (userError) throw userError;

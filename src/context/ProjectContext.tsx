@@ -43,7 +43,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
                     const { data: dbUser } = await supabase
                         .from('usuarios')
                         .select('tipo, nome')
-                        .eq('email', authUser.email.toLowerCase().trim())
+                        .ilike('email', authUser.email.trim())  // case-insensitive
                         .maybeSingle();
                     // If NOT in the team table → system owner → treat as ADMIN
                     const tipo = dbUser ? (dbUser.tipo ?? null) : 'ADMIN';
