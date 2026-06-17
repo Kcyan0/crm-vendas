@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
         const { data, error } = await supabase
             .from('usuarios')
-            .insert({ nome, email, tipo, salario_fixo_mensal: salario || 0, percentual_comissao_sdr: pctSdr || 0, percentual_comissao_closer: pctCloser || 0, id_projeto })
+            .insert({ nome, email, tipo, ativo: true, salario_fixo_mensal: salario || 0, percentual_comissao_sdr: pctSdr || 0, percentual_comissao_closer: pctCloser || 0, id_projeto })
             .select('id_usuario')
             .single();
 
