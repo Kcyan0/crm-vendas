@@ -678,26 +678,32 @@ export default function KanbanBoard() {
             <Download size={16} />
             <span>Exportar</span>
           </button>
-          <select
-            className="bg-surface border border-str text-sec text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400"
-            value={filterSdr}
-            onChange={e => setFilterSdr(e.target.value)}
-          >
-            <option value="">Todos SDRs</option>
-            {users.filter((u: any) => u.tipo === 'SDR' || u.tipo === 'ADM').map((u: any) => (
-              <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
-            ))}
-          </select>
-          <select
-            className="bg-surface border border-str text-sec text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400"
-            value={filterCloser}
-            onChange={e => setFilterCloser(e.target.value)}
-          >
-            <option value="">Todos Closers</option>
-            {users.filter((u: any) => u.tipo === 'CLOSER' || u.tipo === 'ADM').map((u: any) => (
-              <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              className="appearance-none bg-surface border border-str text-sec text-sm rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-orange-400 w-full"
+              value={filterSdr}
+              onChange={e => setFilterSdr(e.target.value)}
+            >
+              <option value="">Todos SDRs</option>
+              {users.filter((u: any) => u.tipo === 'SDR' || u.tipo === 'ADM').map((u: any) => (
+                <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] opacity-50" style={{ color: 'var(--text-sec)' }}>▼</span>
+          </div>
+          <div className="relative">
+            <select
+              className="appearance-none bg-surface border border-str text-sec text-sm rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-orange-400 w-full"
+              value={filterCloser}
+              onChange={e => setFilterCloser(e.target.value)}
+            >
+              <option value="">Todos Closers</option>
+              {users.filter((u: any) => u.tipo === 'CLOSER' || u.tipo === 'ADM').map((u: any) => (
+                <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] opacity-50" style={{ color: 'var(--text-sec)' }}>▼</span>
+          </div>
           {/* ─── Payment method filter — accordion ───────────────── */}
           {(() => {
             const allFormas = Array.from(
