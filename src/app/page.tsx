@@ -54,6 +54,7 @@ export default function KanbanBoard() {
   const [searchTerm, setSearchTerm] = useState("");
   // Payment method filter (multi-select)
   const [filterFormas, setFilterFormas] = useState<string[]>([]);
+  const [showFormasFilter, setShowFormasFilter] = useState(false);
   // Refund modal state
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [refundLeadId, setRefundLeadId] = useState<number | null>(null);
@@ -697,47 +698,71 @@ export default function KanbanBoard() {
               <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
             ))}
           </select>
-          {/* ─── Payment method filter chips ─────────────────────── */}
+          {/* ─── Payment method filter — accordion ───────────────── */}
           {(() => {
             const allFormas = Array.from(
               new Set(leads.flatMap(l => l.formas_pagamento || []))
             ).sort();
             if (allFormas.length === 0) return null;
             return (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-semibold whitespace-nowrap" style={{ color: 'var(--text-sec)' }}>Pagamento:</span>
-                {allFormas.map(forma => {
-                  const isActive = filterFormas.includes(forma);
-                  return (
-                    <button
-                      key={forma}
-                      onClick={() =>
-                        setFilterFormas(prev =>
-                          isActive ? prev.filter(f => f !== forma) : [...prev, forma]
-                        )
-                      }
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-150 whitespace-nowrap"
-                      style={{
-                        background: isActive ? 'var(--accent)' : 'var(--bg-surface)',
-                        color: isActive ? '#0A0A0A' : 'var(--text-sec)',
-                        border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-str)'}`,
-                      }}
-                    >
-                      {forma}
-                      {isActive && (
-                        <span className="ml-0.5 opacity-70 text-[10px]">✕</span>
-                      )}
-                    </button>
-                  );
-                })}
-                {filterFormas.length > 0 && (
-                  <button
-                    onClick={() => setFilterFormas([])}
-                    className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
-                    style={{ color: 'var(--text-sec)', border: '1px solid var(--border-str)', background: 'var(--bg-surface)' }}
+              <div className="flex flex-col gap-1.5">
+                {/* Toggle button */}
+                <button
+                  onClick={() => setShowFormasFilter(v => !v)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap"
+                  style={{
+                    background: filterFormas.length > 0 ? 'var(--accent)' : 'var(--bg-surface)',
+                    color: filterFormas.length > 0 ? '#0A0A0A' : 'var(--text-sec)',
+                    border: `1px solid ${filterFormas.length > 0 ? 'var(--accent)' : 'var(--border-str)'}`,
+                  }}
+                >
+                  💳 Pagamento
+                  {filterFormas.length > 0 && (
+                    <span className="ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black" style={{ background: 'rgba(0,0,0,0.25)' }}>
+                      {filterFormas.length}
+                    </span>
+                  )}
+                  <span className="ml-0.5 text-[10px] opacity-60" style={{ transform: showFormasFilter ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
+                </button>
+
+                {/* Collapsible chip row */}
+                {showFormasFilter && (
+                  <div
+                    className="flex items-center gap-1.5 flex-wrap p-2 rounded-xl"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-str)' }}
                   >
-                    Limpar
-                  </button>
+                    {allFormas.map(forma => {
+                      const isActive = filterFormas.includes(forma);
+                      return (
+                        <button
+                          key={forma}
+                          onClick={() =>
+                            setFilterFormas(prev =>
+                              isActive ? prev.filter(f => f !== forma) : [...prev, forma]
+                            )
+                          }
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-150 whitespace-nowrap"
+                          style={{
+                            background: isActive ? 'var(--accent)' : 'var(--bg-app)',
+                            color: isActive ? '#0A0A0A' : 'var(--text-sec)',
+                            border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-str)'}`,
+                          }}
+                        >
+                          {forma}
+                          {isActive && <span className="ml-0.5 opacity-70 text-[10px]">✕</span>}
+                        </button>
+                      );
+                    })}
+                    {filterFormas.length > 0 && (
+                      <button
+                        onClick={() => setFilterFormas([])}
+                        className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
+                        style={{ color: 'var(--text-sec)', border: '1px solid var(--border-str)', background: 'var(--bg-app)' }}
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             );
