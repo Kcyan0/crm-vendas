@@ -61,7 +61,29 @@ export async function GET(request: Request) {
             valor_pendente: pendenteMap[l.id_lead] || 0,
         }));
 
-        return NextResponse.json(leadsWithPendente);
+        // ─── Enrich leads with payment methods ────────────────────────────────
+        const allLeadIds = leads.map((l: any) => l.id_lead);
+        let formasMap: Record<number, string[]> = {};
+        if (allLeadIds.length > 0) {
+            const { data: vendaFormas } = await supabase
+                .from('vendas')
+                .select('id_lead, forma_pagamento')
+                .in('id_lead', allLeadIds);
+            for (const v of vendaFormas || []) {
+                const base = (v.forma_pagamento || '')
+                    .replace(/ \(Entrada\)| \(Parcelas\)/g, '').trim();
+                if (!base) continue;
+                if (!formasMap[v.id_lead]) formasMap[v.id_lead] = [];
+                if (!formasMap[v.id_lead].includes(base)) formasMap[v.id_lead].push(base);
+            }
+        }
+
+        const enriched = leadsWithPendente.map((l: any) => ({
+            ...l,
+            formas_pagamento: formasMap[l.id_lead] || [],
+        }));
+
+        return NextResponse.json(enriched);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

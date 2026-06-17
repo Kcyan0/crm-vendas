@@ -24,6 +24,7 @@ type Lead = {
   data_entrada: string;
   tem_pendente?: boolean;
   valor_pendente?: number;
+  formas_pagamento?: string[];  // payment methods from vendas table
 };
 
 const KANBAN_COLUMNS = [
@@ -51,6 +52,8 @@ export default function KanbanBoard() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  // Payment method filter (multi-select)
+  const [filterFormas, setFilterFormas] = useState<string[]>([]);
   // Refund modal state
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [refundLeadId, setRefundLeadId] = useState<number | null>(null);
@@ -694,6 +697,51 @@ export default function KanbanBoard() {
               <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
             ))}
           </select>
+          {/* ─── Payment method filter chips ─────────────────────── */}
+          {(() => {
+            const allFormas = Array.from(
+              new Set(leads.flatMap(l => l.formas_pagamento || []))
+            ).sort();
+            if (allFormas.length === 0) return null;
+            return (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-semibold whitespace-nowrap" style={{ color: 'var(--text-sec)' }}>Pagamento:</span>
+                {allFormas.map(forma => {
+                  const isActive = filterFormas.includes(forma);
+                  return (
+                    <button
+                      key={forma}
+                      onClick={() =>
+                        setFilterFormas(prev =>
+                          isActive ? prev.filter(f => f !== forma) : [...prev, forma]
+                        )
+                      }
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-150 whitespace-nowrap"
+                      style={{
+                        background: isActive ? 'var(--accent)' : 'var(--bg-surface)',
+                        color: isActive ? '#0A0A0A' : 'var(--text-sec)',
+                        border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-str)'}`,
+                      }}
+                    >
+                      {forma}
+                      {isActive && (
+                        <span className="ml-0.5 opacity-70 text-[10px]">✕</span>
+                      )}
+                    </button>
+                  );
+                })}
+                {filterFormas.length > 0 && (
+                  <button
+                    onClick={() => setFilterFormas([])}
+                    className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
+                    style={{ color: 'var(--text-sec)', border: '1px solid var(--border-str)', background: 'var(--bg-surface)' }}
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+            );
+          })()}
           <button
             className="btn-primary flex-1 md:flex-none justify-center flex items-center gap-2 whitespace-nowrap"
             onClick={handleOpenCreate}
@@ -711,6 +759,10 @@ export default function KanbanBoard() {
             if (l.status_atual !== col && !(col === 'Loss' && l.status_atual === 'Nao prosseguiu')) return false;
             if (filterSdr && String(l.id_sdr_responsavel) !== filterSdr) return false;
             if (filterCloser && String(l.id_closer_responsavel) !== filterCloser) return false;
+            if (filterFormas.length > 0) {
+              const leadFormas = l.formas_pagamento || [];
+              if (!filterFormas.some(f => leadFormas.includes(f))) return false;
+            }
             if (searchTerm && !l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && !l.telefone?.includes(searchTerm)) return false;
             return true;
           });
