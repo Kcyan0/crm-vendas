@@ -709,20 +709,16 @@ export default function KanbanBoard() {
                 {/* Toggle button */}
                 <button
                   onClick={() => setShowFormasFilter(v => !v)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap"
-                  style={{
-                    background: filterFormas.length > 0 ? 'var(--accent)' : 'var(--bg-surface)',
-                    color: filterFormas.length > 0 ? '#0A0A0A' : 'var(--text-sec)',
-                    border: `1px solid ${filterFormas.length > 0 ? 'var(--accent)' : 'var(--border-str)'}`,
-                  }}
+                  className="bg-surface border border-str text-sec text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400 flex items-center gap-1.5 whitespace-nowrap transition-all duration-150"
+                  style={filterFormas.length > 0 ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : {}}
                 >
-                  💳 Pagamento
+                  Pagamento
                   {filterFormas.length > 0 && (
-                    <span className="ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black" style={{ background: 'rgba(0,0,0,0.25)' }}>
+                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black" style={{ background: 'var(--accent)', color: '#0A0A0A' }}>
                       {filterFormas.length}
                     </span>
                   )}
-                  <span className="ml-0.5 text-[10px] opacity-60" style={{ transform: showFormasFilter ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
+                  <span className="text-[10px] opacity-50" style={{ transform: showFormasFilter ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
                 </button>
 
                 {/* Collapsible chip row */}
