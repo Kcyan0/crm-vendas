@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Phone, Instagram, Clock, Download } from "lucide-react";
+import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV } from '@/lib/exportUtils';
 import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
+import { createClient as createBrowserClient } from '@/lib/supabase/browser';
 
 type Lead = {
   id_lead: number;
@@ -77,6 +78,10 @@ export default function KanbanBoard() {
   const [saleObservacoes, setSaleObservacoes] = useState("");
   const [showCaixaBreakdown, setShowCaixaBreakdown] = useState(false);
   const [saleDate, setSaleDate] = useState(() => todayBrasilia());
+  // Comprovante upload state
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  const [comprovantePreview, setComprovantePreview] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   // Detail panel state
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -429,6 +434,35 @@ export default function KanbanBoard() {
         throw new Error(err.error || `HTTP ${res.status}`);
       }
 
+      const saleData = await res.json();
+
+      // ── Upload comprovante se houver ───────────────────────────────────
+      if (comprovanteFile && saleData.id_oportunidade) {
+        try {
+          const supabase = createBrowserClient();
+          const ext = comprovanteFile.name.split('.').pop();
+          const path = `${saleLead.id_lead}/${saleData.id_oportunidade}_${Date.now()}.${ext}`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('comprovantes')
+            .upload(path, comprovanteFile, { upsert: true });
+
+          if (!uploadError && uploadData) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('comprovantes')
+              .getPublicUrl(path);
+
+            // Salvar URL na oportunidade
+            await supabase
+              .from('oportunidades')
+              .update({ comprovante_url: publicUrl })
+              .eq('id_oportunidade', saleData.id_oportunidade);
+          }
+        } catch (uploadErr) {
+          console.warn('Comprovante upload falhou (venda salva normalmente):', uploadErr);
+        }
+      }
+
       await logActivity(currentLeadId, isEdit ? 'Venda editada' : 'Venda registrada');
       setIsSaleModalOpen(false);
       setSaleLead(null);
@@ -436,6 +470,8 @@ export default function KanbanBoard() {
       setShowCaixaBreakdown(false);
       setPagamentos([newPagamento(gateways[0]?.nome || "")]);
       setSaleDate(todayBrasilia());
+      setComprovanteFile(null);
+      setComprovantePreview(null);
       fetchLeads();
     } catch (err: any) {
       console.error('Sale save error:', err);
@@ -1353,9 +1389,82 @@ export default function KanbanBoard() {
                 </div>
               )}
 
+              {/* ── Comprovante de Pagamento ─────────────────────── */}
+              <div>
+                <label className="block text-xs text-sec mb-2 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Paperclip size={11} />
+                  Comprovante de Pagamento
+                  <span className="text-[10px] font-normal opacity-50 normal-case tracking-normal">(opcional)</span>
+                </label>
+
+                {comprovantePreview ? (
+                  // Preview da imagem selecionada
+                  <div className="relative rounded-xl overflow-hidden border border-orange-400/30 group">
+                    <img
+                      src={comprovantePreview}
+                      alt="Preview do comprovante"
+                      className="w-full max-h-48 object-contain bg-black/40"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => { setComprovanteFile(null); setComprovantePreview(null); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
+                        style={{ background: 'rgba(239,68,68,0.85)', color: '#fff' }}
+                      >
+                        <X size={12} /> Remover
+                      </button>
+                    </div>
+                    <div className="absolute bottom-2 left-2 text-[10px] font-medium px-2 py-0.5 rounded-md" style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--text-sec)' }}>
+                      {comprovanteFile?.name}
+                    </div>
+                  </div>
+                ) : (
+                  // Zona de drop
+                  <label
+                    className="flex flex-col items-center justify-center gap-2 w-full rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 py-6"
+                    style={{
+                      borderColor: isDraggingOver ? 'var(--accent)' : 'var(--border-str)',
+                      background: isDraggingOver ? 'rgba(var(--accent-rgb),0.06)' : 'var(--bg-surface)',
+                    }}
+                    onDragOver={ev => { ev.preventDefault(); setIsDraggingOver(true); }}
+                    onDragLeave={() => setIsDraggingOver(false)}
+                    onDrop={ev => {
+                      ev.preventDefault();
+                      setIsDraggingOver(false);
+                      const file = ev.dataTransfer.files?.[0];
+                      if (file && file.type.startsWith('image/')) {
+                        setComprovanteFile(file);
+                        setComprovantePreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={ev => {
+                        const file = ev.target.files?.[0];
+                        if (file) {
+                          setComprovanteFile(file);
+                          setComprovantePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(var(--accent-rgb),0.1)' }}>
+                      <ImageIcon size={20} style={{ color: 'var(--accent)' }} />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold" style={{ color: 'var(--text-pri)' }}>Clique ou arraste a imagem</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-sec)' }}>PNG, JPG, WEBP — até 5MB</p>
+                    </div>
+                  </label>
+                )}
+              </div>
+
               {/* Actions */}
               <div className="flex justify-end gap-3 pt-2 border-t border-str">
-                <button type="button" onClick={() => setIsSaleModalOpen(false)} className="px-4 py-2 text-sec hover:text-white transition-colors text-sm">
+                <button type="button" onClick={() => { setIsSaleModalOpen(false); setComprovanteFile(null); setComprovantePreview(null); }} className="px-4 py-2 text-sec hover:text-white transition-colors text-sm">
                   Cancelar
                 </button>
                 <button type="submit" className="btn-primary px-6 py-2 justify-center">
@@ -1551,6 +1660,31 @@ export default function KanbanBoard() {
                           ))}
                         </div>
                       )}
+                    </div>
+                  );
+                })()}
+
+                {/* Comprovante thumbnail */}
+                {detailVendas.some(v => v.comprovante_url) && (() => {
+                  const url = detailVendas.find(v => v.comprovante_url)?.comprovante_url;
+                  return (
+                    <div className="rounded-xl overflow-hidden border border-str mt-4">
+                      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[#222]">
+                        <Paperclip size={13} style={{ color: 'var(--accent)' }} />
+                        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-sec)' }}>Comprovante</span>
+                      </div>
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="block group relative">
+                        <img
+                          src={url}
+                          alt="Comprovante de pagamento"
+                          className="w-full max-h-52 object-contain bg-black/40 transition-opacity group-hover:opacity-80"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: 'rgba(0,0,0,0.7)', color: '#fff' }}>
+                            Abrir em tela cheia ↗
+                          </span>
+                        </div>
+                      </a>
                     </div>
                   );
                 })()}

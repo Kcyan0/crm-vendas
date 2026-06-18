@@ -46,12 +46,18 @@ export async function GET(request: Request) {
 
         const { data, error } = await supabase
             .from('vendas')
-            .select('*')
+            .select('*, oportunidades(comprovante_url)')
             .eq('id_lead', leadId)
             .order('data_venda', { ascending: true });
 
         if (error) throw error;
-        return NextResponse.json(data || []);
+        // Flatten comprovante_url from the joined oportunidade
+        const rows = (data || []).map((v: any) => ({
+            ...v,
+            comprovante_url: v.oportunidades?.comprovante_url ?? null,
+            oportunidades: undefined,
+        }));
+        return NextResponse.json(rows);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
