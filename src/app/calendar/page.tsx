@@ -75,6 +75,8 @@ function CalendarContent() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [saving, setSaving] = useState(false);
   const [pendingVendas, setPendingVendas] = useState<PendingVenda[]>([]);
+  // Day overflow popup
+  const [dayPopup, setDayPopup] = useState<Date | null>(null);
   const [formData, setFormData] = useState({
     titulo: "",
     data: "",
@@ -388,7 +390,13 @@ function CalendarContent() {
                         </div>
                       ))}
                       {(dayChamadas.length + getPendingForDay(day).length) > 4 && (
-                        <div className="text-[10px] text-sec font-semibold">+{dayChamadas.length + getPendingForDay(day).length - 4} mais</div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDayPopup(day); }}
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-md transition-all hover:opacity-80"
+                          style={{ background: 'var(--accent)', color: '#0A0A0A' }}
+                        >
+                          +{dayChamadas.length + getPendingForDay(day).length - 4} mais
+                        </button>
                       )}
                     </div>
                   </div>
@@ -397,6 +405,77 @@ function CalendarContent() {
             </div>
           )}
         </div>
+
+        {/* ── Day overflow popup ─────────────────────────────────────── */}
+        {dayPopup && (() => {
+          const popupDate = dayPopup;
+          const popChamadas = chamadas.filter(c => {
+            const d = new Date(c.data_hora_inicio);
+            return d.getFullYear() === popupDate.getFullYear() &&
+                   d.getMonth() === popupDate.getMonth() &&
+                   d.getDate() === popupDate.getDate();
+          });
+          const popPendentes = getPendingForDay(popupDate);
+          const fmt = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              onClick={() => setDayPopup(null)}
+            >
+              <div
+                className="glass-panel bg-surface rounded-2xl border border-str shadow-2xl w-full max-w-sm mx-4 overflow-hidden"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-str">
+                  <h3 className="font-bold text-white text-base">
+                    {popupDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                  </h3>
+                  <button onClick={() => setDayPopup(null)} className="text-sec hover:text-white transition-colors">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Events list */}
+                <div className="max-h-96 overflow-y-auto p-4 space-y-2">
+                  {popChamadas.map(c => (
+                    <button
+                      key={c.id_chamada}
+                      onClick={() => { setDayPopup(null); handleEditChamada(c); }}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-black transition-opacity hover:opacity-80 ${STATUS_COLORS[c.status_chamada] || 'bg-blue-500'}`}
+                    >
+                      <div className="font-bold">
+                        {new Date(c.data_hora_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} — {c.titulo}
+                      </div>
+                      {c.lead && <div className="opacity-70 font-medium mt-0.5">👤 {c.lead.nome}</div>}
+                      {c.closer && <div className="opacity-70 font-medium">🎯 {c.closer.nome}</div>}
+                    </button>
+                  ))}
+                  {popPendentes.map(v => (
+                    <div
+                      key={`pv-${v.id_venda}`}
+                      className="px-3 py-2.5 rounded-xl text-xs font-bold text-[#0A0A0A] bg-amber-400"
+                    >
+                      <div className="font-bold">💰 A Receber — {fmt(v.valor_bruto)}</div>
+                      {v.lead && <div className="opacity-70 font-medium mt-0.5">{v.lead.nome}</div>}
+                      <div className="opacity-70 font-medium">{v.forma_pagamento}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer */}
+                <div className="px-4 pb-4 pt-2 border-t border-str">
+                  <button
+                    onClick={() => { setDayPopup(null); handleDayClick(popupDate); }}
+                    className="btn-primary w-full justify-center flex items-center gap-2 text-sm"
+                  >
+                    <Plus size={14} /> Novo Agendamento neste dia
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Sidebar de próximos eventos */}
         <div className="w-72 flex flex-col gap-4">
