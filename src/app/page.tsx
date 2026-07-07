@@ -56,6 +56,11 @@ export default function KanbanBoard() {
   // Payment method filter (multi-select)
   const [filterFormas, setFilterFormas] = useState<string[]>([]);
   const [showFormasFilter, setShowFormasFilter] = useState(false);
+  // Export menu state
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showNamesModal, setShowNamesModal] = useState(false);
+  const [selectedNamesColumns, setSelectedNamesColumns] = useState<string[]>([...KANBAN_COLUMNS]);
+  const [namesCopied, setNamesCopied] = useState(false);
   // Refund modal state
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [refundLeadId, setRefundLeadId] = useState<number | null>(null);
@@ -705,15 +710,49 @@ export default function KanbanBoard() {
             <span className="text-[#333]">-</span>
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-transparent border-none text-sm text-sec outline-none focus:ring-0 p-2" title="Data Final" />
           </div>
-          <button
-            onClick={handleExportCSV}
-            title="Exportar leads para planilha CSV"
-            className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-colors"
-            style={{ background: 'var(--accent)', color: '#0A0A0A', border: '1px solid transparent' }}
-          >
-            <Download size={16} />
-            <span>Exportar</span>
-          </button>
+          {/* ─── Export dropdown ──────────────────────────────────── */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(v => !v)}
+              title="Opções de exportação"
+              className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-colors"
+              style={{ background: 'var(--accent)', color: '#0A0A0A', border: '1px solid transparent' }}
+            >
+              <Download size={16} />
+              <span>Exportar</span>
+              <span className="text-[10px] opacity-60 ml-0.5" style={{ transform: showExportMenu ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
+            </button>
+
+            {showExportMenu && (
+              <div
+                className="absolute top-full left-0 mt-1 z-30 rounded-xl overflow-hidden shadow-xl border border-str"
+                style={{ background: 'var(--bg-surface)', minWidth: '160px' }}
+              >
+                <button
+                  onClick={() => { setShowExportMenu(false); handleExportCSV(); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/5 text-left"
+                  style={{ color: 'var(--text-pri)' }}
+                >
+                  <Download size={14} style={{ color: 'var(--accent)' }} />
+                  Exportar CSV
+                </button>
+                <div style={{ height: '1px', background: 'var(--border-str)' }} />
+                <button
+                  onClick={() => { setShowExportMenu(false); setSelectedNamesColumns([...KANBAN_COLUMNS]); setNamesCopied(false); setShowNamesModal(true); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/5 text-left"
+                  style={{ color: 'var(--text-pri)' }}
+                >
+                  <span style={{ color: 'var(--accent)', fontSize: 14 }}>📋</span>
+                  Exportar Nomes
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Click-outside overlay for export menu */}
+          {showExportMenu && (
+            <div className="fixed inset-0 z-20" onClick={() => setShowExportMenu(false)} />
+          )}
           <div className="relative">
             <select
               className="appearance-none bg-surface border border-str text-sec text-sm rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-orange-400 w-full"
@@ -1711,6 +1750,140 @@ export default function KanbanBoard() {
           </div>
         </div>
       )}
+
+      {/* \u2500\u2500\u2500 Exportar Nomes Modal \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+      {showNamesModal && (() => {
+        // Collect names filtered by selected columns (respecting existing filters)
+        const namesByCol: Record<string, string[]> = {};
+        selectedNamesColumns.forEach(col => {
+          namesByCol[col] = leads
+            .filter(l => {
+              if (l.status_atual !== col && !(col === 'Loss' && l.status_atual === 'Nao prosseguiu')) return false;
+              if (filterSdr && String(l.id_sdr_responsavel) !== filterSdr) return false;
+              if (filterCloser && String(l.id_closer_responsavel) !== filterCloser) return false;
+              return true;
+            })
+            .map(l => l.nome);
+        });
+
+        const allNames = selectedNamesColumns.flatMap(col => namesByCol[col] || []);
+        const textToCopy = allNames.join('\n');
+
+        const handleCopy = () => {
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            setNamesCopied(true);
+            setTimeout(() => setNamesCopied(false), 2500);
+          });
+        };
+
+        const toggleCol = (col: string) =>
+          setSelectedNamesColumns(prev =>
+            prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]
+          );
+
+        const COL_COLORS: Record<string, string> = {
+          'Novo': '#3b82f6', 'Follow-up': '#a855f7', 'Remarcado': '#f59e0b',
+          'No-show': '#ef4444', 'Venda': '#22c55e', 'Reembolsado': '#6b7280', 'Loss': '#dc2626',
+        };
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4"
+            onClick={() => setShowNamesModal(false)}
+          >
+            <div
+              className="modal-surface glass-panel w-full max-w-md rounded-2xl border border-str shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-str">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Exportar Nomes</h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-sec)' }}>
+                    Selecione as colunas e copie os nomes
+                  </p>
+                </div>
+                <button onClick={() => setShowNamesModal(false)} className="text-sec hover:text-white transition-colors text-xl">✕</button>
+              </div>
+
+              {/* Column checkboxes */}
+              <div className="px-6 py-4 border-b border-str">
+                <p className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-sec)' }}>Colunas</p>
+                <div className="flex flex-wrap gap-2">
+                  {KANBAN_COLUMNS.map(col => {
+                    const active = selectedNamesColumns.includes(col);
+                    const count = (namesByCol[col] || []).length;
+                    return (
+                      <button
+                        key={col}
+                        onClick={() => toggleCol(col)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 border"
+                        style={{
+                          background: active ? `${COL_COLORS[col] || '#888'}22` : 'transparent',
+                          borderColor: active ? COL_COLORS[col] || '#888' : 'var(--border-str)',
+                          color: active ? COL_COLORS[col] || '#fff' : 'var(--text-sec)',
+                        }}
+                      >
+                        {col}
+                        <span
+                          className="px-1.5 py-0.5 rounded-md text-[10px] font-black"
+                          style={{
+                            background: active ? COL_COLORS[col] || '#888' : 'var(--border-str)',
+                            color: active ? '#fff' : 'var(--text-sec)',
+                          }}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => setSelectedNamesColumns([...KANBAN_COLUMNS])} className="text-[11px] font-bold px-2 py-1 rounded-lg transition-all" style={{ color: 'var(--accent)', background: 'var(--bg-surface)', border: '1px solid var(--border-str)' }}>Selecionar todas</button>
+                  <button onClick={() => setSelectedNamesColumns([])} className="text-[11px] font-bold px-2 py-1 rounded-lg transition-all" style={{ color: 'var(--text-sec)', background: 'var(--bg-surface)', border: '1px solid var(--border-str)' }}>Limpar</button>
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className="px-6 py-4 border-b border-str">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-sec)' }}>
+                    Preview — {allNames.length} nome{allNames.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className="max-h-40 overflow-y-auto rounded-xl p-3 space-y-0.5" style={{ background: 'var(--bg-app)', border: '1px solid var(--border-str)' }}>
+                  {allNames.length === 0 ? (
+                    <p className="text-xs text-center py-4" style={{ color: 'var(--text-sec)' }}>Nenhum lead nas colunas selecionadas</p>
+                  ) : (
+                    allNames.map((nome, i) => (
+                      <p key={i} className="text-sm text-white font-medium py-0.5 border-b border-white/5 last:border-0">{nome}</p>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 px-6 py-4">
+                <button onClick={() => setShowNamesModal(false)} className="px-4 py-2 text-sm font-medium transition-colors" style={{ color: 'var(--text-sec)' }}>
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCopy}
+                  disabled={allNames.length === 0}
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all"
+                  style={{
+                    background: namesCopied ? '#22c55e' : 'var(--accent)',
+                    color: '#0A0A0A',
+                    opacity: allNames.length === 0 ? 0.4 : 1,
+                  }}
+                >
+                  {namesCopied ? '✓ Copiado!' : '📋 Copiar nomes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
