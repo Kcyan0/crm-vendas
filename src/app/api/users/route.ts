@@ -76,6 +76,13 @@ export async function PUT(request: Request) {
         if (!id_usuario) return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
         if (!id_projeto) return NextResponse.json({ error: 'Projeto é obrigatório' }, { status: 400 });
 
+        // Buscar e-mail atual ANTES de atualizar, para sincronizar com auth se mudar
+        const { data: currentUser } = await supabase
+            .from('usuarios')
+            .select('email')
+            .eq('id_usuario', id_usuario)
+            .single();
+
         const isAtivo = ativo === undefined || ativo === true || String(ativo) === '1';
         const { error } = await supabase
             .from('usuarios')
@@ -83,6 +90,35 @@ export async function PUT(request: Request) {
             .eq('id_usuario', id_usuario);
 
         if (error) throw error;
+
+        // ── Sincronizar e-mail no Auth se foi alterado ────────────────────
+        const oldEmail = currentUser?.email?.toLowerCase().trim();
+        const newEmail = email?.toLowerCase().trim();
+        if (oldEmail && newEmail && oldEmail !== newEmail) {
+            try {
+                const { data: { users } } = await supabase.auth.admin.listUsers();
+                const authUser = users?.find((u: any) => u.email === oldEmail);
+                if (authUser) {
+                    await supabase.auth.admin.updateUserById(authUser.id, {
+                        email: newEmail,
+                        email_confirm: true,  // confirma imediatamente, sem precisar verificar
+                    });
+                    console.log(`[Auth] E-mail atualizado: ${oldEmail} → ${newEmail}`);
+                } else {
+                    // Não existia no auth ainda — cria agora
+                    await supabase.auth.admin.createUser({
+                        email: newEmail,
+                        password: '0000',
+                        email_confirm: true,
+                    });
+                    console.log(`[Auth] Conta criada para novo e-mail: ${newEmail}`);
+                }
+            } catch (authErr) {
+                console.error('[Auth] Erro ao sincronizar e-mail no auth:', authErr);
+                // Não bloqueia — tabela já foi atualizada
+            }
+        }
+
         return NextResponse.json({ success: true, id_usuario });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
