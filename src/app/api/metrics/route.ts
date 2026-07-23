@@ -115,10 +115,12 @@ export async function GET(request: Request) {
         }
 
         // ─── Leads count ──────────────────────────────────────────────────────────
+        // No-show excluído: closer não teve chance de converter, não deve penalizar a taxa
         let leadsQuery = supabase.from('leads').select('id_lead')
             .gte('data_entrada', startVendaFilter)
             .lt('data_entrada', endFilter)
-            .eq('off_metricas', false);
+            .eq('off_metricas', false)
+            .neq('status_atual', 'No-show');
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
         const { data: leadsData } = await leadsQuery;
         const leadsTotais = leadsData?.length || 0;

@@ -172,9 +172,11 @@ export async function POST(request: Request) {
                     valor_liquido_caixa: restante - taxaResto - desconto,
                     status_pagamento: statusPgto,
                     data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : todayBRTs,
-                    data_recebimento: statusPgto === 'pendente' && dataRecebCustom
-                        ? dataRecebCustom
-                        : primeiraParcelaDate.toISOString().split('T')[0]
+                    // pendente: sem data (só entra no caixa quando confirmado manualmente)
+                    // pago: usa data_recebimento_custom se fornecida, senão data da venda
+                    data_recebimento: statusPgto === 'pendente'
+                        ? null
+                        : (dataRecebCustom || (data_venda ? data_venda : todayBR))
                 });
             } else {
                 // Regular row (no entrada)
@@ -192,9 +194,11 @@ export async function POST(request: Request) {
                     valor_liquido_caixa: valorLiquido,
                     status_pagamento: statusPgto,
                     data_venda: data_venda ? new Date(`${data_venda}T12:00:00.000Z`).toISOString() : todayBRTs,
-                    data_recebimento: statusPgto === 'pendente' && dataRecebCustom
-                        ? dataRecebCustom
-                        : (data_venda ? `${data_venda}` : todayBR)
+                    // pendente: sem data (só entra no caixa quando confirmado manualmente)
+                    // pago: usa data_recebimento_custom se fornecida, senão data da venda
+                    data_recebimento: statusPgto === 'pendente'
+                        ? null
+                        : (dataRecebCustom || (data_venda ? data_venda : todayBR))
                 });
             }
         }

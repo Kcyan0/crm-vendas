@@ -58,14 +58,15 @@ export async function GET(request: Request) {
                 .filter((l: any) => l.status_atual !== 'Reembolsado' && l.status_atual !== 'Loss')
                 .map((l: any) => l.id_lead));
 
-            // Leads created in period
+            // Leads created in period (No-show excluído da conversão)
             const { data: leadsInPeriod } = await supabase
                 .from('leads')
                 .select('id_lead')
                 .eq('id_projeto', pid)
                 .gte('data_entrada', `${startDate}T00:00:00`)
                 .lte('data_entrada', `${endDate}T23:59:59`)
-                .eq('off_metricas', false);  // excluir off-métricas da contagem do pipeline
+                .eq('off_metricas', false)
+                .neq('status_atual', 'No-show');  // não penaliza conversão
             const leadsCount = (leadsInPeriod || []).length;
 
             // Sales in period

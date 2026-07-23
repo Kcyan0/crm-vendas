@@ -542,7 +542,8 @@ export default function KanbanBoard() {
               splitMap[baseGw].numero_parcelas = row.numero_parcelas.toString();
               splitMap[baseGw].taxa_gateway += parseFloat(row.taxa_gateway) || 0;
               splitMap[baseGw].status_pagamento = row.status_pagamento || 'pago';
-              if (row.status_pagamento === 'pendente' && row.data_recebimento) {
+              // pre-fill date for both pago and pendente
+              if (row.data_recebimento) {
                 splitMap[baseGw].data_recebimento_custom = row.data_recebimento;
               }
             }
@@ -558,8 +559,8 @@ export default function KanbanBoard() {
               valor_entrada: '',
               entrada_paga_empresa: false,
               status_pagamento: row.status_pagamento || 'pago',
-              data_recebimento_custom: (row.status_pagamento === 'pendente' && row.data_recebimento)
-                ? row.data_recebimento : ''
+              // pre-fill date for both pago and pendente
+              data_recebimento_custom: row.data_recebimento ? row.data_recebimento : ''
             });
           }
         }
@@ -1320,17 +1321,33 @@ export default function KanbanBoard() {
                             type="button"
                             onClick={() => handlePagamentoChange(p.id, 'status_pagamento', 'pago')}
                             className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pago' ? 'bg-accent text-[#0A0A0A]' : 'bg-app text-sec hover:text-white'}`}
-                          >✓ Pago</button>
+                          >&#10003; Pago</button>
                           <button
                             type="button"
                             onClick={() => handlePagamentoChange(p.id, 'status_pagamento', 'pendente')}
                             className={`px-3 py-1 font-semibold transition-colors ${p.status_pagamento === 'pendente' ? 'bg-amber-500 text-[#0A0A0A]' : 'bg-app text-sec hover:text-white'}`}
-                          >⏳ Pendente</button>
+                          >&#9203; Pendente</button>
                         </div>
                       </div>
+
+                      {/* Pago — data real de recebimento (entra no caixa nessa data) */}
+                      {p.status_pagamento === 'pago' && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-[10px] text-sec">Data de recebimento:</span>
+                          <input
+                            type="date"
+                            className="bg-app border border-emerald-500/40 text-emerald-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-400"
+                            value={p.data_recebimento_custom}
+                            onChange={e => handlePagamentoChange(p.id, 'data_recebimento_custom', e.target.value)}
+                          />
+                          <span className="text-[10px] text-emerald-400/70">entra no caixa nessa data</span>
+                        </div>
+                      )}
+
+                      {/* Pendente — data prevista (nao entra no caixa) */}
                       {p.status_pagamento === 'pendente' && (
                         <div className="mt-2 flex items-center gap-2">
-                          <span className="text-[10px] text-sec">Data prevista:</span>
+                          <span className="text-[10px] text-sec">Previsao de recebimento:</span>
                           <input
                             type="date"
                             className="bg-app border border-amber-500/40 text-amber-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-amber-400"
@@ -1338,9 +1355,7 @@ export default function KanbanBoard() {
                             min={new Date().toISOString().split('T')[0]}
                             onChange={e => handlePagamentoChange(p.id, 'data_recebimento_custom', e.target.value)}
                           />
-                          {p.data_recebimento_custom && (
-                            <span className="text-[10px] text-amber-400/70">Não entra no caixa atual</span>
-                          )}
+                          <span className="text-[10px] text-amber-400/70">nao entra no caixa ainda</span>
                         </div>
                       )}
                     </div>
