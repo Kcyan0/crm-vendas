@@ -64,7 +64,8 @@ export async function GET(request: Request) {
                 .select('id_lead')
                 .eq('id_projeto', pid)
                 .gte('data_entrada', `${startDate}T00:00:00`)
-                .lte('data_entrada', `${endDate}T23:59:59`);
+                .lte('data_entrada', `${endDate}T23:59:59`)
+                .eq('off_metricas', false);  // excluir off-métricas da contagem do pipeline
             const leadsCount = (leadsInPeriod || []).length;
 
             // Sales in period

@@ -25,7 +25,8 @@ type Lead = {
   data_entrada: string;
   tem_pendente?: boolean;
   valor_pendente?: number;
-  formas_pagamento?: string[];  // payment methods from vendas table
+  formas_pagamento?: string[];
+  off_metricas?: boolean;
 };
 
 const KANBAN_COLUMNS = [
@@ -61,6 +62,8 @@ export default function KanbanBoard() {
   const [showNamesModal, setShowNamesModal] = useState(false);
   const [selectedNamesColumns, setSelectedNamesColumns] = useState<string[]>([...KANBAN_COLUMNS]);
   const [namesCopied, setNamesCopied] = useState(false);
+  // Off métricas state (separate from formData to avoid reset conflicts)
+  const [offMetricas, setOffMetricas] = useState(false);
   // Refund modal state
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [refundLeadId, setRefundLeadId] = useState<number | null>(null);
@@ -348,6 +351,7 @@ export default function KanbanBoard() {
 
   const handleOpenCreate = () => {
     setEditingLeadId(null);
+    setOffMetricas(false);
     setFormData({
       nome: "", telefone: "", instagram: "", email: "", origem: "", id_sdr_responsavel: "", id_closer_responsavel: "", observacoes_gerais: "",
       data_entrada: nowBrasiliaLocal()
@@ -357,6 +361,7 @@ export default function KanbanBoard() {
 
   const handleOpenEdit = (lead: Lead) => {
     setEditingLeadId(lead.id_lead);
+    setOffMetricas(lead.off_metricas ?? false);
 
     const dEntrada = lead.data_entrada ? new Date(lead.data_entrada) : new Date();
     const dataEntradaLocal = lead.data_entrada
@@ -397,6 +402,7 @@ export default function KanbanBoard() {
           id_closer_responsavel: formData.id_closer_responsavel ? parseInt(formData.id_closer_responsavel) : null,
           id_projeto: selectedProject.id_projeto,
           usuario_nome: userName,
+          off_metricas: offMetricas,
         }),
       });
       setIsModalOpen(false);
@@ -957,10 +963,22 @@ export default function KanbanBoard() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1 text-[10px] text-sec font-medium">
-                        <Clock size={12} />
-                        <span>{formatDateBr(lead.data_entrada)}</span>
+                      <div className="flex items-center gap-1.5">
+                        {lead.off_metricas && (
+                          <span
+                            className="text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wide"
+                            style={{ background: '#1c1c1c', color: '#888', border: '1px solid #333' }}
+                            title="Fora das métricas comerciais"
+                          >
+                            ⊘ OFF
+                          </span>
+                        )}
+                        <div className="flex items-center gap-1 text-[10px] text-sec font-medium">
+                          <Clock size={12} />
+                          <span>{formatDateBr(lead.data_entrada)}</span>
+                        </div>
                       </div>
+
                       {lead.status_atual === 'Venda' && (
                         <button
                           onClick={(e) => handleOpenEditSale(e, lead)}
@@ -1098,6 +1116,37 @@ export default function KanbanBoard() {
                   onChange={(e) => setFormData({ ...formData, observacoes_gerais: e.target.value })}
                 ></textarea>
               </div>
+
+              {/* Off Métricas toggle */}
+              <button
+                type="button"
+                onClick={() => setOffMetricas(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200 text-left"
+                style={{
+                  background: offMetricas ? 'rgba(245,158,11,0.08)' : 'var(--bg-surface)',
+                  borderColor: offMetricas ? '#f59e0b' : 'var(--border-str)',
+                }}
+              >
+                <div>
+                  <p className="text-sm font-bold" style={{ color: offMetricas ? '#f59e0b' : 'var(--text-sec)' }}>
+                    ⊘ Off Métricas
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-sec)' }}>
+                    {offMetricas
+                      ? 'Ativado — fora da conversão, funil e ranking do time'
+                      : 'Desativado — lead entra nas métricas normalmente'}
+                  </p>
+                </div>
+                <div
+                  className="w-10 h-5 rounded-full flex items-center transition-all duration-200 shrink-0 ml-4"
+                  style={{ background: offMetricas ? '#f59e0b' : '#333', padding: '2px' }}
+                >
+                  <div
+                    className="w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200"
+                    style={{ transform: offMetricas ? 'translateX(20px)' : 'translateX(0)' }}
+                  />
+                </div>
+              </button>
 
               <div className="flex justify-between items-center mt-8 pt-4 border-t border-[#222222] flex-col-reverse md:flex-row gap-4">
                 {editingLeadId ? (

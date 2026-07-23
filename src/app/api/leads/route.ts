@@ -94,13 +94,13 @@ export async function PUT(request: Request) {
         const body = await request.json();
         const {
             id_lead, status_atual, nome, telefone, instagram, email, origem,
-            id_sdr_responsavel, id_closer_responsavel, observacoes_gerais, id_projeto, is_full_update, data_entrada
+            id_sdr_responsavel, id_closer_responsavel, observacoes_gerais, id_projeto, is_full_update, data_entrada, off_metricas
         } = body;
 
         if (!id_lead) return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
 
         if (is_full_update) {
-            const updateData: any = { nome, telefone: telefone || null, instagram: instagram || null, email: email || null, origem: origem || null, id_sdr_responsavel: id_sdr_responsavel || null, id_closer_responsavel: id_closer_responsavel || null, observacoes_gerais: observacoes_gerais || null, id_projeto: id_projeto || null };
+            const updateData: any = { nome, telefone: telefone || null, instagram: instagram || null, email: email || null, origem: origem || null, id_sdr_responsavel: id_sdr_responsavel || null, id_closer_responsavel: id_closer_responsavel || null, observacoes_gerais: observacoes_gerais || null, id_projeto: id_projeto || null, off_metricas: off_metricas === true };
             if (data_entrada) updateData.data_entrada = data_entrada;
 
             const { error } = await supabase.from('leads').update(updateData).eq('id_lead', id_lead);
@@ -151,12 +151,12 @@ export async function PUT(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { nome, telefone, instagram, email, origem, id_sdr_responsavel, id_closer_responsavel, observacoes_gerais, id_projeto, data_entrada } = body;
+        const { nome, telefone, instagram, email, origem, id_sdr_responsavel, id_closer_responsavel, observacoes_gerais, id_projeto, data_entrada, off_metricas } = body;
 
         if (!nome) return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
         if (!id_projeto) return NextResponse.json({ error: 'Projeto é obrigatório' }, { status: 400 });
 
-        const insertData: any = { nome, telefone: telefone || null, instagram: instagram || null, email: email || null, origem: origem || null, id_sdr_responsavel: id_sdr_responsavel || null, id_closer_responsavel: id_closer_responsavel || null, observacoes_gerais: observacoes_gerais || null, id_projeto };
+        const insertData: any = { nome, telefone: telefone || null, instagram: instagram || null, email: email || null, origem: origem || null, id_sdr_responsavel: id_sdr_responsavel || null, id_closer_responsavel: id_closer_responsavel || null, observacoes_gerais: observacoes_gerais || null, id_projeto, off_metricas: off_metricas === true };
         if (data_entrada) insertData.data_entrada = data_entrada;
 
         const { data, error } = await supabase.from('leads').insert(insertData).select('id_lead').single();

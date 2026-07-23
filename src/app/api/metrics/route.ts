@@ -117,7 +117,8 @@ export async function GET(request: Request) {
         // ─── Leads count ──────────────────────────────────────────────────────────
         let leadsQuery = supabase.from('leads').select('id_lead')
             .gte('data_entrada', startVendaFilter)
-            .lt('data_entrada', endFilter);
+            .lt('data_entrada', endFilter)
+            .eq('off_metricas', false);
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
         const { data: leadsData } = await leadsQuery;
         const leadsTotais = leadsData?.length || 0;
@@ -269,7 +270,8 @@ export async function GET(request: Request) {
             .from('leads')
             .select('status_atual, motivo_reembolso')
             .gte('data_entrada', startVendaFilter)
-            .lt('data_entrada', endFilter);
+            .lt('data_entrada', endFilter)
+            .eq('off_metricas', false);
         if (projectId) periodFunnelQuery = (periodFunnelQuery as any).eq('id_projeto', projectId);
         const { data: allLeads } = await periodFunnelQuery;
         const funnelData = funnelStages.map(stage => ({
@@ -288,7 +290,8 @@ export async function GET(request: Request) {
         const kanbanStatuses = ['Novo', 'Follow-up', 'Remarcado', 'No-show', 'Venda', 'Reembolsado', 'Loss'];
         let periodLeadsQuery = supabase.from('leads').select('status_atual')
             .gte('data_entrada', `${startDate}T03:00:00.000Z`)
-            .lt('data_entrada', endFilter);
+            .lt('data_entrada', endFilter)
+            .eq('off_metricas', false);
         if (projectId) periodLeadsQuery = (periodLeadsQuery as any).eq('id_projeto', projectId);
         const { data: periodLeads } = await periodLeadsQuery;
 
