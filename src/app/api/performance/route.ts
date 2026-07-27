@@ -28,10 +28,11 @@ export async function GET(request: Request) {
             }
         });
 
-        // Leads created on this date
+        // Leads created on this date (No-show excluído — closer não teve chance de converter)
         let leadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual')
             .gte('data_entrada', `${startDate}T00:00:00`).lte('data_entrada', `${endDate}T23:59:59`)
-            .eq('off_metricas', false);  // excluir off-métricas do ranking/contagem do time
+            .eq('off_metricas', false)
+            .neq('status_atual', 'No-show');
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
         const { data: leads } = await leadsQuery;
 
