@@ -62,10 +62,10 @@ export async function GET(request: Request) {
         // ─── Filter by project ────────────────────────────────────────────────────
         let validLeadIds: Set<number> | null = null;
         if (projectId) {
-            const { data: projLeads } = await supabase.from('leads').select('id_lead').eq('id_projeto', projectId).not('status_atual', 'in', '("Reembolsado","Loss")');
+            const { data: projLeads } = await supabase.from('leads').select('id_lead').eq('id_projeto', projectId).eq('off_metricas', false).not('status_atual', 'in', '("Reembolsado","Loss")');
             validLeadIds = new Set((projLeads || []).map((l: any) => l.id_lead));
         } else {
-            const { data: projLeads } = await supabase.from('leads').select('id_lead').not('status_atual', 'in', '("Reembolsado","Loss")');
+            const { data: projLeads } = await supabase.from('leads').select('id_lead').eq('off_metricas', false).not('status_atual', 'in', '("Reembolsado","Loss")');
             validLeadIds = new Set((projLeads || []).map((l: any) => l.id_lead));
         }
 
