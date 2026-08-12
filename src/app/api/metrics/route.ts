@@ -59,14 +59,24 @@ export async function GET(request: Request) {
         ]);
         const vendasCaixa = [...(caixaWithDate || []), ...(caixaNoDate || [])];
 
-        // ─── Filter by project ────────────────────────────────────────────────────
+        // ─── Filter by project (inclui off_metricas → caixa e faturamento completos) ──
         let validLeadIds: Set<number> | null = null;
         if (projectId) {
-            const { data: projLeads } = await supabase.from('leads').select('id_lead').eq('id_projeto', projectId).eq('off_metricas', false).not('status_atual', 'in', '("Reembolsado","Loss")');
+            const { data: projLeads } = await supabase.from('leads').select('id_lead').eq('id_projeto', projectId).not('status_atual', 'in', '("Reembolsado","Loss")');
             validLeadIds = new Set((projLeads || []).map((l: any) => l.id_lead));
         } else {
-            const { data: projLeads } = await supabase.from('leads').select('id_lead').eq('off_metricas', false).not('status_atual', 'in', '("Reembolsado","Loss")');
+            const { data: projLeads } = await supabase.from('leads').select('id_lead').not('status_atual', 'in', '("Reembolsado","Loss")');
             validLeadIds = new Set((projLeads || []).map((l: any) => l.id_lead));
+        }
+
+        // ─── Filter sem off_metricas → usado APENAS para Ticket Médio ─────────────
+        let validLeadIdsTicket: Set<number> | null = null;
+        if (projectId) {
+            const { data: projLeads } = await supabase.from('leads').select('id_lead').eq('id_projeto', projectId).eq('off_metricas', false).not('status_atual', 'in', '("Reembolsado","Loss")');
+            validLeadIdsTicket = new Set((projLeads || []).map((l: any) => l.id_lead));
+        } else {
+            const { data: projLeads } = await supabase.from('leads').select('id_lead').eq('off_metricas', false).not('status_atual', 'in', '("Reembolsado","Loss")');
+            validLeadIdsTicket = new Set((projLeads || []).map((l: any) => l.id_lead));
         }
 
         const filteredFat = (vendasFat || []).filter((v: any) => validLeadIds!.has(v.id_lead));
@@ -93,6 +103,17 @@ export async function GET(request: Request) {
         // ─── Receita (Faturamento Global) ─────────────────────────────────────────
         const receita = groupedSalesFat.reduce((sum, s) => sum + s.valor_bruto, 0);
         const vendasTotais = groupedSalesFat.length;
+
+        // ─── Vendas sem off_metricas → base para Ticket Médio ─────────────────────
+        const mapFatTicket: Record<number, { valor_bruto: number }> = {};
+        for (const v of (vendasFat || []).filter((v: any) => validLeadIdsTicket!.has(v.id_lead))) {
+            const oportId = v.id_oportunidade ?? v.id_lead;
+            if (!mapFatTicket[oportId]) mapFatTicket[oportId] = { valor_bruto: 0 };
+            mapFatTicket[oportId].valor_bruto += parseFloat(v.valor_bruto) || 0;
+        }
+        const groupedSalesFatTicket = Object.values(mapFatTicket);
+        const receitaTicket = groupedSalesFatTicket.reduce((sum, s) => sum + s.valor_bruto, 0);
+        const vendasTotaisTicket = groupedSalesFatTicket.length;
 
         // ─── Pagamentos Pendentes ──────────────────────────────────────────────────
         // Sum of valor_bruto for pendente rows, deduplicated by id_oportunidade so
@@ -126,8 +147,8 @@ export async function GET(request: Request) {
         const leadsTotais = leadsData?.length || 0;
         const conversaoAproximada = leadsTotais > 0 ? ((vendasTotais / leadsTotais) * 100).toFixed(1) : '0.0';
 
-        // ─── Ticket Médio (Global based on Faturamento) ───────────────────────────
-        const ticketMedio = vendasTotais > 0 ? receita / vendasTotais : 0;
+        // ─── Ticket Médio (exclui off_metricas) ──────────────────────────────────
+        const ticketMedio = vendasTotaisTicket > 0 ? receitaTicket / vendasTotaisTicket : 0;
 
         // ─── Receita por Forma de Pagamento (Faturamento) ───────────────────
         const byPaymentFat: Record<string, number> = {};
