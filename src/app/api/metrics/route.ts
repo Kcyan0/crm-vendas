@@ -194,28 +194,28 @@ export async function GET(request: Request) {
             leadOwnerMap[l.id_lead] = { sdr: l.id_sdr_responsavel, closer: l.id_closer_responsavel };
         });
 
-        // ─── Per-person stats (separated logic) ──────────────────────────────────
-        const byCloser: Record<string, number> = {};
-        const bySdr: Record<string, number> = {};
-        const closerStats: Record<string, { faturamento: number; caixa: number; count: number }> = {};
-        const sdrStats: Record<string, { faturamento: number; caixa: number; count: number }> = {};
+        // ─── Per-person stats keyed by id_usuario (evita colisão de nomes iguais) ──
+        const byCloser: Record<number, number> = {};
+        const bySdr: Record<number, number> = {};
+        const closerStats: Record<number, { faturamento: number; caixa: number; count: number }> = {};
+        const sdrStats: Record<number, { faturamento: number; caixa: number; count: number }> = {};
 
         // Faturamento (Receita Bruta e Vendas)
         for (const sale of groupedSalesFat) {
             const owners = leadOwnerMap[sale.id_lead];
             if (owners?.closer) {
-                const cName = usersMap[owners.closer] || 'Desconhecido';
-                byCloser[cName] = (byCloser[cName] || 0) + sale.valor_bruto;
-                if (!closerStats[cName]) closerStats[cName] = { faturamento: 0, caixa: 0, count: 0 };
-                closerStats[cName].faturamento += sale.valor_bruto;
-                closerStats[cName].count += 1;
+                const cId = owners.closer;
+                byCloser[cId] = (byCloser[cId] || 0) + sale.valor_bruto;
+                if (!closerStats[cId]) closerStats[cId] = { faturamento: 0, caixa: 0, count: 0 };
+                closerStats[cId].faturamento += sale.valor_bruto;
+                closerStats[cId].count += 1;
             }
             if (owners?.sdr) {
-                const sName = usersMap[owners.sdr] || 'Desconhecido';
-                bySdr[sName] = (bySdr[sName] || 0) + sale.valor_bruto;
-                if (!sdrStats[sName]) sdrStats[sName] = { faturamento: 0, caixa: 0, count: 0 };
-                sdrStats[sName].faturamento += sale.valor_bruto;
-                sdrStats[sName].count += 1;
+                const sId = owners.sdr;
+                bySdr[sId] = (bySdr[sId] || 0) + sale.valor_bruto;
+                if (!sdrStats[sId]) sdrStats[sId] = { faturamento: 0, caixa: 0, count: 0 };
+                sdrStats[sId].faturamento += sale.valor_bruto;
+                sdrStats[sId].count += 1;
             }
         }
 
@@ -229,33 +229,35 @@ export async function GET(request: Request) {
             // This is the source of truth — avoids mismatch with leadOwnerMap
             const closerIdFromSale = sale.id_closer;
             if (closerIdFromSale) {
-                const cName = usersMap[closerIdFromSale] || 'Desconhecido';
-                if (!closerStats[cName]) closerStats[cName] = { faturamento: 0, caixa: 0, count: 0 };
-                closerStats[cName].caixa += saleCaixa;
+                if (!closerStats[closerIdFromSale]) closerStats[closerIdFromSale] = { faturamento: 0, caixa: 0, count: 0 };
+                closerStats[closerIdFromSale].caixa += saleCaixa;
             }
 
             // SDR attribution still uses leadOwnerMap (no id_sdr on vendas table)
             const owners = leadOwnerMap[sale.id_lead];
             if (owners?.sdr) {
-                const sName = usersMap[owners.sdr] || 'Desconhecido';
-                if (!sdrStats[sName]) sdrStats[sName] = { faturamento: 0, caixa: 0, count: 0 };
-                sdrStats[sName].caixa += saleCaixa;
+                const sId = owners.sdr;
+                if (!sdrStats[sId]) sdrStats[sId] = { faturamento: 0, caixa: 0, count: 0 };
+                sdrStats[sId].caixa += saleCaixa;
             }
         }
 
-        const receitaPorCloser = Object.entries(byCloser).map(([name, value]) => ({ name, value }));
-        const receitaPorSdr    = Object.entries(bySdr).map(([name, value]) => ({ name, value }));
+        // Resolve IDs → nomes para os gráficos de receita por pessoa
+        const receitaPorCloser = Object.entries(byCloser).map(([id, value]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value }));
+        const receitaPorSdr    = Object.entries(bySdr).map(([id, value]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value }));
 
-        // ─── Commissions (derived directly from closerStats/sdrStats — no re-calc) ─
-        const comissaoCloserDetalhes = Object.entries(closerStats).map(([name, stats]) => {
-            const uid = Object.keys(usersMap).find(k => usersMap[parseInt(k)] === name);
-            const pct = uid ? (userCommissionMap[parseInt(uid)]?.pctCloser || 0) : 0;
-            return { nome: name, caixa: stats.caixa, pct, comissao: parseFloat((stats.caixa * pct / 100).toFixed(2)) };
+        // ─── Commissions — % buscado pelo id_usuario correto, sem ambiguidade ──────
+        const comissaoCloserDetalhes = Object.entries(closerStats).map(([id, stats]) => {
+            const uid = parseInt(id);
+            const pct = userCommissionMap[uid]?.pctCloser || 0;
+            const nome = usersMap[uid] || 'Desconhecido';
+            return { nome, caixa: stats.caixa, pct, comissao: parseFloat((stats.caixa * pct / 100).toFixed(2)) };
         });
-        const comissaoSdrDetalhes = Object.entries(sdrStats).map(([name, stats]) => {
-            const uid = Object.keys(usersMap).find(k => usersMap[parseInt(k)] === name);
-            const pct = uid ? (userCommissionMap[parseInt(uid)]?.pctSdr || 0) : 0;
-            return { nome: name, caixa: stats.caixa, pct, comissao: parseFloat((stats.caixa * pct / 100).toFixed(2)) };
+        const comissaoSdrDetalhes = Object.entries(sdrStats).map(([id, stats]) => {
+            const uid = parseInt(id);
+            const pct = userCommissionMap[uid]?.pctSdr || 0;
+            const nome = usersMap[uid] || 'Desconhecido';
+            return { nome, caixa: stats.caixa, pct, comissao: parseFloat((stats.caixa * pct / 100).toFixed(2)) };
         });
         const comissaoCloserTotal = comissaoCloserDetalhes.reduce((s, d) => s + d.comissao, 0);
         const comissaoSdrTotal    = comissaoSdrDetalhes.reduce((s, d) => s + d.comissao, 0);
@@ -265,7 +267,7 @@ export async function GET(request: Request) {
         // each pending payment to the closer responsible for that lead.
         // Deduplicates by id_oportunidade to avoid double-counting split rows.
         const pendOportSeen = new Set<number>();
-        const pendByCloser: Record<string, number> = {};
+        const pendByCloser: Record<number, number> = {};
         for (const v of filteredFat) {
             if (v.status_pagamento !== 'pendente') continue;
             const oportId = v.id_oportunidade ?? v.id_lead;
@@ -273,19 +275,20 @@ export async function GET(request: Request) {
             pendOportSeen.add(oportId);
             const owners = leadOwnerMap[v.id_lead];
             if (owners?.closer) {
-                const cName = usersMap[owners.closer] || 'Desconhecido';
-                pendByCloser[cName] = (pendByCloser[cName] || 0) + (parseFloat(v.valor_bruto) || 0);
+                const cId = owners.closer;
+                pendByCloser[cId] = (pendByCloser[cId] || 0) + (parseFloat(v.valor_bruto) || 0);
             }
         }
         const pendentesPorCloser = Object.entries(pendByCloser)
-            .map(([nome, valor]) => ({ nome, valor }))
+            .map(([id, valor]) => ({ nome: usersMap[parseInt(id)] || 'Desconhecido', valor }))
             .sort((a, b) => b.valor - a.valor);
 
         // ─── Ticket Médio donuts ──────────────────────────────────────────────────
-        const tmFaturamentoCloser = Object.entries(closerStats).map(([name, s]) => ({ name, value: s.count > 0 ? s.faturamento / s.count : 0 })).sort((a, b) => b.value - a.value);
-        const tmCaixaCloser       = Object.entries(closerStats).map(([name, s]) => ({ name, value: s.count > 0 ? s.caixa / s.count : 0 })).sort((a, b) => b.value - a.value);
-        const tmFaturamentoSdr    = Object.entries(sdrStats).map(([name, s]) => ({ name, value: s.count > 0 ? s.faturamento / s.count : 0 })).sort((a, b) => b.value - a.value);
-        const tmCaixaSdr          = Object.entries(sdrStats).map(([name, s]) => ({ name, value: s.count > 0 ? s.caixa / s.count : 0 })).sort((a, b) => b.value - a.value);
+        const tmFaturamentoCloser = Object.entries(closerStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.count > 0 ? s.faturamento / s.count : 0 })).sort((a, b) => b.value - a.value);
+        const tmCaixaCloser       = Object.entries(closerStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.count > 0 ? s.caixa / s.count : 0 })).sort((a, b) => b.value - a.value);
+        const tmFaturamentoSdr    = Object.entries(sdrStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.count > 0 ? s.faturamento / s.count : 0 })).sort((a, b) => b.value - a.value);
+        const tmCaixaSdr          = Object.entries(sdrStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.count > 0 ? s.caixa / s.count : 0 })).sort((a, b) => b.value - a.value);
+
 
         // ─── Funnel & Chargeback (filtered by period via data_entrada) ───────────
         const funnelStages = ['Novo', 'Follow-up', 'Agendado', 'Negociação', 'Venda', 'Reembolsado', 'Loss'];
