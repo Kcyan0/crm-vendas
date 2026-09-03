@@ -332,6 +332,36 @@ export async function GET(request: Request) {
             .map(s => ({ status: s, count: statusCounts[s], pct: totalLeadsStatus > 0 ? parseFloat(((statusCounts[s] / totalLeadsStatus) * 100).toFixed(1)) : 0 }))
             .sort((a, b) => b.count - a.count);
 
+        // ─── Métricas por Produto ──────────────────────────────────────────────────
+        let produtosMetrics: any[] = [];
+        try {
+            // Get all vendas IDs that are in our filteredFat set
+            const vendasIds = filteredFat.map((v: any) => v.id_venda).filter(Boolean);
+            if (vendasIds.length > 0) {
+                const { data: vendaProdData } = await supabase
+                    .from('venda_produtos')
+                    .select('id_venda, id_produto, produtos(nome)')
+                    .in('id_venda', vendasIds);
+
+                // Build product stats map
+                const prodMap: Record<number, { nome: string; vendas: number; receita: number }> = {};
+                for (const vp of (vendaProdData || [])) {
+                    const pid = vp.id_produto;
+                    const nomeProd = (vp as any).produtos?.nome || 'Desconhecido';
+                    if (!prodMap[pid]) prodMap[pid] = { nome: nomeProd, vendas: 0, receita: 0 };
+                    // Find the venda value
+                    const vendaRow = filteredFat.find((v: any) => v.id_venda === vp.id_venda);
+                    if (vendaRow) prodMap[pid].receita += parseFloat(vendaRow.valor_bruto) || 0;
+                    prodMap[pid].vendas += 1;
+                }
+                produtosMetrics = Object.values(prodMap)
+                    .map(p => ({ ...p, ticketMedio: p.vendas > 0 ? p.receita / p.vendas : 0 }))
+                    .sort((a, b) => b.receita - a.receita);
+            }
+        } catch (e) {
+            console.warn('Produto metrics error:', e);
+        }
+
         return NextResponse.json({
             receita,
             caixaLiquido,
@@ -357,6 +387,7 @@ export async function GET(request: Request) {
             statusLeads,
             pagamentosPendentes,
             pendentesPorCloser,
+            produtosMetrics,
             period: { startDate, endDate }
         });
     } catch (error: any) {

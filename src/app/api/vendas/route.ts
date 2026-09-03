@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { id_lead, pagamentos, observacoes, id_sdr, id_closer, data_venda } = body;
+        const { id_lead, pagamentos, observacoes, id_sdr, id_closer, data_venda, id_produtos } = body;
 
         // Always use Brazil local date (UTC-3) for "today" so a sale at 23h BRT
         // doesn't get stored as the next day in UTC.
@@ -206,6 +206,26 @@ export async function POST(request: Request) {
 
         const { error: vendasErr } = await supabase.from('vendas').insert(vendasToInsert);
         if (vendasErr) throw vendasErr;
+
+        // ─── Link produtos to vendas ───────────────────────────────────────────
+        if (id_produtos && Array.isArray(id_produtos) && id_produtos.length > 0) {
+            // Fetch the IDs of the newly inserted rows for this oportunidade
+            const { data: newVendas } = await supabase
+                .from('vendas')
+                .select('id_venda')
+                .eq('id_oportunidade', id_oportunidade);
+
+            if (newVendas && newVendas.length > 0) {
+                const vpRows: any[] = [];
+                for (const v of newVendas) {
+                    for (const pid of id_produtos) {
+                        vpRows.push({ id_venda: v.id_venda, id_produto: pid });
+                    }
+                }
+                // upsert to avoid duplicates on re-saves
+                await supabase.from('venda_produtos').upsert(vpRows, { onConflict: 'id_venda,id_produto' });
+            }
+        }
 
         // ─── Log venda ────────────────────────────────────────────────────────
         const { data: leadLog } = await supabase.from('leads').select('nome, id_projeto').eq('id_lead', id_lead).single();

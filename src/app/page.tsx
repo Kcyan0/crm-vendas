@@ -115,6 +115,9 @@ export default function KanbanBoard() {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([newPagamento()]);
 
   const [gateways, setGateways] = useState<any[]>([]);
+  const [produtos, setProdutos] = useState<any[]>([]);
+  const [selectedProdutos, setSelectedProdutos] = useState<number[]>([]);
+
 
   useEffect(() => {
     if (!selectedProject) {
@@ -123,7 +126,9 @@ export default function KanbanBoard() {
     }
     fetchUsers();
     fetchGateways();
+    fetchProdutos();
   }, [selectedProject]);
+
 
   useEffect(() => {
     if (selectedProject) fetchLeads();
@@ -146,6 +151,18 @@ export default function KanbanBoard() {
       console.error(e);
     }
   };
+
+  const fetchProdutos = async () => {
+    if (!selectedProject?.id_projeto) return;
+    try {
+      const res = await fetch(`/api/produtos?projectId=${selectedProject.id_projeto}`);
+      const data = await res.json();
+      setProdutos(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
 
   // gwList: optional override — pass fresh gateways when the React state may be stale
   const calcFee = (gatewayName: string, valor: string, entradaStr?: string, gwList?: any[]) => {
@@ -437,6 +454,7 @@ export default function KanbanBoard() {
           id_closer: saleLead.id_closer_responsavel,
           data_venda: saleDate,
           closer_nome: userName,
+          id_produtos: selectedProdutos,
         }),
       });
 
@@ -483,7 +501,9 @@ export default function KanbanBoard() {
       setSaleDate(todayBrasilia());
       setComprovanteFile(null);
       setComprovantePreview(null);
+      setSelectedProdutos([]);
       fetchLeads();
+
     } catch (err: any) {
       console.error('Sale save error:', err);
       alert(`Erro ao salvar venda: ${err.message || err}`);
@@ -1197,6 +1217,38 @@ export default function KanbanBoard() {
                 <label className="block text-xs text-sec mb-1 font-bold uppercase">Data da Venda</label>
                 <input type="date" required value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className="w-full sm:w-1/2 bg-surface border border-str text-white rounded-xl p-2 text-sm focus:border-orange-500 focus:outline-none" />
               </div>
+
+              {/* Produtos */}
+              {produtos.length > 0 && (
+                <div>
+                  <label className="block text-xs text-sec mb-2 font-bold uppercase">Produtos Vendidos</label>
+                  <div className="flex flex-wrap gap-2">
+                    {produtos.map((p: any) => {
+                      const selected = selectedProdutos.includes(p.id_produto);
+                      return (
+                        <button
+                          key={p.id_produto}
+                          type="button"
+                          onClick={() => setSelectedProdutos(prev =>
+                            selected ? prev.filter(id => id !== p.id_produto) : [...prev, p.id_produto]
+                          )}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
+                          style={{
+                            background: selected ? 'rgba(var(--accent-rgb), 0.15)' : 'var(--bg-app)',
+                            borderColor: selected ? 'var(--accent)' : 'var(--border-str)',
+                            color: selected ? 'var(--accent)' : 'var(--text-sec)',
+                          }}
+                        >
+                          {selected ? '✓ ' : ''}{p.nome}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedProdutos.length === 0 && (
+                    <p className="text-[10px] text-sec mt-1 opacity-60">Nenhum produto selecionado (opcional)</p>
+                  )}
+                </div>
+              )}
 
               {/* Payment Rows */}
               <div className="space-y-3">
