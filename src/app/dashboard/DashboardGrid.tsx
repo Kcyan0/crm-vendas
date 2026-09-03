@@ -34,8 +34,9 @@ const DEFAULT_LAYOUT = [
     'statusLeads', 'sdrsPeriodo', 'closersPeriodo', 'conversaoSdr', 'conversaoCloser',
     'tmFatCloser', 'tmCaixaCloser', 'tmFatSdr', 'tmCaixaSdr',
     'recFat', 'recCaixa', 'recCloser', 'recSdr', 'reembolsos', 'comissaoCloser', 'comissaoSdr',
-    'pagamentosPendentes'
+    'pagamentosPendentes', 'produtosRanking', 'produtosFaturamento', 'produtosTicket'
 ];
+
 
 export function DashboardGrid({
     metrics, sdrs, closers, formatBRL, CHART_COLORS, TEXT_SEC, LIME, tooltipStyle, renderTicketDonut,
@@ -486,10 +487,146 @@ export function DashboardGrid({
                     </div>
                 </div>
             ) : null
-        }
+        },
+
+        // ─── Widgets de Produto ───────────────────────────────────────────────────
+        produtosRanking: {
+            colSpan: "col-span-1 md:col-span-2 xl:col-span-4",
+            render: () => metrics?.produtosMetrics && metrics.produtosMetrics.length > 0 ? (
+                <div className="glass-panel p-4 sm:p-5 bg-[#151515] border border-white/5 rounded-2xl h-full flex flex-col">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-1">Ranking de Produtos</h3>
+                    <p className="text-[10px] text-sec mb-4">Receita bruta por produto no período.</p>
+                    <div className="flex-1 min-h-[200px]">
+                        <ResponsiveContainer width="100%" height={Math.max(180, metrics.produtosMetrics.length * 48)}>
+                            <BarChart
+                                layout="vertical"
+                                data={metrics.produtosMetrics}
+                                margin={{ top: 0, right: 16, left: 8, bottom: 0 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+                                <XAxis type="number" tick={{ fill: TEXT_SEC, fontSize: 10 }} tickFormatter={(v) => formatBRL(v)} axisLine={false} tickLine={false} />
+                                <YAxis type="category" dataKey="nome" tick={{ fill: '#fff', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} width={110} />
+                                <Tooltip
+                                    contentStyle={tooltipStyle}
+                                    formatter={(v: any) => [formatBRL(v), 'Receita']}
+                                />
+                                <Bar dataKey="receita" radius={[0, 6, 6, 0]} maxBarSize={28}>
+                                    {metrics.produtosMetrics.map((_: any, i: number) => (
+                                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                    {/* Summary row */}
+                    <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {metrics.produtosMetrics.slice(0, 4).map((p: any, i: number) => (
+                            <div key={p.nome} className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                <div className="min-w-0">
+                                    <p className="text-[10px] text-white font-semibold truncate">{p.nome}</p>
+                                    <p className="text-[10px] text-sec">{p.vendas} venda{p.vendas !== 1 ? 's' : ''}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : null
+        },
+
+        produtosFaturamento: {
+            colSpan: "col-span-1 md:col-span-2",
+            render: () => metrics?.produtosMetrics && metrics.produtosMetrics.length > 0 ? (
+                <div className="glass-panel p-4 sm:p-5 bg-[#151515] border border-white/5 rounded-2xl h-full flex flex-col">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-1">Faturamento por Produto</h3>
+                    <p className="text-[10px] text-sec mb-3">Participação de cada produto na receita total.</p>
+                    <div className="flex flex-col sm:flex-row items-center gap-4 flex-1">
+                        <ResponsiveContainer width={160} height={160}>
+                            <PieChart>
+                                <Pie
+                                    data={metrics.produtosMetrics}
+                                    dataKey="receita"
+                                    nameKey="nome"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={46}
+                                    outerRadius={72}
+                                    paddingAngle={3}
+                                >
+                                    {metrics.produtosMetrics.map((_: any, i: number) => (
+                                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [formatBRL(v), 'Receita']} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="flex-1 space-y-2 w-full">
+                            {(() => {
+                                const total = metrics.produtosMetrics.reduce((s: number, p: any) => s + p.receita, 0);
+                                return metrics.produtosMetrics.map((p: any, i: number) => {
+                                    const pct = total > 0 ? ((p.receita / total) * 100).toFixed(1) : '0.0';
+                                    return (
+                                        <div key={p.nome}>
+                                            <div className="flex justify-between text-[10px] mb-0.5">
+                                                <span className="text-white font-medium truncate max-w-[120px]">{p.nome}</span>
+                                                <span style={{ color: CHART_COLORS[i % CHART_COLORS.length] }} className="font-bold shrink-0 ml-2">{pct}%</span>
+                                            </div>
+                                            <div className="w-full h-1.5 rounded-full bg-white/5">
+                                                <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                            </div>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+                    </div>
+                </div>
+            ) : null
+        },
+
+        produtosTicket: {
+            colSpan: "col-span-1 md:col-span-2",
+            render: () => metrics?.produtosMetrics && metrics.produtosMetrics.length > 0 ? (
+                <div className="glass-panel p-4 sm:p-5 bg-[#151515] border border-white/5 rounded-2xl h-full flex flex-col">
+                    <h3 className="text-xs sm:text-sm font-bold text-white mb-1">Ticket Médio por Produto</h3>
+                    <p className="text-[10px] text-sec mb-4">Valor médio por venda de cada produto.</p>
+                    <div className="flex-1 min-h-[160px]">
+                        <ResponsiveContainer width="100%" height={Math.max(160, metrics.produtosMetrics.length * 52)}>
+                            <BarChart
+                                layout="vertical"
+                                data={metrics.produtosMetrics}
+                                margin={{ top: 0, right: 16, left: 8, bottom: 0 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+                                <XAxis type="number" tick={{ fill: TEXT_SEC, fontSize: 10 }} tickFormatter={(v) => formatBRL(v)} axisLine={false} tickLine={false} />
+                                <YAxis type="category" dataKey="nome" tick={{ fill: '#fff', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} width={110} />
+                                <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [formatBRL(v), 'Ticket Médio']} />
+                                <Bar dataKey="ticketMedio" radius={[0, 6, 6, 0]} maxBarSize={28}>
+                                    {metrics.produtosMetrics.map((_: any, i: number) => (
+                                        <Cell key={i} fill={CHART_COLORS[(i + 2) % CHART_COLORS.length]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-2 gap-2">
+                        {metrics.produtosMetrics.map((p: any, i: number) => (
+                            <div key={p.nome} className="flex items-center justify-between p-2 rounded-lg bg-app">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: CHART_COLORS[(i + 2) % CHART_COLORS.length] }} />
+                                    <span className="text-[10px] text-white truncate">{p.nome}</span>
+                                </div>
+                                <span className="text-[10px] font-bold shrink-0 ml-2" style={{ color: CHART_COLORS[(i + 2) % CHART_COLORS.length] }}>{formatBRL(p.ticketMedio)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : null
+        },
     };
 
     return (
+
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={layoutOrder} strategy={rectSortingStrategy}>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 pb-12 mt-4">

@@ -54,6 +54,7 @@ type Metrics = {
     comissaoSdrDetalhes?: { nome: string; caixa: number; pct: number; comissao: number }[];
     statusLeads?: { status: string; count: number; pct: number }[];
     pendentesPorCloser?: { nome: string; valor: number }[];
+    produtosMetrics?: { nome: string; vendas: number; receita: number; ticketMedio: number }[];
 };
 
 const DARK = 'var(--bg-surface)';
