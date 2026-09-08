@@ -6,6 +6,19 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId') || searchParams.get('id_projeto');
 
+        // ─── Mode: fetch products linked to specific venda IDs ───────────────
+        // Used by edit-sale modal to pre-populate selected products
+        const vendaIds = searchParams.getAll('vendaId').map(Number).filter(Boolean);
+        if (vendaIds.length > 0) {
+            const { data, error } = await supabase
+                .from('venda_produtos')
+                .select('id_venda, id_produto')
+                .in('id_venda', vendaIds);
+            if (error) throw error;
+            return NextResponse.json(data || []);
+        }
+
+        // ─── Default mode: list active products for a project ────────────────
         let query = supabase
             .from('produtos')
             .select('*')

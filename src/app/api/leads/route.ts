@@ -83,7 +83,42 @@ export async function GET(request: Request) {
             formas_pagamento: formasMap[l.id_lead] || [],
         }));
 
-        return NextResponse.json(enriched);
+        // ─── Enrich leads with product IDs ────────────────────────────────────
+        // Get all venda IDs for the current leads
+        const { data: allVendas } = await supabase
+            .from('vendas')
+            .select('id_venda, id_lead')
+            .in('id_lead', allLeadIds);
+
+        const vendaToLeadMap: Record<number, number> = {};
+        for (const v of allVendas || []) {
+            vendaToLeadMap[v.id_venda] = v.id_lead;
+        }
+
+        const allVendaIds = (allVendas || []).map((v: any) => v.id_venda);
+        let produtosMap: Record<number, number[]> = {}; // lead_id -> [id_produto, ...]
+        if (allVendaIds.length > 0) {
+            const { data: vpRows } = await supabase
+                .from('venda_produtos')
+                .select('id_venda, id_produto')
+                .in('id_venda', allVendaIds);
+            for (const vp of vpRows || []) {
+                const leadId = vendaToLeadMap[vp.id_venda];
+                if (!leadId) continue;
+                if (!produtosMap[leadId]) produtosMap[leadId] = [];
+                if (!produtosMap[leadId].includes(vp.id_produto)) {
+                    produtosMap[leadId].push(vp.id_produto);
+                }
+            }
+        }
+
+        const fullyEnriched = enriched.map((l: any) => ({
+            ...l,
+            produtos_ids: produtosMap[l.id_lead] || [],
+        }));
+
+        return NextResponse.json(fullyEnriched);
+
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

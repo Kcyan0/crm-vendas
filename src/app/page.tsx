@@ -26,8 +26,10 @@ type Lead = {
   tem_pendente?: boolean;
   valor_pendente?: number;
   formas_pagamento?: string[];
+  produtos_ids?: number[];
   off_metricas?: boolean;
 };
+
 
 const KANBAN_COLUMNS = [
   "Novo",
@@ -57,6 +59,10 @@ export default function KanbanBoard() {
   // Payment method filter (multi-select)
   const [filterFormas, setFilterFormas] = useState<string[]>([]);
   const [showFormasFilter, setShowFormasFilter] = useState(false);
+  // Product filter (multi-select)
+  const [filterProdutos, setFilterProdutos] = useState<number[]>([]);
+  const [showProdutosFilter, setShowProdutosFilter] = useState(false);
+
   // Export menu state
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showNamesModal, setShowNamesModal] = useState(false);
@@ -598,6 +604,26 @@ export default function KanbanBoard() {
         
         const existingDate = rows[0]?.data_venda ? new Date(rows[0].data_venda).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
         setSaleDate(existingDate);
+
+        // ─── Load previously saved products ───────────────────────────────
+        try {
+          const vendaIds = rows.map((r: any) => r.id_venda).filter(Boolean);
+          if (vendaIds.length > 0) {
+            // Fetch via query string — one param per id to avoid long URLs
+            const params = vendaIds.map((id: number) => `vendaId=${id}`).join('&');
+            const vpRes = await fetch(`/api/produtos?${params}`);
+            const vpData = await vpRes.json();
+            // vpData is an array of { id_produto } from venda_produtos
+            const existingProdIds: number[] = Array.isArray(vpData)
+              ? [...new Set(vpData.map((vp: any) => vp.id_produto))]
+              : [];
+            setSelectedProdutos(existingProdIds);
+          } else {
+            setSelectedProdutos([]);
+          }
+        } catch {
+          setSelectedProdutos([]);
+        }
       }
 
       setSaleLead(lead);
@@ -608,6 +634,7 @@ export default function KanbanBoard() {
       console.error(err);
     }
   };
+
 
   const handleSaveRefund = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -857,7 +884,7 @@ export default function KanbanBoard() {
                         </button>
                       );
                     })}
-                    {filterFormas.length > 0 && (
+          {filterFormas.length > 0 && (
                       <button
                         onClick={() => setFilterFormas([])}
                         className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
@@ -871,6 +898,66 @@ export default function KanbanBoard() {
               </div>
             );
           })()}
+
+          {/* ─── Product filter — accordion ───────────────────────────── */}
+          {produtos.length > 0 && (() => {
+            return (
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={() => setShowProdutosFilter(v => !v)}
+                  className="bg-surface border border-str text-sec text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400 flex items-center gap-1.5 whitespace-nowrap transition-all duration-150"
+                  style={filterProdutos.length > 0 ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : {}}
+                >
+                  Produto
+                  {filterProdutos.length > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black" style={{ background: 'var(--accent)', color: '#0A0A0A' }}>
+                      {filterProdutos.length}
+                    </span>
+                  )}
+                  <span className="text-[10px] opacity-50" style={{ transform: showProdutosFilter ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
+                </button>
+                {showProdutosFilter && (
+                  <div
+                    className="flex items-center gap-1.5 flex-wrap p-2 rounded-xl"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-str)' }}
+                  >
+                    {produtos.map((p: any) => {
+                      const isActive = filterProdutos.includes(p.id_produto);
+                      return (
+                        <button
+                          key={p.id_produto}
+                          onClick={() =>
+                            setFilterProdutos(prev =>
+                              isActive ? prev.filter(id => id !== p.id_produto) : [...prev, p.id_produto]
+                            )
+                          }
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-150 whitespace-nowrap"
+                          style={{
+                            background: isActive ? 'var(--accent)' : 'var(--bg-app)',
+                            color: isActive ? '#0A0A0A' : 'var(--text-sec)',
+                            border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-str)'}`,
+                          }}
+                        >
+                          {p.nome}
+                          {isActive && <span className="ml-0.5 opacity-70 text-[10px]">✕</span>}
+                        </button>
+                      );
+                    })}
+                    {filterProdutos.length > 0 && (
+                      <button
+                        onClick={() => setFilterProdutos([])}
+                        className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
+                        style={{ color: 'var(--text-sec)', border: '1px solid var(--border-str)', background: 'var(--bg-app)' }}
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <button
             className="btn-primary flex-1 md:flex-none justify-center flex items-center gap-2 whitespace-nowrap"
             onClick={handleOpenCreate}
@@ -880,6 +967,7 @@ export default function KanbanBoard() {
           </button>
         </div>
       </div>
+
 
       {/* Kanban Board Area */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 pb-4 px-1 md:px-0">
@@ -892,9 +980,14 @@ export default function KanbanBoard() {
               const leadFormas = l.formas_pagamento || [];
               if (!filterFormas.some(f => leadFormas.includes(f))) return false;
             }
+            if (filterProdutos.length > 0) {
+              const leadProdutos = l.produtos_ids || [];
+              if (!filterProdutos.some(pid => leadProdutos.includes(pid))) return false;
+            }
             if (searchTerm && !l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && !l.telefone?.includes(searchTerm)) return false;
             return true;
           });
+
 
           return (
             <div
