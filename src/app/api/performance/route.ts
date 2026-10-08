@@ -3,6 +3,21 @@ import supabase from '@/lib/db';
 import { caixaInPeriod } from '@/lib/financial';
 import { todayBrasilia } from '@/lib/brasilia';
 
+async function fetchAll(queryBuilder: any) {
+    let allData: any[] = [];
+    let from = 0;
+    const step = 999;
+    while (true) {
+        const { data, error } = await queryBuilder.range(from, from + step);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if (data.length <= step) break;
+        from += step + 1;
+    }
+    return allData;
+}
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -15,7 +30,7 @@ export async function GET(request: Request) {
         // Fetch active users
         let usersQuery = supabase.from('usuarios').select('id_usuario, nome, tipo').eq('ativo', true).in('tipo', ['SDR', 'CLOSER']);
         if (projectId) usersQuery = usersQuery.eq('id_projeto', projectId);
-        const { data: users } = await usersQuery;
+        const users = await fetchAll(usersQuery);
 
         const performanceSDR: Record<number, any> = {};
         const performanceCloser: Record<number, any> = {};
@@ -34,7 +49,7 @@ export async function GET(request: Request) {
             .eq('off_metricas', false)
             .neq('status_atual', 'No-show');
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
-        const { data: leads } = await leadsQuery;
+        const leads = await fetchAll(leadsQuery);
 
         (leads || []).forEach((l: any) => {
             const sdrId = l.id_sdr_responsavel;
@@ -67,13 +82,13 @@ export async function GET(request: Request) {
             .gte('data_venda', `${startDate}T00:00:00`)
             .lte('data_venda', `${endDate}T23:59:59`);
 
-        const { data: vendasPeriod } = await vendasQuery;
+        const vendasPeriod = await fetchAll(vendasQuery);
 
         // Also fetch ALL leads for this project to cover sales outside the start/end window for accurate SDR attribution & filtering
         let allLeadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual');
 
         if (projectId) allLeadsQuery = allLeadsQuery.eq('id_projeto', projectId);
-        const { data: allLeads } = await allLeadsQuery;
+        const allLeads = await fetchAll(allLeadsQuery);
 
         const validLeadIds = new Set<number>();
         const leadToSdr: Record<number, number> = {};
@@ -107,7 +122,7 @@ export async function GET(request: Request) {
             .in('status_pagamento', ['pago', 'pendente'])
             .gte('data_venda', `${startDate}T00:00:00`)
             .lte('data_venda', `${endDate}T23:59:59`);
-        const { data: vendasSdr } = await vendasSdrQuery;
+        const vendasSdr = await fetchAll(vendasSdrQuery);
 
         (vendasSdr || []).forEach((v: any) => {
             if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
@@ -150,7 +165,7 @@ export async function GET(request: Request) {
             .gte('data_venda', `${startDate}T00:00:00`)
             .lte('data_venda', `${endDate}T23:59:59`);
 
-        const [{ data: caixaWithDate }, { data: caixaNoDate }] = await Promise.all([caixaQueryA, caixaQueryB]);
+        const [caixaWithDate, caixaNoDate] = await Promise.all([fetchAll(caixaQueryA), fetchAll(caixaQueryB)]);
         const caixaPeriod = [...(caixaWithDate || []), ...(caixaNoDate || [])];
 
         // ─── Group by id_oportunidade (same deduplication as metrics API) ────────
@@ -190,7 +205,7 @@ export async function GET(request: Request) {
             .gte('data_entrada', `${startDate}T00:00:00`)
             .lte('data_entrada', `${endDate}T23:59:59`);
         if (projectId) reembolsadosQuery = reembolsadosQuery.eq('id_projeto', projectId);
-        const { data: reembolsados } = await reembolsadosQuery;
+        const reembolsados = await fetchAll(reembolsadosQuery);
         (reembolsados || []).forEach((l: any) => {
             if (l.id_sdr_responsavel && performanceSDR[l.id_sdr_responsavel]) {
                 performanceSDR[l.id_sdr_responsavel].reembolsos = (performanceSDR[l.id_sdr_responsavel].reembolsos || 0) + 1;
