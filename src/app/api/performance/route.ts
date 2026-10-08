@@ -70,17 +70,20 @@ export async function GET(request: Request) {
         const { data: vendasPeriod } = await vendasQuery;
 
         // Also fetch ALL leads for this project to cover sales outside the start/end window for accurate SDR attribution & filtering
-        let allLeadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, status_atual');
+        let allLeadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual');
+
         if (projectId) allLeadsQuery = allLeadsQuery.eq('id_projeto', projectId);
         const { data: allLeads } = await allLeadsQuery;
 
         const validLeadIds = new Set<number>();
         const leadToSdr: Record<number, number> = {};
+        const leadToCloser: Record<number, number> = {};
         
         (allLeads || []).forEach((l: any) => {
             if (l.status_atual !== 'Reembolsado' && l.status_atual !== 'Loss') {
                 validLeadIds.add(l.id_lead);
                 if (l.id_sdr_responsavel) leadToSdr[l.id_lead] = l.id_sdr_responsavel;
+                if (l.id_closer_responsavel) leadToCloser[l.id_lead] = l.id_closer_responsavel;
             }
         });
 
@@ -88,12 +91,14 @@ export async function GET(request: Request) {
         (vendasPeriod || []).forEach((v: any) => {
             if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
             
-            const closerId = v.id_closer;
+            // Fallback ao closer do lead quando id_closer não está na venda
+            const closerId = v.id_closer ?? leadToCloser[v.id_lead] ?? null;
             if (!closerId || !performanceCloser[closerId]) return;
 
             performanceCloser[closerId].vgv += parseFloat(v.valor_bruto) || 0;
             // CAIXA is computed separately below
         });
+
 
         // SDR vgv/caixa — fetch sales for leads where the SDR is responsible
         let vendasSdrQuery = supabase
@@ -164,8 +169,8 @@ export async function GET(request: Request) {
             for (const v of deal.rows) cxVal += caixaInPeriod(v, startDate, endDate);
             if (cxVal <= 0) return;
 
-            // Credit closer
-            const closerId = deal.id_closer;
+            // Credit closer — fallback to leadToCloser when id_closer is null on the venda
+            const closerId = deal.id_closer ?? leadToCloser[deal.id_lead] ?? null;
             if (closerId && performanceCloser[closerId]) {
                 performanceCloser[closerId].caixa += cxVal;
             }
@@ -175,6 +180,7 @@ export async function GET(request: Request) {
                 performanceSDR[sdrId].caixa = (performanceSDR[sdrId].caixa || 0) + cxVal;
             }
         });
+
 
         // Reembolsos per user — filtered by data_entrada in selected period
         let reembolsadosQuery = supabase

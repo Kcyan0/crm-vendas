@@ -100,13 +100,49 @@ export async function GET(request: Request) {
         }
         const groupedSalesCaixa = Object.values(mapCaixa);
 
-        // ─── Receita (Faturamento Global) ─────────────────────────────────────────
-        const receita = groupedSalesFat.reduce((sum, s) => sum + s.valor_bruto, 0);
+        // ─── Faturamento — pago no período ────────────────────────────────────────
+        // Rebuild only pago rows for the period (pendentes are added separately below
+        // so a pendente from a prior period is not missed or double-counted).
+        const mapFatPago: Record<number, { id_lead: number; valor_bruto: number }> = {};
+        for (const v of filteredFat) {
+            if (v.status_pagamento !== 'pago') continue;
+            const oportId = v.id_oportunidade ?? v.id_lead;
+            if (!mapFatPago[oportId]) mapFatPago[oportId] = { id_lead: v.id_lead, valor_bruto: 0 };
+            mapFatPago[oportId].valor_bruto += parseFloat(v.valor_bruto) || 0;
+        }
+        const receitaPeriodoPago = Object.values(mapFatPago).reduce((s, x) => s + x.valor_bruto, 0);
         const vendasTotais = groupedSalesFat.length;
+
+
+        // ─── Pagamentos Pendentes (ALL-TIME para o projeto) ───────────────────────
+        // Busca TODOS os pendentes do projeto, independente de data_venda.
+        // Isso garante que um pendente de agosto apareça no painel de setembro.
+        const validLeadIdsArray = [...validLeadIds!];
+        let allTimePendentesData: any[] = [];
+        if (validLeadIdsArray.length > 0) {
+            const { data: pendData } = await supabase
+                .from('vendas')
+                .select('id_venda, id_oportunidade, id_lead, valor_bruto')
+                .eq('status_pagamento', 'pendente')
+                .in('id_lead', validLeadIdsArray);
+            allTimePendentesData = pendData || [];
+        }
+
+        // Deduplica por id_oportunidade (evita contar Entrada+Parcelas duas vezes)
+        const mapPendentes: Record<number, number> = {};
+        for (const v of allTimePendentesData) {
+            const oportId = v.id_oportunidade ?? v.id_lead;
+            mapPendentes[oportId] = (mapPendentes[oportId] || 0) + (parseFloat(v.valor_bruto) || 0);
+        }
+        const pagamentosPendentes = Object.values(mapPendentes).reduce((sum, v) => sum + v, 0);
+
+        // ─── Faturamento total = pago no período + todos pendentes ─────────────────
+        const receita = receitaPeriodoPago + pagamentosPendentes;
 
         // ─── Vendas sem off_metricas → base para Ticket Médio ─────────────────────
         const mapFatTicket: Record<number, { valor_bruto: number }> = {};
         for (const v of (vendasFat || []).filter((v: any) => validLeadIdsTicket!.has(v.id_lead))) {
+            if (v.status_pagamento !== 'pago') continue; // ticket médio só pago
             const oportId = v.id_oportunidade ?? v.id_lead;
             if (!mapFatTicket[oportId]) mapFatTicket[oportId] = { valor_bruto: 0 };
             mapFatTicket[oportId].valor_bruto += parseFloat(v.valor_bruto) || 0;
@@ -114,17 +150,6 @@ export async function GET(request: Request) {
         const groupedSalesFatTicket = Object.values(mapFatTicket);
         const receitaTicket = groupedSalesFatTicket.reduce((sum, s) => sum + s.valor_bruto, 0);
         const vendasTotaisTicket = groupedSalesFatTicket.length;
-
-        // ─── Pagamentos Pendentes ──────────────────────────────────────────────────
-        // Sum of valor_bruto for pendente rows, deduplicated by id_oportunidade so
-        // split payments (Entrada + Parcelas) aren't double-counted.
-        const mapPendentes: Record<number, number> = {};
-        for (const v of filteredFat) {
-            if (v.status_pagamento !== 'pendente') continue;
-            const oportId = v.id_oportunidade ?? v.id_lead;
-            mapPendentes[oportId] = (mapPendentes[oportId] || 0) + (parseFloat(v.valor_bruto) || 0);
-        }
-        const pagamentosPendentes = Object.values(mapPendentes).reduce((sum, v) => sum + v, 0);
         // Note: pendentesPorCloser is computed AFTER leadOwnerMap is built below.
 
         // ─── Caixa Líquido Global ─────────────────────────────────────────────────
@@ -225,22 +250,24 @@ export async function GET(request: Request) {
             for (const v of sale.rows) saleCaixa += caixaInPeriod(v, startDate, endDate);
             if (saleCaixa <= 0) continue;
 
-            // Use id_closer from the SALE row (same logic as /api/performance)
-            // This is the source of truth — avoids mismatch with leadOwnerMap
-            const closerIdFromSale = sale.id_closer;
+            const owners = leadOwnerMap[sale.id_lead];
+
+            // Closer: usa id_closer da venda (source of truth), com fallback ao leadOwnerMap
+            // caso o campo não tenha sido preenchido em vendas antigas.
+            const closerIdFromSale = sale.id_closer ?? owners?.closer ?? null;
             if (closerIdFromSale) {
                 if (!closerStats[closerIdFromSale]) closerStats[closerIdFromSale] = { faturamento: 0, caixa: 0, count: 0 };
                 closerStats[closerIdFromSale].caixa += saleCaixa;
             }
 
-            // SDR attribution still uses leadOwnerMap (no id_sdr on vendas table)
-            const owners = leadOwnerMap[sale.id_lead];
+            // SDR: não tem id_sdr na tabela vendas, sempre usa leadOwnerMap
             if (owners?.sdr) {
                 const sId = owners.sdr;
                 if (!sdrStats[sId]) sdrStats[sId] = { faturamento: 0, caixa: 0, count: 0 };
                 sdrStats[sId].caixa += saleCaixa;
             }
         }
+
 
         // Resolve IDs → nomes para os gráficos de receita por pessoa
         const receitaPorCloser = Object.entries(byCloser).map(([id, value]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value }));
