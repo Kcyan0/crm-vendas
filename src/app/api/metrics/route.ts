@@ -120,45 +120,19 @@ export async function GET(request: Request) {
         }
         const groupedSalesCaixa = Object.values(mapCaixa);
 
-        // ─── Faturamento — pago no período ────────────────────────────────────────
-        // Rebuild only pago rows for the period (pendentes are added separately below
-        // so a pendente from a prior period is not missed or double-counted).
-        const mapFatPago: Record<number, { id_lead: number; valor_bruto: number }> = {};
-        for (const v of filteredFat) {
-            if (v.status_pagamento !== 'pago') continue;
-            const oportId = v.id_oportunidade ?? v.id_lead;
-            if (!mapFatPago[oportId]) mapFatPago[oportId] = { id_lead: v.id_lead, valor_bruto: 0 };
-            mapFatPago[oportId].valor_bruto += parseFloat(v.valor_bruto) || 0;
-        }
-        const receitaPeriodoPago = Object.values(mapFatPago).reduce((s, x) => s + x.valor_bruto, 0);
+        // ─── Faturamento — pago + pendente no período ─────────────────────────────
+        const receita = groupedSalesFat.reduce((sum, s) => sum + s.valor_bruto, 0);
         const vendasTotais = groupedSalesFat.length;
 
-
-        // ─── Pagamentos Pendentes (ALL-TIME para o projeto) ───────────────────────
-        // Busca TODOS os pendentes do projeto, independente de data_venda.
-        // Isso garante que um pendente de agosto apareça no painel de setembro.
-        const validLeadIdsArray = [...validLeadIds!];
-        let allTimePendentesData: any[] = [];
-        if (validLeadIdsArray.length > 0) {
-            allTimePendentesData = await fetchAll(
-                supabase
-                    .from('vendas')
-                    .select('id_venda, id_oportunidade, id_lead, valor_bruto')
-                    .eq('status_pagamento', 'pendente')
-                    .in('id_lead', validLeadIdsArray)
-            );
-        }
-
-        // Deduplica por id_oportunidade (evita contar Entrada+Parcelas duas vezes)
+        // ─── Pagamentos Pendentes (no período) ────────────────────────────────────
+        // Soma os valores pendentes das vendas que ocorreram neste período.
         const mapPendentes: Record<number, number> = {};
-        for (const v of allTimePendentesData) {
+        for (const v of filteredFat) {
+            if (v.status_pagamento !== 'pendente') continue;
             const oportId = v.id_oportunidade ?? v.id_lead;
             mapPendentes[oportId] = (mapPendentes[oportId] || 0) + (parseFloat(v.valor_bruto) || 0);
         }
         const pagamentosPendentes = Object.values(mapPendentes).reduce((sum, v) => sum + v, 0);
-
-        // ─── Faturamento total = pago no período + todos pendentes ─────────────────
-        const receita = receitaPeriodoPago + pagamentosPendentes;
 
         // ─── Vendas sem off_metricas → base para Ticket Médio ─────────────────────
         const mapFatTicket: Record<number, { valor_bruto: number }> = {};
