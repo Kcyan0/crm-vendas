@@ -175,7 +175,7 @@ export async function POST(request: Request) {
                     // pendente: sem data (só entra no caixa quando confirmado manualmente)
                     // pago: usa data_recebimento_custom se fornecida, senão data da venda
                     data_recebimento: statusPgto === 'pendente'
-                        ? null
+                        ? (dataRecebCustom || null)
                         : (dataRecebCustom || (data_venda ? data_venda : todayBR))
                 });
             } else {
@@ -197,7 +197,7 @@ export async function POST(request: Request) {
                     // pendente: sem data (só entra no caixa quando confirmado manualmente)
                     // pago: usa data_recebimento_custom se fornecida, senão data da venda
                     data_recebimento: statusPgto === 'pendente'
-                        ? null
+                        ? (dataRecebCustom || null)
                         : (dataRecebCustom || (data_venda ? data_venda : todayBR))
                 });
             }
