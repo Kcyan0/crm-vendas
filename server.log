@@ -1,0 +1,42 @@
+
+> crm-vendas@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.19:3000
+- Environments: .env.local
+
+✓ Starting...
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 1018ms
+[THALIS DEBUG] id_venda=2713, valor_liquido=0, data_rec=2026-07-23, data_venda=2026-07-23T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2714, valor_liquido=0, data_rec=2026-07-23, data_venda=2026-07-23T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2367, valor_liquido=297, data_rec=2026-08-07, data_venda=2026-08-07T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2801, valor_liquido=0, data_rec=2026-08-26, data_venda=2026-08-26T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2802, valor_liquido=0, data_rec=2026-08-26, data_venda=2026-08-26T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2803, valor_liquido=2000, data_rec=2026-08-26, data_venda=2026-08-26T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2804, valor_liquido=1500, data_rec=2026-09-05, data_venda=2026-08-26T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2643, valor_liquido=-100, data_rec=2026-08-31, data_venda=2026-08-31T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2644, valor_liquido=0, data_rec=2026-08-31, data_venda=2026-08-31T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2645, valor_liquido=495, data_rec=2026-08-31, data_venda=2026-08-31T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2850, valor_liquido=200, data_rec=2026-09-09, data_venda=2026-09-09T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2946, valor_liquido=400, data_rec=2026-09-16, data_venda=2026-09-16T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=2947, valor_liquido=0, data_rec=2026-09-16, data_venda=2026-09-16T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3005, valor_liquido=0, data_rec=2026-09-22, data_venda=2026-09-22T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3050, valor_liquido=-100, data_rec=2026-09-23, data_venda=2026-09-23T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3051, valor_liquido=0, data_rec=2026-09-23, data_venda=2026-09-23T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3049, valor_liquido=700, data_rec=2026-09-26, data_venda=2026-09-26T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3058, valor_liquido=0, data_rec=2026-09-27, data_venda=2026-09-27T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3063, valor_liquido=-100, data_rec=2026-09-27, data_venda=2026-09-27T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3064, valor_liquido=0, data_rec=2026-09-27, data_venda=2026-09-27T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3065, valor_liquido=300, data_rec=2026-09-27, data_venda=2026-09-27T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3142, valor_liquido=0, data_rec=2026-09-30, data_venda=2026-09-30T12:00:00+00:00, caixaInPeriod=0
+[THALIS DEBUG] id_venda=3143, valor_liquido=400, data_rec=2026-09-30, data_venda=2026-09-30T12:00:00+00:00, caixaInPeriod=0
+CLOSER STATS FINAL: {
+  '22': { faturamento: 32500, caixa: 16300, count: 5 },
+  '32': { faturamento: 0, caixa: 5, count: 0 },
+  '73': { faturamento: 26000, caixa: 8000, count: 6 },
+  '74': { faturamento: 11000, caixa: 0, count: 3 }
+}
+ GET /api/metrics?startDate=2026-10-01&endDate=2026-10-31&projectId=11 200 in 3.0s (compile: 174ms, proxy.ts: 42ms, render: 2.8s)

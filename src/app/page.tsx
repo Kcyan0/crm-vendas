@@ -602,7 +602,8 @@ export default function KanbanBoard() {
         setPagamentos(reconstructed);
         setSaleObservacoes(lead.observacoes_gerais || '');
         
-        const existingDate = rows[0]?.data_venda ? new Date(rows[0].data_venda).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        const fallbackToday = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })();
+        const existingDate = rows[0]?.data_venda ? rows[0].data_venda.substring(0, 10) : fallbackToday;
         setSaleDate(existingDate);
 
         // ─── Load previously saved products ───────────────────────────────
@@ -1497,7 +1498,7 @@ export default function KanbanBoard() {
                             type="date"
                             className="bg-app border border-amber-500/40 text-amber-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-amber-400"
                             value={p.data_recebimento_custom}
-                            min={new Date().toISOString().split('T')[0]}
+                            min={(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })()}
                             onChange={e => handlePagamentoChange(p.id, 'data_recebimento_custom', e.target.value)}
                           />
                           <span className="text-[10px] text-amber-400/70">nao entra no caixa ainda</span>

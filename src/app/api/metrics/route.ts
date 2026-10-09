@@ -246,9 +246,6 @@ export async function GET(request: Request) {
             for (const v of sale.rows) {
                 const c = caixaInPeriod(v, startDate, endDate);
                 saleCaixa += c;
-                if (v.id_closer === 74 || owners?.closer === 74) {
-                    console.log(`[THALIS DEBUG] id_venda=${v.id_venda}, valor_liquido=${v.valor_liquido_caixa}, data_rec=${v.data_recebimento}, data_venda=${v.data_venda}, caixaInPeriod=${c}`);
-                }
             }
             if (saleCaixa <= 0) continue;
 
@@ -270,7 +267,6 @@ export async function GET(request: Request) {
 
 
         // Resolve IDs → nomes para os gráficos de receita por pessoa
-        console.log("CLOSER STATS FINAL:", closerStats);
         const receitaPorCloser = Object.entries(byCloser).map(([id, value]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value }));
         const receitaPorSdr    = Object.entries(bySdr).map(([id, value]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value }));
 
