@@ -76,7 +76,7 @@ export default function TeamPage() {
                 id_projeto: selectedProject.id_projeto
             };
 
-            if (formData.senha && formData.senha.trim().length >= 6) {
+            if (formData.senha && formData.senha.trim()) {
                 body.senha = formData.senha.trim();
             }
 
@@ -109,7 +109,7 @@ export default function TeamPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-white tracking-tight">Gestão do Time</h2>
-                    <p className="text-sec mt-1">Configure permissões, comissionamentos e salários. A senha padrão inicial de novos membros é <span className="text-accent font-semibold">000000</span>.</p>
+                    <p className="text-sec mt-1">Configure permissões, comissionamentos e salários. A senha padrão inicial de novos membros é <span className="text-accent font-semibold">0000</span>.</p>
                 </div>
                 <button onClick={handleOpenCreate} className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2">
                     <UserPlus size={18} />
@@ -215,14 +215,14 @@ export default function TeamPage() {
                                 <input
                                     type="text"
                                     className="w-full bg-surface"
-                                    placeholder={editingUserId ? "Deixe em branco para manter a atual" : "Padrão: 000000 (mínimo 6 dígitos)"}
+                                    placeholder={editingUserId ? "Deixe em branco para manter a atual" : "Padrão: 0000"}
                                     value={formData.senha}
                                     onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                                 />
                                 <p className="text-[11px] text-sec mt-1">
                                     {editingUserId
-                                        ? "Preencha apenas se quiser redefinir a senha do membro no login (mínimo 6 caracteres)."
-                                        : "Mínimo 6 caracteres. Se deixar em branco, a senha padrão será 000000."}
+                                        ? "Preencha apenas se quiser redefinir a senha do membro no login."
+                                        : "Se deixar em branco, a senha padrão será 0000."}
                                 </p>
                             </div>
 

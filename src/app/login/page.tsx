@@ -18,10 +18,33 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+    const cleanEmail = email.trim()
+    let { error: signInError } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
       password,
     })
+
+    // Suporte transparente para a senha padrão de 4 zeros ('0000'):
+    // Como o Supabase Auth exige no mínimo 6 caracteres para criação de contas,
+    // contas criadas usam '000000' internamente. O retry abaixo garante que
+    // qualquer pessoa digitando '0000' consiga entrar perfeitamente.
+    if (signInError && password === '0000') {
+      const retry = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: '000000',
+      })
+      if (!retry.error) {
+        signInError = null
+      }
+    } else if (signInError && password === '000000') {
+      const retry = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: '0000',
+      })
+      if (!retry.error) {
+        signInError = null
+      }
+    }
 
     if (signInError) {
       setError(signInError.message)

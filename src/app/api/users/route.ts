@@ -10,7 +10,12 @@ const DEFAULT_PASSWORD = '000000'; // Mínimo de 6 caracteres exigido pelo Supab
 async function ensureAuthUser(email: string, password?: string) {
     if (!email) return;
     const cleanEmail = email.toLowerCase().trim();
-    const pwd = (password && password.trim().length >= 6) ? password.trim() : DEFAULT_PASSWORD;
+    // '0000' ou vazio mapeia para DEFAULT_PASSWORD ('000000') para cumprir a regra de min 6 chars do Supabase Auth
+    let pwd = DEFAULT_PASSWORD;
+    if (password && password.trim()) {
+        const trimmed = password.trim();
+        pwd = (trimmed === '0000') ? DEFAULT_PASSWORD : (trimmed.length >= 6 ? trimmed : DEFAULT_PASSWORD);
+    }
     try {
         const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
         if (listError) {
@@ -29,7 +34,7 @@ async function ensureAuthUser(email: string, password?: string) {
             } else {
                 console.log(`[Auth] Conta criada com sucesso para: ${cleanEmail}`);
             }
-        } else if (password && password.trim().length >= 6) {
+        } else if (password && password.trim()) {
             // Se forneceu uma senha específica, atualiza a senha no Auth
             const { error: updError } = await supabase.auth.admin.updateUserById(existing.id, { password: pwd });
             if (updError) {
@@ -114,29 +119,36 @@ export async function PUT(request: Request) {
             const { data: { users } } = await supabase.auth.admin.listUsers();
             let authUser = users?.find((u: any) => u.email === (oldEmail || newEmail));
 
+            // Se a senha foi informada como '0000', mapeia para DEFAULT_PASSWORD ('000000')
+            let effectivePassword: string | null = null;
+            if (senha && senha.trim()) {
+                const trimmed = senha.trim();
+                effectivePassword = (trimmed === '0000') ? DEFAULT_PASSWORD : (trimmed.length >= 6 ? trimmed : null);
+            }
+
             if (oldEmail && newEmail && oldEmail !== newEmail) {
                 if (authUser) {
                     await supabase.auth.admin.updateUserById(authUser.id, {
                         email: newEmail,
                         email_confirm: true,
-                        ...(senha && senha.trim().length >= 6 ? { password: senha.trim() } : {})
+                        ...(effectivePassword ? { password: effectivePassword } : {})
                     });
                     console.log(`[Auth] E-mail atualizado: ${oldEmail} → ${newEmail}`);
                 } else {
                     await supabase.auth.admin.createUser({
                         email: newEmail,
-                        password: (senha && senha.trim().length >= 6) ? senha.trim() : DEFAULT_PASSWORD,
+                        password: effectivePassword || DEFAULT_PASSWORD,
                         email_confirm: true,
                     });
                     console.log(`[Auth] Conta criada para novo e-mail: ${newEmail}`);
                 }
-            } else if (authUser && senha && senha.trim().length >= 6) {
-                await supabase.auth.admin.updateUserById(authUser.id, { password: senha.trim() });
+            } else if (authUser && effectivePassword) {
+                await supabase.auth.admin.updateUserById(authUser.id, { password: effectivePassword });
                 console.log(`[Auth] Senha atualizada para: ${newEmail}`);
             } else if (!authUser && newEmail) {
                 await supabase.auth.admin.createUser({
                     email: newEmail,
-                    password: (senha && senha.trim().length >= 6) ? senha.trim() : DEFAULT_PASSWORD,
+                    password: effectivePassword || DEFAULT_PASSWORD,
                     email_confirm: true,
                 });
             }
