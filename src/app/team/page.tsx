@@ -80,15 +80,23 @@ export default function TeamPage() {
                 body.senha = formData.senha.trim();
             }
 
-            await fetch("/api/users", {
+            const res = await fetch("/api/users", {
                 method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                alert(errData.error || "Erro ao salvar usuário.");
+                return;
+            }
+
             setIsModalOpen(false);
             fetchUsers();
-        } catch (err) {
+        } catch (err: any) {
             console.error("Erro ao salvar usuário:", err);
+            alert("Erro de conexão ao salvar usuário: " + (err.message || err));
         }
     };
 

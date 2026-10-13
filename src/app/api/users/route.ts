@@ -79,7 +79,14 @@ export async function POST(request: Request) {
             .select('id_usuario')
             .single();
 
-        if (error) throw error;
+        if (error) {
+            if (error.message?.includes('usuarios_tipo_check')) {
+                return NextResponse.json({
+                    error: "O banco de dados do Supabase ainda não tem o cargo EXPERT liberado na tabela de usuários. É necessário executar o comando SQL de atualização no Supabase para permitir EXPERT."
+                }, { status: 400 });
+            }
+            throw error;
+        }
 
         // Criar conta Auth automaticamente para o novo membro
         await ensureAuthUser(email, senha);
@@ -110,7 +117,14 @@ export async function PUT(request: Request) {
             .update({ nome, email, tipo, ativo: isAtivo, salario_fixo_mensal: salario || 0, percentual_comissao_sdr: pctSdr || 0, percentual_comissao_closer: pctCloser || 0, id_projeto })
             .eq('id_usuario', id_usuario);
 
-        if (error) throw error;
+        if (error) {
+            if (error.message?.includes('usuarios_tipo_check')) {
+                return NextResponse.json({
+                    error: "O banco de dados do Supabase ainda não tem o cargo EXPERT liberado na tabela de usuários. É necessário executar o comando SQL de atualização no Supabase para permitir EXPERT."
+                }, { status: 400 });
+            }
+            throw error;
+        }
 
         // ── Sincronizar e-mail e senha no Auth se foi alterado ────────────────────
         const oldEmail = currentUser?.email?.toLowerCase().trim();
