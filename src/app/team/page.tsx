@@ -20,7 +20,7 @@ export default function TeamPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
     const [formData, setFormData] = useState({
-        nome: "", email: "", tipo: "SDR", salario: "0", pctSdr: "0", pctCloser: "0", ativo: true
+        nome: "", email: "", tipo: "SDR", salario: "0", pctSdr: "0", pctCloser: "0", ativo: true, senha: ""
     });
 
     const { selectedProject } = useProject();
@@ -40,7 +40,7 @@ export default function TeamPage() {
 
     const handleOpenCreate = () => {
         setEditingUserId(null);
-        setFormData({ nome: "", email: "", tipo: "SDR", salario: "0", pctSdr: "0", pctCloser: "0", ativo: true });
+        setFormData({ nome: "", email: "", tipo: "SDR", salario: "0", pctSdr: "0", pctCloser: "0", ativo: true, senha: "" });
         setIsModalOpen(true);
     };
 
@@ -53,7 +53,8 @@ export default function TeamPage() {
             salario: user.salario_fixo_mensal?.toString() || "0",
             pctSdr: user.percentual_comissao_sdr?.toString() || "0",
             pctCloser: user.percentual_comissao_closer?.toString() || "0",
-            ativo: user.ativo === 1
+            ativo: user.ativo === 1,
+            senha: ""
         });
         setIsModalOpen(true);
     };
@@ -63,7 +64,7 @@ export default function TeamPage() {
         if (!selectedProject) return;
         try {
             const method = editingUserId ? "PUT" : "POST";
-            const body = {
+            const body: any = {
                 id_usuario: editingUserId,
                 nome: formData.nome,
                 email: formData.email,
@@ -74,6 +75,10 @@ export default function TeamPage() {
                 ativo: formData.ativo,
                 id_projeto: selectedProject.id_projeto
             };
+
+            if (formData.senha && formData.senha.trim().length >= 6) {
+                body.senha = formData.senha.trim();
+            }
 
             await fetch("/api/users", {
                 method,
@@ -104,7 +109,7 @@ export default function TeamPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-white tracking-tight">Gestão do Time</h2>
-                    <p className="text-sec mt-1">Configure permissões, comissionamentos e salários.</p>
+                    <p className="text-sec mt-1">Configure permissões, comissionamentos e salários. A senha padrão inicial de novos membros é <span className="text-accent font-semibold">000000</span>.</p>
                 </div>
                 <button onClick={handleOpenCreate} className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2">
                     <UserPlus size={18} />
@@ -201,6 +206,24 @@ export default function TeamPage() {
                             <div>
                                 <label className="block text-sm font-medium text-white mb-1">E-mail *</label>
                                 <input required type="email" className="w-full" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-white mb-1">
+                                    {editingUserId ? "Alterar Senha de Acesso" : "Senha de Acesso (Login)"}
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-surface"
+                                    placeholder={editingUserId ? "Deixe em branco para manter a atual" : "Padrão: 000000 (mínimo 6 dígitos)"}
+                                    value={formData.senha}
+                                    onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                                />
+                                <p className="text-[11px] text-sec mt-1">
+                                    {editingUserId
+                                        ? "Preencha apenas se quiser redefinir a senha do membro no login (mínimo 6 caracteres)."
+                                        : "Mínimo 6 caracteres. Se deixar em branco, a senha padrão será 000000."}
+                                </p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1,29 +1,45 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 
-const DEFAULT_PASSWORD = '0000';
+const DEFAULT_PASSWORD = '000000'; // Mínimo de 6 caracteres exigido pelo Supabase Auth
 
 /**
- * Cria conta no Supabase Auth (auth.users) para um email se ainda não existir.
+ * Cria ou atualiza conta no Supabase Auth (auth.users) para um email.
  * Usa a Service Role Key para poder chamar auth.admin.
  */
-async function ensureAuthUser(email: string) {
+async function ensureAuthUser(email: string, password?: string) {
     if (!email) return;
+    const cleanEmail = email.toLowerCase().trim();
+    const pwd = (password && password.trim().length >= 6) ? password.trim() : DEFAULT_PASSWORD;
     try {
-        // Listar todos os usuários para verificar se já existe
-        const { data: { users } } = await supabase.auth.admin.listUsers();
-        const exists = users?.some((u: any) => u.email === email.toLowerCase().trim());
-        if (!exists) {
-            await supabase.auth.admin.createUser({
-                email: email.toLowerCase().trim(),
-                password: DEFAULT_PASSWORD,
+        const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+        if (listError) {
+            console.error('[Auth] Erro ao listar usuários:', listError);
+            return;
+        }
+        const existing = users?.find((u: any) => u.email?.toLowerCase().trim() === cleanEmail);
+        if (!existing) {
+            const { error: createError } = await supabase.auth.admin.createUser({
+                email: cleanEmail,
+                password: pwd,
                 email_confirm: true
             });
-            console.log(`[Auth] Conta criada para: ${email}`);
+            if (createError) {
+                console.error(`[Auth] Erro ao criar conta para ${cleanEmail}:`, createError);
+            } else {
+                console.log(`[Auth] Conta criada com sucesso para: ${cleanEmail}`);
+            }
+        } else if (password && password.trim().length >= 6) {
+            // Se forneceu uma senha específica, atualiza a senha no Auth
+            const { error: updError } = await supabase.auth.admin.updateUserById(existing.id, { password: pwd });
+            if (updError) {
+                console.error(`[Auth] Erro ao atualizar senha para ${cleanEmail}:`, updError);
+            } else {
+                console.log(`[Auth] Senha atualizada para: ${cleanEmail}`);
+            }
         }
     } catch (err) {
-        // Não devemos bloquear o cadastro se o Auth falhar
-        console.error('[Auth] Erro ao criar conta auth:', err);
+        console.error('[Auth] Erro ao gerenciar conta auth:', err);
     }
 }
 
@@ -49,7 +65,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { nome, email, tipo, salario, pctSdr, pctCloser, id_projeto } = body;
+        const { nome, email, tipo, salario, pctSdr, pctCloser, id_projeto, senha } = body;
         if (!id_projeto) return NextResponse.json({ error: 'Projeto é obrigatório' }, { status: 400 });
 
         const { data, error } = await supabase
@@ -61,7 +77,7 @@ export async function POST(request: Request) {
         if (error) throw error;
 
         // Criar conta Auth automaticamente para o novo membro
-        await ensureAuthUser(email);
+        await ensureAuthUser(email, senha);
 
         return NextResponse.json({ id: data.id_usuario, ...body });
     } catch (error: any) {
@@ -72,7 +88,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
     try {
         const body = await request.json();
-        const { id_usuario, nome, email, tipo, ativo, salario, pctSdr, pctCloser, id_projeto } = body;
+        const { id_usuario, nome, email, tipo, ativo, salario, pctSdr, pctCloser, id_projeto, senha } = body;
         if (!id_usuario) return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
         if (!id_projeto) return NextResponse.json({ error: 'Projeto é obrigatório' }, { status: 400 });
 
@@ -91,32 +107,41 @@ export async function PUT(request: Request) {
 
         if (error) throw error;
 
-        // ── Sincronizar e-mail no Auth se foi alterado ────────────────────
+        // ── Sincronizar e-mail e senha no Auth se foi alterado ────────────────────
         const oldEmail = currentUser?.email?.toLowerCase().trim();
         const newEmail = email?.toLowerCase().trim();
-        if (oldEmail && newEmail && oldEmail !== newEmail) {
-            try {
-                const { data: { users } } = await supabase.auth.admin.listUsers();
-                const authUser = users?.find((u: any) => u.email === oldEmail);
+        try {
+            const { data: { users } } = await supabase.auth.admin.listUsers();
+            let authUser = users?.find((u: any) => u.email === (oldEmail || newEmail));
+
+            if (oldEmail && newEmail && oldEmail !== newEmail) {
                 if (authUser) {
                     await supabase.auth.admin.updateUserById(authUser.id, {
                         email: newEmail,
-                        email_confirm: true,  // confirma imediatamente, sem precisar verificar
+                        email_confirm: true,
+                        ...(senha && senha.trim().length >= 6 ? { password: senha.trim() } : {})
                     });
                     console.log(`[Auth] E-mail atualizado: ${oldEmail} → ${newEmail}`);
                 } else {
-                    // Não existia no auth ainda — cria agora
                     await supabase.auth.admin.createUser({
                         email: newEmail,
-                        password: '0000',
+                        password: (senha && senha.trim().length >= 6) ? senha.trim() : DEFAULT_PASSWORD,
                         email_confirm: true,
                     });
                     console.log(`[Auth] Conta criada para novo e-mail: ${newEmail}`);
                 }
-            } catch (authErr) {
-                console.error('[Auth] Erro ao sincronizar e-mail no auth:', authErr);
-                // Não bloqueia — tabela já foi atualizada
+            } else if (authUser && senha && senha.trim().length >= 6) {
+                await supabase.auth.admin.updateUserById(authUser.id, { password: senha.trim() });
+                console.log(`[Auth] Senha atualizada para: ${newEmail}`);
+            } else if (!authUser && newEmail) {
+                await supabase.auth.admin.createUser({
+                    email: newEmail,
+                    password: (senha && senha.trim().length >= 6) ? senha.trim() : DEFAULT_PASSWORD,
+                    email_confirm: true,
+                });
             }
+        } catch (authErr) {
+            console.error('[Auth] Erro ao sincronizar credenciais no auth:', authErr);
         }
 
         return NextResponse.json({ success: true, id_usuario });
