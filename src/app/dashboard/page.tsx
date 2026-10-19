@@ -48,6 +48,9 @@ type Metrics = {
     funnelData?: { name: string; value: number }[];
     chargebackRate?: string;
     recentRefundReasons?: string[];
+    valorPerdidoReembolso?: number;
+    totalReembolsados?: number;
+    detalhesReembolsos?: { leadId: number; nome: string; valor: number; motivo: string }[];
     comissaoCloserTotal?: number;
     comissaoSdrTotal?: number;
     comissaoCloserDetalhes?: { nome: string; caixa: number; pct: number; comissao: number }[];

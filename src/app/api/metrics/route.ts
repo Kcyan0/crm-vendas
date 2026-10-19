@@ -336,6 +336,32 @@ export async function GET(request: Request) {
             : '0.0';
         const recentRefundReasons = reembolsados.filter((l: any) => l.motivo_reembolso).slice(0, 5).map((l: any) => l.motivo_reembolso);
 
+        // ─── Valor Total Perdido por Reembolso (no período) ──────────────────────
+        const reembolsadoLeadIds = reembolsados.map((l: any) => l.id_lead).filter(Boolean);
+        let valorPerdidoReembolso = 0;
+        let detalhesReembolsos: { leadId: number; nome: string; valor: number; motivo: string }[] = [];
+
+        if (reembolsadoLeadIds.length > 0) {
+            const { data: vendasReembolsadas } = await supabase
+                .from('vendas')
+                .select('id_venda, id_lead, valor_bruto, status_pagamento')
+                .in('id_lead', reembolsadoLeadIds);
+
+            const valorPorLead: Record<number, number> = {};
+            for (const vr of (vendasReembolsadas || [])) {
+                valorPorLead[vr.id_lead] = (valorPorLead[vr.id_lead] || 0) + (parseFloat(vr.valor_bruto) || 0);
+            }
+
+            valorPerdidoReembolso = Object.values(valorPorLead).reduce((acc, curr) => acc + curr, 0);
+
+            detalhesReembolsos = reembolsados.map((l: any) => ({
+                leadId: l.id_lead,
+                nome: l.nome || 'Lead Reembolsado',
+                valor: valorPorLead[l.id_lead] || 0,
+                motivo: l.motivo_reembolso || 'Sem motivo informado'
+            })).sort((a, b) => b.valor - a.valor);
+        }
+
         // ─── Status dos Leads no período ─────────────────────────────────────────
         const kanbanStatuses = ['Novo', 'Follow-up', 'Remarcado', 'No-show', 'Venda', 'Reembolsado', 'Loss'];
         let periodLeadsQuery = supabase.from('leads').select('status_atual')
@@ -404,6 +430,9 @@ export async function GET(request: Request) {
             funnelData,
             chargebackRate,
             recentRefundReasons,
+            valorPerdidoReembolso,
+            totalReembolsados: reembolsados.length,
+            detalhesReembolsos,
             comissaoCloserTotal,
             comissaoSdrTotal,
             comissaoCloserDetalhes,

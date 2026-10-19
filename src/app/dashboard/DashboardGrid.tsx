@@ -383,28 +383,66 @@ export function DashboardGrid({
         },
         reembolsos: {
             colSpan: "col-span-1",
-            render: () => (
-                <div className="glass-panel p-4 rounded-xl flex flex-col h-full border border-white/5">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xs sm:text-sm font-bold text-white">Reembolsos & Chargeback</h3>
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg" style={{ background: '#ef4444', color: '#fff' }}>
-                            {metrics?.chargebackRate || '0.0'}% tx
-                        </span>
-                    </div>
-                    <div className="flex-1 w-full min-h-[120px] max-h-[160px] overflow-y-auto space-y-2 custom-scrollbar">
-                        {metrics?.recentRefundReasons && metrics.recentRefundReasons.length > 0 ? (
-                            metrics.recentRefundReasons.map((reason: string, i: number) => (
-                                <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-app border border-str">
-                                    <span className="text-red-400 mt-0.5 shrink-0 text-[10px]">⚠</span>
-                                    <p className="text-[10px] text-[#cccccc]">{reason}</p>
+            render: () => {
+                const totalPerdido = metrics?.valorPerdidoReembolso || 0;
+                const totalQtd = metrics?.totalReembolsados || (metrics?.recentRefundReasons?.length || 0);
+                const detalhes = metrics?.detalhesReembolsos || [];
+
+                return (
+                    <div className="glass-panel p-4 rounded-xl flex flex-col h-full border border-white/5">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-xs sm:text-sm font-bold text-white">Reembolsos & Prejuízo</h3>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg" style={{ background: '#ef4444', color: '#fff' }}>
+                                {metrics?.chargebackRate || '0.0'}% tx
+                            </span>
+                        </div>
+
+                        {/* Card de Valor Total Perdido */}
+                        <div className="mb-3 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between">
+                            <div>
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-red-300/80 block">Total Perdido</span>
+                                <span className="text-sm sm:text-base font-black text-red-400">
+                                    {formatBRL(totalPerdido)}
+                                </span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-sec block">Ocorrências</span>
+                                <span className="text-xs sm:text-sm font-bold text-white">
+                                    {totalQtd} {totalQtd === 1 ? 'lead' : 'leads'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Lista com detalhes dos motivos e valores */}
+                        <div className="flex-1 w-full min-h-[100px] max-h-[140px] overflow-y-auto space-y-1.5 custom-scrollbar">
+                            {detalhes.length > 0 ? (
+                                detalhes.map((item: any, i: number) => (
+                                    <div key={i} className="flex flex-col p-2 rounded-lg bg-app border border-str text-[10px] space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-semibold text-white truncate max-w-[130px]">{item.nome}</span>
+                                            {item.valor > 0 && (
+                                                <span className="font-bold text-red-400 shrink-0">-{formatBRL(item.valor)}</span>
+                                            )}
+                                        </div>
+                                        <p className="text-[9px] text-[#aaa] italic line-clamp-2">"{item.motivo}"</p>
+                                    </div>
+                                ))
+                            ) : metrics?.recentRefundReasons && metrics.recentRefundReasons.length > 0 ? (
+                                metrics.recentRefundReasons.map((reason: string, i: number) => (
+                                    <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-app border border-str">
+                                        <span className="text-red-400 mt-0.5 shrink-0 text-[10px]">⚠</span>
+                                        <p className="text-[10px] text-[#cccccc]">{reason}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px] py-4" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>
+                                    Nenhum reembolso 🎉
                                 </div>
-                            ))
-                        ) : (
-                            <div className="h-full flex items-center justify-center border-2 border-dashed rounded-xl text-[10px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: TEXT_SEC }}>Nenhum reembolso 🎉</div>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
-            )
+                );
+            }
         },
         comissaoCloser: {
             colSpan: "col-span-1 md:col-span-2",
