@@ -318,7 +318,7 @@ export async function GET(request: Request) {
         const funnelStages = ['Novo', 'Follow-up', 'Agendado', 'Negociação', 'Venda', 'Reembolsado', 'Loss'];
         let periodFunnelQuery = supabase
             .from('leads')
-            .select('status_atual, motivo_reembolso')
+            .select('id_lead, nome, status_atual, motivo_reembolso')
             .gte('data_entrada', startVendaFilter)
             .lt('data_entrada', endFilter)
             .eq('off_metricas', false);
