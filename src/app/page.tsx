@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing } from "lucide-react";
+import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2 } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV } from '@/lib/exportUtils';
 import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
@@ -47,7 +47,10 @@ export default function KanbanBoard() {
   const { selectedProject, userName } = useProject();
   const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
+  // loading: só a primeira carga troca a tela; depois o quadro fica visível e refreshing mostra um aviso discreto
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const leadsRequestRef = useRef(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSavingLead, setIsSavingLead] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
@@ -267,19 +270,26 @@ export default function KanbanBoard() {
   };
 
   const fetchLeads = async () => {
+    // Se outra busca começar antes desta terminar (ex.: troca de data), a resposta antiga é descartada
+    const requestId = ++leadsRequestRef.current;
     try {
-      setLoading(true);
+      setRefreshing(true);
       const query = new URLSearchParams();
       if (selectedProject?.id_projeto) query.set('projectId', selectedProject.id_projeto.toString());
       if (startDate) query.set('startDate', startDate);
       if (endDate) query.set('endDate', endDate);
       const res = await fetch(`/api/leads?${query.toString()}`);
       const data = await res.json();
-      setLeads(data);
+      if (requestId !== leadsRequestRef.current) return;
+      if (Array.isArray(data)) setLeads(data);
+      else console.error('Erro ao carregar leads', data);
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (requestId === leadsRequestRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
@@ -415,21 +425,46 @@ export default function KanbanBoard() {
     try {
       const isEdit = editingLeadId !== null;
       const method = isEdit ? "PUT" : "POST";
+      const sdrId = formData.id_sdr_responsavel ? parseInt(formData.id_sdr_responsavel) : null;
+      const closerId = formData.id_closer_responsavel ? parseInt(formData.id_closer_responsavel) : null;
 
-      await fetch("/api/leads", {
+      const res = await fetch("/api/leads", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           id_lead: editingLeadId,
           is_full_update: isEdit ? true : undefined,
-          id_sdr_responsavel: formData.id_sdr_responsavel ? parseInt(formData.id_sdr_responsavel) : null,
-          id_closer_responsavel: formData.id_closer_responsavel ? parseInt(formData.id_closer_responsavel) : null,
+          id_sdr_responsavel: sdrId,
+          id_closer_responsavel: closerId,
           id_projeto: selectedProject.id_projeto,
           usuario_nome: userName,
           off_metricas: offMetricas,
         }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(`Erro ao salvar lead: ${err.error || `HTTP ${res.status}`}`);
+        return;
+      }
+      if (isEdit) {
+        // Atualiza o card na hora; a busca em segundo plano traz o resto (datas, vendas)
+        const nomeUsuario = (id: number | null) => users.find(u => u.id_usuario === id)?.nome ?? "";
+        setLeads(prev => prev.map(l => l.id_lead === editingLeadId ? {
+          ...l,
+          nome: formData.nome,
+          telefone: formData.telefone,
+          instagram: formData.instagram,
+          email: formData.email,
+          origem: formData.origem,
+          observacoes_gerais: formData.observacoes_gerais,
+          id_sdr_responsavel: sdrId,
+          id_closer_responsavel: closerId,
+          sdr_nome: nomeUsuario(sdrId),
+          closer_nome: nomeUsuario(closerId),
+          off_metricas: offMetricas,
+        } : l));
+      }
       setIsModalOpen(false);
       setFormData({
         nome: "", telefone: "", instagram: "", email: "", origem: "", id_sdr_responsavel: "", id_closer_responsavel: "", observacoes_gerais: "", data_entrada: ""
@@ -510,6 +545,8 @@ export default function KanbanBoard() {
       setComprovanteFile(null);
       setComprovantePreview(null);
       setSelectedProdutos([]);
+      // Card vai para Venda na hora; a busca em segundo plano traz valores e formas de pagamento
+      setLeads(prev => prev.map(l => l.id_lead === currentLeadId ? { ...l, status_atual: 'Venda' } : l));
       fetchLeads();
 
     } catch (err: any) {
@@ -676,9 +713,10 @@ export default function KanbanBoard() {
     if (!editingLeadId) return;
     if (!confirm('Deseja realmente excluir permanentemente este Lead?')) return;
     try {
-      await fetch(`/api/leads?id=${editingLeadId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/leads?id=${editingLeadId}`, { method: 'DELETE' });
+      if (!res.ok) { alert('Erro ao excluir lead.'); return; }
       setIsModalOpen(false);
-      fetchLeads();
+      setLeads(prev => prev.filter(l => l.id_lead !== editingLeadId));
     } catch (err) {
       console.error(err);
     }
@@ -727,9 +765,10 @@ export default function KanbanBoard() {
     if (!detailLead) return;
     if (!confirm('Deseja realmente excluir permanentemente este Lead?')) return;
     try {
-      await fetch(`/api/leads?id=${detailLead.id_lead}`, { method: 'DELETE' });
+      const res = await fetch(`/api/leads?id=${detailLead.id_lead}`, { method: 'DELETE' });
+      if (!res.ok) { alert('Erro ao excluir lead.'); return; }
       setIsDetailOpen(false);
-      fetchLeads();
+      setLeads(prev => prev.filter(l => l.id_lead !== detailLead.id_lead));
     } catch (err) { console.error(err); }
   };
 
@@ -748,7 +787,15 @@ export default function KanbanBoard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h2 className="text-3xl font-black text-white tracking-tight">Quadro de Leads</h2>
-          <p className="text-sec mt-1 text-sm">Arraste os cards para atualizar o status no pipeline.</p>
+          <p className="text-sec mt-1 text-sm flex items-center gap-2">
+            Arraste os cards para atualizar o status no pipeline.
+            {refreshing && (
+              <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                <Loader2 size={12} className="animate-spin" />
+                Atualizando...
+              </span>
+            )}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">

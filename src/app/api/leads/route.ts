@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 import { logActivity } from '@/lib/logger';
+import { fetchAll } from '@/lib/fetchAll';
+
+// Lotes de 200 ids para a URL do .in() não ficar gigante; os lotes rodam em paralelo
+async function fetchInBatches(ids: number[], buildQuery: (ids: number[]) => Parameters<typeof fetchAll>[0]) {
+    const batches: number[][] = [];
+    for (let i = 0; i < ids.length; i += 200) batches.push(ids.slice(i, i + 200));
+    const results = await Promise.all(batches.map(batch => fetchAll(buildQuery(batch))));
+    return results.flat();
+}
 
 export async function GET(request: Request) {
     try {
@@ -23,8 +32,8 @@ export async function GET(request: Request) {
         if (startDate) query = query.gte('data_entrada', `${startDate}T00:00:00`);
         if (endDate) query = query.lte('data_entrada', `${endDate}T23:59:59`);
 
-        const { data, error } = await query;
-        if (error) throw error;
+        // Paginado: sem isso o Supabase corta em 1000 leads e os mais antigos somem
+        const data = await fetchAll(query.order('id_lead', { ascending: false }));
 
         // Flatten the joined data to match the expected format
         const leads = (data || []).map((lead: any) => {
@@ -41,18 +50,22 @@ export async function GET(request: Request) {
             };
         });
 
-        // ─── Enrich leads with pending payment info ────────────────────────────
-        const vendaLeadIds = leads.filter((l: any) => l.status_atual === 'Venda').map((l: any) => l.id_lead);
-        let pendenteMap: Record<number, number> = {};
-        if (vendaLeadIds.length > 0) {
-            const { data: pendentes } = await supabase
+        // ─── Vendas dos leads: uma consulta só, em lotes paralelos ────────────
+        const allLeadIds = leads.map((l: any) => l.id_lead);
+        const allVendas = await fetchInBatches(allLeadIds, ids =>
+            supabase
                 .from('vendas')
-                .select('id_lead, valor_bruto')
-                .eq('status_pagamento', 'pendente')
-                .in('id_lead', vendaLeadIds);
-            for (const p of pendentes || []) {
-                pendenteMap[p.id_lead] = (pendenteMap[p.id_lead] || 0) + (parseFloat(p.valor_bruto) || 0);
-            }
+                .select('id_venda, id_lead, forma_pagamento, status_pagamento, valor_bruto')
+                .in('id_lead', ids)
+                .order('id_venda')
+        );
+
+        // ─── Enrich leads with pending payment info ────────────────────────────
+        const vendaLeadIds = new Set(leads.filter((l: any) => l.status_atual === 'Venda').map((l: any) => l.id_lead));
+        let pendenteMap: Record<number, number> = {};
+        for (const p of allVendas) {
+            if (p.status_pagamento !== 'pendente' || !vendaLeadIds.has(p.id_lead)) continue;
+            pendenteMap[p.id_lead] = (pendenteMap[p.id_lead] || 0) + (parseFloat(p.valor_bruto) || 0);
         }
 
         const leadsWithPendente = leads.map((l: any) => ({
@@ -62,20 +75,13 @@ export async function GET(request: Request) {
         }));
 
         // ─── Enrich leads with payment methods ────────────────────────────────
-        const allLeadIds = leads.map((l: any) => l.id_lead);
         let formasMap: Record<number, string[]> = {};
-        if (allLeadIds.length > 0) {
-            const { data: vendaFormas } = await supabase
-                .from('vendas')
-                .select('id_lead, forma_pagamento')
-                .in('id_lead', allLeadIds);
-            for (const v of vendaFormas || []) {
-                const base = (v.forma_pagamento || '')
-                    .replace(/ \(Entrada\)| \(Parcelas\)/g, '').trim();
-                if (!base) continue;
-                if (!formasMap[v.id_lead]) formasMap[v.id_lead] = [];
-                if (!formasMap[v.id_lead].includes(base)) formasMap[v.id_lead].push(base);
-            }
+        for (const v of allVendas) {
+            const base = (v.forma_pagamento || '')
+                .replace(/ \(Entrada\)| \(Parcelas\)/g, '').trim();
+            if (!base) continue;
+            if (!formasMap[v.id_lead]) formasMap[v.id_lead] = [];
+            if (!formasMap[v.id_lead].includes(base)) formasMap[v.id_lead].push(base);
         }
 
         const enriched = leadsWithPendente.map((l: any) => ({
@@ -84,25 +90,23 @@ export async function GET(request: Request) {
         }));
 
         // ─── Enrich leads with product IDs ────────────────────────────────────
-        // Get all venda IDs for the current leads
-        const { data: allVendas } = await supabase
-            .from('vendas')
-            .select('id_venda, id_lead')
-            .in('id_lead', allLeadIds);
-
         const vendaToLeadMap: Record<number, number> = {};
-        for (const v of allVendas || []) {
+        for (const v of allVendas) {
             vendaToLeadMap[v.id_venda] = v.id_lead;
         }
 
-        const allVendaIds = (allVendas || []).map((v: any) => v.id_venda);
+        const allVendaIds = allVendas.map((v: any) => v.id_venda);
         let produtosMap: Record<number, number[]> = {}; // lead_id -> [id_produto, ...]
         if (allVendaIds.length > 0) {
-            const { data: vpRows } = await supabase
-                .from('venda_produtos')
-                .select('id_venda, id_produto')
-                .in('id_venda', allVendaIds);
-            for (const vp of vpRows || []) {
+            const vpRows = await fetchInBatches(allVendaIds, ids =>
+                supabase
+                    .from('venda_produtos')
+                    .select('id_venda, id_produto')
+                    .in('id_venda', ids)
+                    .order('id_venda')
+                    .order('id_produto')
+            );
+            for (const vp of vpRows) {
                 const leadId = vendaToLeadMap[vp.id_venda];
                 if (!leadId) continue;
                 if (!produtosMap[leadId]) produtosMap[leadId] = [];
