@@ -16,7 +16,7 @@ type Lead = {
   instagram: string;
   email: string;
   origem: string;
-  observacoes_gerais: string;
+  observacoes_gerais?: string; // não vem na lista; é buscada ao abrir o lead (carregarObservacoes)
   status_atual: string;
   sdr_nome: string;
   closer_nome: string;
@@ -394,7 +394,25 @@ export default function KanbanBoard() {
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (lead: Lead) => {
+  // As observações não vêm na lista de leads (são o grosso do peso); busca só quando o lead é aberto
+  const carregarObservacoes = async (lead: Lead): Promise<string> => {
+    if (lead.observacoes_gerais !== undefined) return lead.observacoes_gerais || "";
+    const res = await fetch(`/api/leads?id=${lead.id_lead}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data.observacoes_gerais || "";
+  };
+
+  const handleOpenEdit = async (lead: Lead) => {
+    let observacoes: string;
+    try {
+      observacoes = await carregarObservacoes(lead);
+    } catch (err) {
+      // Sem as observações carregadas, salvar o formulário apagaria as do banco
+      console.error(err);
+      alert('Não foi possível abrir o lead para edição. Tente de novo.');
+      return;
+    }
     setEditingLeadId(lead.id_lead);
     setOffMetricas(lead.off_metricas ?? false);
 
@@ -411,7 +429,7 @@ export default function KanbanBoard() {
       origem: lead.origem || "",
       id_sdr_responsavel: lead.id_sdr_responsavel?.toString() || "",
       id_closer_responsavel: lead.id_closer_responsavel?.toString() || "",
-      observacoes_gerais: lead.observacoes_gerais || "",
+      observacoes_gerais: observacoes,
       data_entrada: dataEntradaLocal
     });
     setIsModalOpen(true);
@@ -557,14 +575,17 @@ export default function KanbanBoard() {
   const handleOpenEditSale = async (e: React.MouseEvent, lead: Lead) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/vendas?leadId=${lead.id_lead}`);
+      const [res, observacoes] = await Promise.all([
+        fetch(`/api/vendas?leadId=${lead.id_lead}`),
+        carregarObservacoes(lead),
+      ]);
       const rows: any[] = await res.json();
 
       if (rows.length === 0) {
         // No existing rows? Open as a fresh sale
         const defaultGw = gateways[0]?.nome || "PIX";
         setPagamentos([newPagamento(defaultGw)]);
-        setSaleObservacoes(lead.observacoes_gerais || "");
+        setSaleObservacoes(observacoes);
         setSaleDate(todayBrasilia());
       } else {
         // Reconstruct pagamentos from DB rows.
@@ -639,7 +660,7 @@ export default function KanbanBoard() {
         ];
 
         setPagamentos(reconstructed);
-        setSaleObservacoes(lead.observacoes_gerais || '');
+        setSaleObservacoes(observacoes);
         
         const fallbackToday = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })();
         const existingDate = rows[0]?.data_venda ? rows[0].data_venda.substring(0, 10) : fallbackToday;
@@ -672,6 +693,7 @@ export default function KanbanBoard() {
       setIsSaleModalOpen(true);
     } catch (err) {
       console.error(err);
+      alert('Não foi possível abrir a venda. Tente de novo.');
     }
   };
 
@@ -727,6 +749,11 @@ export default function KanbanBoard() {
     setDetailCaixaOpen(false);
     setBriefingExpanded(false);
     setIsDetailOpen(true);
+    if (lead.observacoes_gerais === undefined) {
+      carregarObservacoes(lead)
+        .then(obs => setDetailLead(prev => prev?.id_lead === lead.id_lead ? { ...prev, observacoes_gerais: obs } : prev))
+        .catch(err => console.error('Erro ao carregar observações', err));
+    }
     if (lead.status_atual === 'Venda') {
       try {
         const res = await fetch(`/api/vendas?leadId=${lead.id_lead}`);
@@ -1908,6 +1935,11 @@ export default function KanbanBoard() {
             </div>
 
             {/* Briefing */}
+            {detailLead.observacoes_gerais === undefined && (
+              <div className="px-5 py-3 border-b border-str flex items-center gap-2 text-xs text-sec">
+                <Loader2 size={12} className="animate-spin" /> Carregando briefing...
+              </div>
+            )}
             {detailLead.observacoes_gerais && (
               <div className="px-5 py-4 border-b border-str">
                 <div className="flex items-center justify-between mb-2">

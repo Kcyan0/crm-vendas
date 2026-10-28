@@ -18,10 +18,25 @@ export async function GET(request: Request) {
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
 
+        // ?id=X → só as observações de um lead (a lista não traz, ver abaixo)
+        const leadId = searchParams.get('id');
+        if (leadId) {
+            const { data, error } = await supabase
+                .from('leads')
+                .select('id_lead, observacoes_gerais')
+                .eq('id_lead', leadId)
+                .single();
+            if (error) throw error;
+            return NextResponse.json(data);
+        }
+
+        // Sem observacoes_gerais: são ~80% do peso da lista e só aparecem ao abrir um lead
         let query = supabase
             .from('leads')
             .select(`
-                *,
+                id_lead, nome, telefone, instagram, email, origem, status_atual,
+                id_sdr_responsavel, id_closer_responsavel, id_projeto, data_entrada,
+                motivo_reembolso, off_metricas, data_proximo_follow,
                 sdr:usuarios!id_sdr_responsavel(nome),
                 closer:usuarios!id_closer_responsavel(nome),
                 oportunidades(valor_proposta, etapa_pipeline)

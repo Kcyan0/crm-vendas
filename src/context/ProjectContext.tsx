@@ -35,7 +35,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const fetchUserDataAndProjects = async () => {
-            try {
+            const loadUser = async () => {
                 const supabase = createClient();
                 const { data: { user: authUser } } = await supabase.auth.getUser();
                 if (authUser && authUser.email) {
@@ -51,6 +51,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
                     const nome = dbUser?.nome ?? authUser.email.split('@')[0];
                     setUser({ email: authUser.email, tipo, nome } as any);
                 }
+            };
+
+            const loadProjects = async () => {
                 const res = await fetch('/api/projetos');
                 const data = await res.json();
 
@@ -70,8 +73,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
                         setSelectedProject(data.projetos[0]);
                     }
                 }
-            } catch (error) {
-                console.error("Erro ao carregar sessão e projetos", error);
+            };
+
+            try {
+                // Em paralelo: as telas só precisam do projeto para começar a carregar os dados
+                const results = await Promise.allSettled([loadUser(), loadProjects()]);
+                for (const r of results) {
+                    if (r.status === 'rejected') console.error("Erro ao carregar sessão e projetos", r.reason);
+                }
             } finally {
                 setIsLoading(false);
             }
