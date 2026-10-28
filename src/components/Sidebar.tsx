@@ -2,17 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X, Globe, Palette, ChevronDown, ShieldCheck, Package } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X, Globe, Palette, ChevronDown, ShieldCheck, Package, BellRing } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { createClient } from "@/lib/supabase/browser";
 import { useTheme, THEMES, MODES, ThemeId, ModeId } from "@/context/ThemeContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { FOLLOWUPS_CHANGED_EVENT } from "@/lib/followUp";
 
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {
     const pathname = usePathname();
     const { projetos, selectedProject, setSelectedProject, isLoading, user, isAdmin } = useProject();
     const { theme, mode, setTheme, setMode } = useTheme();
     const [showThemePicker, setShowThemePicker] = useState(false);
+    const [followsAtrasados, setFollowsAtrasados] = useState(0);
+
+    // Contador de follows atrasados: recarrega ao trocar de projeto, de tela ou ao registrar um follow
+    useEffect(() => {
+        if (!selectedProject) return;
+        const fetchAtrasados = async () => {
+            try {
+                const res = await fetch(`/api/follow-ups?projectId=${selectedProject.id_projeto}&summary=1`);
+                if (!res.ok) return;
+                const data = await res.json();
+                setFollowsAtrasados(data.atrasados || 0);
+            } catch {
+                // contador é só um aviso: falha aqui não deve quebrar o menu
+            }
+        };
+        fetchAtrasados();
+        window.addEventListener(FOLLOWUPS_CHANGED_EVENT, fetchAtrasados);
+        return () => window.removeEventListener(FOLLOWUPS_CHANGED_EVENT, fetchAtrasados);
+    }, [selectedProject, pathname]);
 
     const handleLogout = async () => {
         const supabase = createClient();
@@ -23,6 +43,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
 
     const NAV_ITEMS = [
         { name: "Painel de Leads", icon: KanbanSquare, path: "/" },
+        { name: "Follow-up", icon: BellRing, path: "/follow-up", badge: followsAtrasados },
         { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
         { name: "Performance", icon: BarChart2, path: "/performance" },
         { name: "Meu Time", icon: Users, path: "/team" },
@@ -135,6 +156,15 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                             >
                                 <Icon size={18} />
                                 <span className="font-semibold text-sm">{link.name}</span>
+                                {!!link.badge && (
+                                    <span
+                                        className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-black flex items-center justify-center"
+                                        style={{ background: '#ef4444', color: '#fff' }}
+                                        title={`${link.badge} follow${link.badge > 1 ? 's' : ''} atrasado${link.badge > 1 ? 's' : ''}`}
+                                    >
+                                        {link.badge}
+                                    </span>
+                                )}
                             </Link>
                         );
                     })}

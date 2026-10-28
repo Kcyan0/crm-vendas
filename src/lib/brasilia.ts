@@ -62,3 +62,36 @@ export function dbDateToBrasiliaLocal(dbStr: string): string {
     const get = (type: string) => parts.find(p => p.type === type)?.value ?? '00';
     return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
 }
+
+/**
+ * Converte um instante (ex: timestamptz vindo do banco) para "YYYY-MM-DD" em Brasília.
+ */
+export function toBrasiliaDate(value: string | Date): string {
+    const date = typeof value === 'string' ? new Date(value) : value;
+    return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(date);
+}
+
+/**
+ * Soma (ou subtrai, com valor negativo) dias a uma data "YYYY-MM-DD".
+ */
+export function addDaysToDate(dateStr: string, days: number): string {
+    const date = new Date(`${dateStr}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Instante (ISO em UTC) em que começa o dia "YYYY-MM-DD" em Brasília.
+ * Brasília não tem horário de verão desde 2019, então é sempre UTC-3.
+ */
+export function startOfDayBrasiliaISO(dateStr: string): string {
+    return new Date(`${dateStr}T00:00:00-03:00`).toISOString();
+}
+
+/**
+ * Segunda-feira da semana (segunda a domingo) que contém a data "YYYY-MM-DD".
+ */
+export function mondayOf(dateStr: string): string {
+    const weekday = new Date(`${dateStr}T12:00:00Z`).getUTCDay(); // 0 = domingo
+    return addDaysToDate(dateStr, -((weekday + 6) % 7));
+}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Settings } from "lucide-react";
 import { DashboardGrid } from "./DashboardGrid";
+import { DestaquesSemana } from "./DestaquesSemana";
 
 import {
     TrendingUp,
@@ -416,6 +417,9 @@ export default function Dashboard() {
                 </div>
                 </div>
             </div>
+
+            {/* ── Destaques da semana ───────────────────────────────────── */}
+            <DestaquesSemana projectId={selectedProject?.id_projeto} formatBRL={formatBRL} />
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">

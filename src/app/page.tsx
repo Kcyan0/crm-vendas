@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon } from "lucide-react";
+import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV } from '@/lib/exportUtils';
 import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
 import { createClient as createBrowserClient } from '@/lib/supabase/browser';
+import { followSituacao, diasDeAtraso } from '@/lib/followUp';
 
 type Lead = {
   id_lead: number;
@@ -28,6 +29,7 @@ type Lead = {
   formas_pagamento?: string[];
   produtos_ids?: number[];
   off_metricas?: boolean;
+  data_proximo_follow?: string | null;
 };
 
 
@@ -1005,13 +1007,16 @@ export default function KanbanBoard() {
               </div>
 
               <div className="p-3 flex-1 overflow-y-auto space-y-3">
-                {columnLeads.map((lead) => (
+                {columnLeads.map((lead) => {
+                  const followAtrasado = followSituacao(lead.data_proximo_follow, lead.status_atual) === 'atrasado';
+                  return (
                   <div
                     key={lead.id_lead}
                     draggable
                     onDragStart={(e) => handleDragStart(e, lead.id_lead)}
                     onDoubleClick={() => handleOpenDetail(lead)}
-                    className="glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 border-str hover:border-orange-300 transition-all select-none group relative bg-surface"
+                    className={`glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 ${followAtrasado ? '' : 'border-str'} hover:border-orange-300 transition-all select-none group relative bg-surface`}
+                    style={followAtrasado ? { borderColor: 'rgba(239,68,68,0.6)', boxShadow: 'inset 3px 0 0 #ef4444' } : undefined}
                   >
                     <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                       <button
@@ -1058,6 +1063,19 @@ export default function KanbanBoard() {
                       )}
                     </div>
 
+                    {followAtrasado && lead.data_proximo_follow && (() => {
+                      const dias = diasDeAtraso(lead.data_proximo_follow);
+                      return (
+                        <div
+                          className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-md"
+                          style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.4)' }}
+                        >
+                          <BellRing size={11} />
+                          Follow atrasado há {dias} dia{dias > 1 ? 's' : ''}
+                        </div>
+                      );
+                    })()}
+
                     <div className="mt-4 pt-3 border-t border-[#222222] flex justify-between items-center">
                       <div className="flex -space-x-2">
                         {lead.sdr_nome && (
@@ -1102,7 +1120,8 @@ export default function KanbanBoard() {
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 {columnLeads.length === 0 && (
                   <div className="h-24 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-sec text-sm font-medium">
