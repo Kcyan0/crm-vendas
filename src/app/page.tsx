@@ -8,6 +8,7 @@ import { exportLeadsToCSV } from '@/lib/exportUtils';
 import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
 import { createClient as createBrowserClient } from '@/lib/supabase/browser';
 import { followSituacao, diasDeAtraso } from '@/lib/followUp';
+import { lerCacheLeads, salvarCacheLeads } from '@/lib/leadsCache';
 
 type Lead = {
   id_lead: number;
@@ -44,13 +45,14 @@ const KANBAN_COLUMNS = [
 ];
 
 export default function KanbanBoard() {
-  const { selectedProject, userName } = useProject();
+  const { selectedProject, userName, isLoading: carregandoProjeto } = useProject();
   const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   // loading: só a primeira carga troca a tela; depois o quadro fica visível e refreshing mostra um aviso discreto
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const leadsRequestRef = useRef(0);
+  const buscandoLeadsRef = useRef(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSavingLead, setIsSavingLead] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
@@ -131,15 +133,28 @@ export default function KanbanBoard() {
 
 
   useEffect(() => {
-    if (!selectedProject) {
-      setLoading(false);
-      return;
-    }
+    if (!selectedProject) return;
     fetchUsers();
     fetchGateways();
     fetchProdutos();
   }, [selectedProject]);
 
+  // Enquanto o projeto carrega, segue em "Carregando leads..." (antes mostrava o quadro vazio);
+  // só para de carregar sem projeto quando não existe projeto nenhum
+  useEffect(() => {
+    if (!selectedProject && !carregandoProjeto) setLoading(false);
+  }, [selectedProject, carregandoProjeto]);
+
+
+  // Abre na hora com a cópia da última visita; a busca do efeito seguinte atualiza em segundo plano
+  useEffect(() => {
+    if (!selectedProject) return;
+    const cache = lerCacheLeads<Lead>(selectedProject.id_projeto);
+    if (cache) {
+      setLeads(cache);
+      setLoading(false);
+    }
+  }, [selectedProject]);
 
   useEffect(() => {
     if (selectedProject) fetchLeads();
@@ -272,6 +287,7 @@ export default function KanbanBoard() {
   const fetchLeads = async () => {
     // Se outra busca começar antes desta terminar (ex.: troca de data), a resposta antiga é descartada
     const requestId = ++leadsRequestRef.current;
+    buscandoLeadsRef.current = true;
     try {
       setRefreshing(true);
       const query = new URLSearchParams();
@@ -281,16 +297,27 @@ export default function KanbanBoard() {
       const res = await fetch(`/api/leads?${query.toString()}`);
       const data = await res.json();
       if (requestId !== leadsRequestRef.current) return;
-      if (Array.isArray(data)) setLeads(data);
-      else console.error('Erro ao carregar leads', data);
+      if (Array.isArray(data)) {
+        setLeads(data);
+        // Só a lista sem filtro de data é a que o painel mostra ao abrir
+        if (selectedProject && !startDate && !endDate) salvarCacheLeads(selectedProject.id_projeto, data);
+      } else {
+        console.error('Erro ao carregar leads', data);
+      }
     } catch (e) {
       console.error(e);
     } finally {
       if (requestId === leadsRequestRef.current) {
+        buscandoLeadsRef.current = false;
         setLoading(false);
         setRefreshing(false);
       }
     }
+  };
+
+  // Uma busca que começou antes de uma alteração pode trazer o lead como era: busca de novo
+  const rebuscarSeEmAndamento = () => {
+    if (buscandoLeadsRef.current) fetchLeads();
   };
 
   const handleDragStart = (e: React.DragEvent, id_lead: number) => {
@@ -374,6 +401,7 @@ export default function KanbanBoard() {
         body: JSON.stringify({ id_lead, status_atual: status_novo, usuario_nome: userName }),
       });
       await logActivity(id_lead, `Status alterado para "${status_novo}"`);
+      rebuscarSeEmAndamento();
     } catch (err) {
       console.error("Failed to update status", err);
       fetchLeads();
@@ -710,6 +738,7 @@ export default function KanbanBoard() {
       });
       await logActivity(refundLeadId, `Reembolsado — motivo: "${motivo}"`);
       setLeads(prev => prev.map(l => l.id_lead === refundLeadId ? { ...l, status_atual: 'Reembolsado' } : l));
+      rebuscarSeEmAndamento();
       setIsRefundModalOpen(false);
       setRefundLeadId(null);
       setRefundMotivo('');
@@ -739,6 +768,7 @@ export default function KanbanBoard() {
       if (!res.ok) { alert('Erro ao excluir lead.'); return; }
       setIsModalOpen(false);
       setLeads(prev => prev.filter(l => l.id_lead !== editingLeadId));
+      rebuscarSeEmAndamento();
     } catch (err) {
       console.error(err);
     }
@@ -783,6 +813,7 @@ export default function KanbanBoard() {
       await fetch('/api/leads', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_lead: detailLead.id_lead, status_atual: newStatus, usuario_nome: userName }) });
       setDetailLead(prev => prev ? { ...prev, status_atual: newStatus } : prev);
       setLeads(prev => prev.map(l => l.id_lead === detailLead.id_lead ? { ...l, status_atual: newStatus } : l));
+      rebuscarSeEmAndamento();
       await logActivity(detailLead.id_lead, `Status alterado para "${newStatus}"`);
     } catch (err) { console.error(err); }
     finally { setDetailStatusSaving(false); }
@@ -796,6 +827,7 @@ export default function KanbanBoard() {
       if (!res.ok) { alert('Erro ao excluir lead.'); return; }
       setIsDetailOpen(false);
       setLeads(prev => prev.filter(l => l.id_lead !== detailLead.id_lead));
+      rebuscarSeEmAndamento();
     } catch (err) { console.error(err); }
   };
 

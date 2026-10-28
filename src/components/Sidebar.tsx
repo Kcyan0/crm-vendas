@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/browser";
 import { useTheme, THEMES, MODES, ThemeId, ModeId } from "@/context/ThemeContext";
 import { useState, useEffect } from "react";
 import { FOLLOWUPS_CHANGED_EVENT } from "@/lib/followUp";
+import { limparCacheLeads } from "@/lib/leadsCache";
 
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {
     const pathname = usePathname();
@@ -38,6 +39,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
         const supabase = createClient();
         await supabase.auth.signOut();
         localStorage.removeItem('feracrm_selected_project');
+        limparCacheLeads();
         window.location.href = '/login';
     };
 
