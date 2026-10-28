@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, BarChart2, FolderKanban, X, Globe, Palette, ChevronDown, ShieldCheck, Package, BellRing } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings as SettingsIcon, LogOut, KanbanSquare, FolderKanban, X, Globe, Palette, ChevronDown, ShieldCheck, Package, BellRing } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { createClient } from "@/lib/supabase/browser";
 import { useTheme, THEMES, MODES, ThemeId, ModeId } from "@/context/ThemeContext";
@@ -45,7 +45,6 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
         { name: "Painel de Leads", icon: KanbanSquare, path: "/" },
         { name: "Follow-up", icon: BellRing, path: "/follow-up", badge: followsAtrasados },
         { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-        { name: "Performance", icon: BarChart2, path: "/performance" },
         { name: "Meu Time", icon: Users, path: "/team" },
         { name: "Calendário", icon: Calendar, path: "/calendar" },
         { name: "Projetos", icon: FolderKanban, path: "/projects" },
