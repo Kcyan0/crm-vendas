@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 import { logActivity } from '@/lib/logger';
+import { pagoComDataFutura } from '@/lib/financial';
 
 export async function GET(request: Request) {
     try {
@@ -77,6 +78,16 @@ export async function POST(request: Request) {
 
         if (!id_lead || !pagamentos || pagamentos.length === 0) {
             return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+        }
+
+        // "Pago" só com data de hoje ou anterior: dinheiro que ainda vai entrar fica Pendente
+        // e só vira Pago quando alguém confirma manualmente (senão entra no caixa sozinho na data)
+        for (const p of pagamentos) {
+            if (pagoComDataFutura(p, data_venda || todayBR, todayBR)) {
+                return NextResponse.json({
+                    error: `O pagamento "${p.forma_pagamento || 'PIX'}" está como Pago com data futura. Se o dinheiro ainda não entrou, marque como Pendente.`,
+                }, { status: 400 });
+            }
         }
 
         // Calculate total gross value from all payments

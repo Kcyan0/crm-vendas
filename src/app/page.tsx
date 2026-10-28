@@ -1636,17 +1636,18 @@ export default function KanbanBoard() {
                         </div>
                       </div>
 
-                      {/* Pago — data real de recebimento (entra no caixa nessa data) */}
+                      {/* Pago — data real de recebimento, nunca futura (dinheiro que ainda vai entrar é Pendente) */}
                       {p.status_pagamento === 'pago' && (
                         <div className="mt-2 flex items-center gap-2">
                           <span className="text-[10px] text-sec">Data de recebimento:</span>
                           <input
                             type="date"
+                            max={todayBrasilia()}
                             className="bg-app border border-emerald-500/40 text-emerald-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-400"
                             value={p.data_recebimento_custom}
                             onChange={e => handlePagamentoChange(p.id, 'data_recebimento_custom', e.target.value)}
                           />
-                          <span className="text-[10px] text-emerald-400/70">entra no caixa nessa data</span>
+                          <span className="text-[10px] text-emerald-400/70">dia em que o dinheiro entrou</span>
                         </div>
                       )}
 

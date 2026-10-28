@@ -1,3 +1,22 @@
+/**
+ * true quando um pagamento do formulário de venda ficaria "pago" com data depois de hoje.
+ * Isso faria o valor entrar no caixa sozinho quando a data chegasse; dinheiro futuro deve ficar Pendente.
+ * A entrada (quando há) é sempre gravada como paga na data da venda.
+ * Datas no formato YYYY-MM-DD.
+ */
+export function pagoComDataFutura(
+    p: { valor?: string | number; valor_entrada?: string | number; status_pagamento?: string; data_recebimento_custom?: string },
+    dataVenda: string,
+    hoje: string
+): boolean {
+    const valorTotal = parseFloat(String(p.valor ?? '')) || 0;
+    const entrada = parseFloat(String(p.valor_entrada ?? '')) || 0;
+    const temEntrada = entrada > 0 && entrada < valorTotal;
+    const pago = (p.status_pagamento || 'pago') === 'pago';
+    const recebimento = pago ? (p.data_recebimento_custom || dataVenda) : null;
+    return (temEntrada && dataVenda > hoje) || (!!recebimento && recebimento > hoje);
+}
+
 // Strip "(Entrada)" / "(Parcelas)" suffixes so we get the base gateway name
 export function baseGateway(forma: string): string {
     return (forma || 'PIX').replace(/ \(Entrada\)| \(Parcelas\)/g, '').trim();
