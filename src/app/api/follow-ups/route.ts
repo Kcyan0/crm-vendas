@@ -41,7 +41,7 @@ export async function GET(request: Request) {
             supabase
                 .from('leads')
                 .select(`
-                    id_lead, nome, telefone, instagram, status_atual, data_proximo_follow, off_metricas,
+                    id_lead, nome, telefone, instagram, status_atual, data_proximo_follow, off_metricas, data_entrada,
                     id_sdr_responsavel, id_closer_responsavel,
                     sdr:usuarios!id_sdr_responsavel(nome),
                     closer:usuarios!id_closer_responsavel(nome)
@@ -52,27 +52,48 @@ export async function GET(request: Request) {
                 .order('id_lead', { ascending: true })
         );
 
-        // Último follow e total de follows de cada lead (em lotes para não estourar a URL)
+        // Último follow, total de follows e quando entrou em Follow-up (em lotes para não estourar a URL)
         const leadIds = leads.map((l: any) => l.id_lead);
         const ultimoFollow: Record<number, any> = {};
         const totalFollows: Record<number, number> = {};
+        const entrouEmFollow: Record<number, string> = {};
         for (let i = 0; i < leadIds.length; i += 200) {
-            const follows = await fetchAll(
-                supabase
-                    .from('follow_ups')
-                    .select('id_follow, id_lead, data_feito, observacao, usuario:usuarios(nome)')
-                    .in('id_lead', leadIds.slice(i, i + 200))
-                    .order('id_follow', { ascending: true })
-            );
+            const batch = leadIds.slice(i, i + 200);
+            const [follows, historico] = await Promise.all([
+                fetchAll(
+                    supabase
+                        .from('follow_ups')
+                        .select('id_follow, id_lead, data_feito, observacao, usuario:usuarios(nome)')
+                        .in('id_lead', batch)
+                        .order('id_follow', { ascending: true })
+                ),
+                fetchAll(
+                    supabase
+                        .from('lead_historico')
+                        .select('id, id_lead, criado_em')
+                        .in('id_lead', batch)
+                        .like('acao', 'Status alterado para%Follow-up%')
+                        .order('id', { ascending: true })
+                ),
+            ]);
             for (const f of follows) {
                 totalFollows[f.id_lead] = (totalFollows[f.id_lead] || 0) + 1;
                 const atual = ultimoFollow[f.id_lead];
                 if (!atual || new Date(f.data_feito) >= new Date(atual.data_feito)) ultimoFollow[f.id_lead] = f;
             }
+            for (const h of historico) {
+                const atual = entrouEmFollow[h.id_lead];
+                if (!atual || new Date(h.criado_em) >= new Date(atual)) entrouEmFollow[h.id_lead] = h.criado_em;
+            }
         }
 
         const result = leads.map((l: any) => {
             const ultimo = ultimoFollow[l.id_lead];
+            // Último contato: o mais recente entre último follow e entrada em Follow-up; sem nenhum, a entrada do lead
+            const contatos = [ultimo?.data_feito, entrouEmFollow[l.id_lead]].filter(Boolean) as string[];
+            const ultimoContato = contatos.length > 0
+                ? contatos.reduce((a, b) => (new Date(a) >= new Date(b) ? a : b))
+                : l.data_entrada || null;
             return {
                 id_lead: l.id_lead,
                 nome: l.nome,
@@ -86,6 +107,7 @@ export async function GET(request: Request) {
                 sdr_nome: l.sdr?.nome || null,
                 closer_nome: l.closer?.nome || null,
                 total_follows: totalFollows[l.id_lead] || 0,
+                ultimo_contato: ultimoContato,
                 ultimo_follow: ultimo
                     ? { data_feito: ultimo.data_feito, observacao: ultimo.observacao, usuario_nome: ultimo.usuario?.nome || null }
                     : null,

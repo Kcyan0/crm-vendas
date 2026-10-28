@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BellRing, Phone, Instagram, Loader2, X, MessageSquare } from "lucide-react";
+import { BellRing, Phone, Instagram, Loader2, X, MessageSquare, AlertTriangle } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { todayBrasilia, addDaysToDate, toBrasiliaDate } from "@/lib/brasilia";
-import { followSituacao, diasDeAtraso, FOLLOW_DEFAULT_DAYS, FOLLOWUPS_CHANGED_EVENT, FollowSituacao } from "@/lib/followUp";
+import { followSituacao, followAtencao, FOLLOW_DEFAULT_DAYS, FOLLOWUPS_CHANGED_EVENT, ESQUECIDO_DIAS, FollowSituacao, FollowAtencao } from "@/lib/followUp";
 
 type FollowLead = {
   id_lead: number;
@@ -19,10 +19,13 @@ type FollowLead = {
   sdr_nome: string | null;
   closer_nome: string | null;
   total_follows: number;
+  ultimo_contato: string | null;
   ultimo_follow: { data_feito: string; observacao: string | null; usuario_nome: string | null } | null;
 };
 
 const RED = '#ef4444';
+
+const plural = (n: number, palavra: string) => `${n} ${palavra}${n === 1 ? '' : 's'}`;
 
 const SITUACAO_LABEL: Record<FollowSituacao, string> = {
   atrasado: 'Atrasados',
@@ -134,17 +137,36 @@ export default function FollowUpPage() {
     if (s) contagem[s] += 1;
   }
 
-  const renderProximo = (lead: FollowLead) => {
+  // Críticos no topo e esquecidos no fim, cada grupo com quem espera há mais tempo primeiro
+  const comAtencao = visibleLeads.map(lead => ({
+    lead,
+    atencao: followAtencao(lead.data_proximo_follow, lead.status_atual, lead.ultimo_contato, hoje),
+  }));
+  const porDiasDesc = (a: { atencao: FollowAtencao | null }, b: { atencao: FollowAtencao | null }) =>
+    (b.atencao?.dias ?? 0) - (a.atencao?.dias ?? 0);
+  const criticos = comAtencao.filter(x => x.atencao?.prioridade === 'critico').sort(porDiasDesc);
+  const esquecidos = comAtencao.filter(x => x.atencao?.prioridade === 'esquecido').sort(porDiasDesc);
+  const demais = comAtencao.filter(x => !x.atencao?.prioridade);
+
+  const renderProximo = (lead: FollowLead, atencao: FollowAtencao | null) => {
     const situacao = followSituacao(lead.data_proximo_follow, lead.status_atual, hoje);
+    const dia = lead.data_proximo_follow ? formatDia(toBrasiliaDate(lead.data_proximo_follow)) : '';
+    if (atencao?.prioridade) {
+      const texto = atencao.motivo === 'atraso'
+        ? `Atrasado há ${plural(atencao.dias, 'dia')} · ${dia}`
+        : `Sem contato há ${plural(atencao.dias, 'dia')}`;
+      const estilo = atencao.prioridade === 'critico'
+        ? { background: 'rgba(239,68,68,0.12)', color: RED, border: '1px solid rgba(239,68,68,0.4)' }
+        : { background: 'var(--bg-surface-2)', color: 'var(--text-sec)', border: '1px solid var(--border-str)' };
+      return <span className="text-xs font-black px-2 py-1 rounded-md whitespace-nowrap" style={estilo}>{texto}</span>;
+    }
     if (!lead.data_proximo_follow || situacao === 'sem_data') {
       return <span className="text-xs font-semibold" style={{ color: 'var(--text-sec)' }}>Sem próximo follow</span>;
     }
-    const dia = formatDia(toBrasiliaDate(lead.data_proximo_follow));
-    if (situacao === 'atrasado') {
-      const dias = diasDeAtraso(lead.data_proximo_follow, hoje);
+    if (situacao === 'atrasado' && atencao) {
       return (
         <span className="text-xs font-black px-2 py-1 rounded-md whitespace-nowrap" style={{ background: 'rgba(239,68,68,0.12)', color: RED, border: '1px solid rgba(239,68,68,0.4)' }}>
-          Atrasado há {dias} dia{dias > 1 ? 's' : ''} · {dia}
+          Atrasado há {plural(atencao.dias, 'dia')} · {dia}
         </span>
       );
     }
@@ -158,6 +180,103 @@ export default function FollowUpPage() {
     return <span className="text-xs font-semibold whitespace-nowrap" style={{ color: 'var(--text-pri)' }}>Próximo: {dia}</span>;
   };
 
+  const renderLead = ({ lead, atencao }: { lead: FollowLead; atencao: FollowAtencao | null }) => {
+    const situacao = followSituacao(lead.data_proximo_follow, lead.status_atual, hoje);
+    const critico = atencao?.prioridade === 'critico';
+    const esquecido = atencao?.prioridade === 'esquecido';
+    const atrasado = situacao === 'atrasado' && !esquecido;
+    // Inline porque .border-str do CSS global vence as classes do Tailwind
+    const cardStyle: React.CSSProperties | undefined = critico
+      ? {
+          borderColor: RED,
+          background: 'linear-gradient(rgba(239,68,68,0.07), rgba(239,68,68,0.07)), var(--bg-surface)',
+          boxShadow: `inset 4px 0 0 ${RED}, 0 0 0 1px rgba(239,68,68,0.25)`,
+        }
+      : atrasado
+        ? { borderColor: 'rgba(239,68,68,0.6)', boxShadow: `inset 3px 0 0 ${RED}` }
+        : esquecido
+          ? { opacity: 0.75 }
+          : undefined;
+    return (
+      <div
+        key={lead.id_lead}
+        className={`glass-panel p-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-5 ${critico || atrasado ? '' : 'border-str'}`}
+        style={cardStyle}
+      >
+        {/* Lead */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {critico && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md tracking-wide" style={{ background: RED, color: '#fff' }}>
+                <AlertTriangle size={11} />
+                CRÍTICO
+              </span>
+            )}
+            {esquecido && (
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md tracking-wide" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-sec)', border: '1px dashed var(--border-str)' }}>
+                ESQUECIDO
+              </span>
+            )}
+            <h4 className="font-bold text-white leading-tight truncate">{lead.nome}</h4>
+            {lead.status_atual !== 'Follow-up' && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-sec)', border: '1px solid var(--border-str)' }}>
+                {lead.status_atual}
+              </span>
+            )}
+            {lead.off_metricas && (
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wide" style={{ background: '#1c1c1c', color: '#888', border: '1px solid #333' }} title="Fora das métricas comerciais">
+                ⊘ OFF
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-sec">
+            {lead.telefone && <span className="flex items-center gap-1.5"><Phone size={12} />{lead.telefone}</span>}
+            {lead.instagram && <span className="flex items-center gap-1.5"><Instagram size={12} />{lead.instagram}</span>}
+            {lead.sdr_nome && <span>SDR: <span className="text-white font-semibold">{lead.sdr_nome}</span></span>}
+            {lead.closer_nome && <span>Closer: <span className="text-white font-semibold">{lead.closer_nome}</span></span>}
+          </div>
+        </div>
+
+        {/* Último follow */}
+        <div className="md:w-64 min-w-0 text-xs text-sec">
+          {lead.ultimo_follow ? (
+            <>
+              <div className="flex items-center gap-1.5">
+                <MessageSquare size={12} />
+                <span>
+                  Último: {formatDia(toBrasiliaDate(lead.ultimo_follow.data_feito))}
+                  {lead.ultimo_follow.usuario_nome ? ` por ${lead.ultimo_follow.usuario_nome}` : ''}
+                  {lead.total_follows > 1 ? ` · ${lead.total_follows} follows` : ''}
+                </span>
+              </div>
+              {lead.ultimo_follow.observacao && (
+                <p className="mt-1 truncate" title={lead.ultimo_follow.observacao}>“{lead.ultimo_follow.observacao}”</p>
+              )}
+            </>
+          ) : (
+            <span>Nenhum follow registrado</span>
+          )}
+        </div>
+
+        {/* Próximo + ação */}
+        <div className="flex items-center justify-between md:justify-end gap-3 md:w-72">
+          {renderProximo(lead, atencao)}
+          <button
+            onClick={() => openFollowModal(lead)}
+            className="text-xs font-bold px-3 py-2 rounded-xl whitespace-nowrap transition-all"
+            style={critico || atrasado
+              ? { background: RED, color: '#fff' }
+              : esquecido
+                ? { background: 'var(--bg-surface-2)', color: 'var(--text-pri)', border: '1px solid var(--border-str)' }
+                : { background: 'var(--accent)', color: 'var(--accent-text)' }}
+          >
+            Registrar follow
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="pt-4 flex flex-col">
       {/* Header */}
@@ -165,7 +284,7 @@ export default function FollowUpPage() {
         <div>
           <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-pri)' }}>Follow-up</h2>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-sec)' }}>
-            Leads em follow-up, com os atrasados primeiro. Registre cada contato e marque o próximo.
+            Leads em follow-up, com os críticos primeiro. Registre cada contato e marque o próximo.
           </p>
         </div>
         <div className="relative w-full sm:w-64">
@@ -185,6 +304,16 @@ export default function FollowUpPage() {
 
       {/* Resumo */}
       <div className="flex flex-wrap gap-2 mb-5">
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold"
+          style={criticos.length > 0
+            ? { background: RED, color: '#fff', border: `1px solid ${RED}` }
+            : { background: 'var(--bg-surface)', color: 'var(--text-sec)', border: '1px solid var(--border-str)' }}
+        >
+          <AlertTriangle size={13} />
+          <span>Críticos</span>
+          <span className="font-black">{criticos.length}</span>
+        </div>
         {(Object.keys(SITUACAO_LABEL) as FollowSituacao[]).map(s => (
           <div
             key={s}
@@ -197,6 +326,14 @@ export default function FollowUpPage() {
             <span className="font-black" style={{ color: s === 'atrasado' && contagem.atrasado > 0 ? RED : 'var(--text-pri)' }}>{contagem[s]}</span>
           </div>
         ))}
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)', border: '1px dashed var(--border-str)' }}
+          title={`Mais de ${ESQUECIDO_DIAS} dias sem atenção`}
+        >
+          <span>Esquecidos</span>
+          <span className="font-black" style={{ color: 'var(--text-sec)' }}>{esquecidos.length}</span>
+        </div>
       </div>
 
       {/* Lista */}
@@ -211,76 +348,33 @@ export default function FollowUpPage() {
           Nenhum lead em follow-up{filterVendedor ? ' para este vendedor' : ''}.
         </div>
       ) : (
-        <div className="space-y-3">
-          {visibleLeads.map(lead => {
-            const situacao = followSituacao(lead.data_proximo_follow, lead.status_atual, hoje);
-            const atrasado = situacao === 'atrasado';
-            return (
-              <div
-                key={lead.id_lead}
-                className={`glass-panel p-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-5 ${atrasado ? '' : 'border-str'}`}
-                style={atrasado ? { borderColor: 'rgba(239,68,68,0.6)', boxShadow: `inset 3px 0 0 ${RED}` } : undefined}
-              >
-                {/* Lead */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-bold text-white leading-tight truncate">{lead.nome}</h4>
-                    {lead.status_atual !== 'Follow-up' && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-sec)', border: '1px solid var(--border-str)' }}>
-                        {lead.status_atual}
-                      </span>
-                    )}
-                    {lead.off_metricas && (
-                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wide" style={{ background: '#1c1c1c', color: '#888', border: '1px solid #333' }} title="Fora das métricas comerciais">
-                        ⊘ OFF
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-sec">
-                    {lead.telefone && <span className="flex items-center gap-1.5"><Phone size={12} />{lead.telefone}</span>}
-                    {lead.instagram && <span className="flex items-center gap-1.5"><Instagram size={12} />{lead.instagram}</span>}
-                    {lead.sdr_nome && <span>SDR: <span className="text-white font-semibold">{lead.sdr_nome}</span></span>}
-                    {lead.closer_nome && <span>Closer: <span className="text-white font-semibold">{lead.closer_nome}</span></span>}
-                  </div>
-                </div>
-
-                {/* Último follow */}
-                <div className="md:w-64 min-w-0 text-xs text-sec">
-                  {lead.ultimo_follow ? (
-                    <>
-                      <div className="flex items-center gap-1.5">
-                        <MessageSquare size={12} />
-                        <span>
-                          Último: {formatDia(toBrasiliaDate(lead.ultimo_follow.data_feito))}
-                          {lead.ultimo_follow.usuario_nome ? ` por ${lead.ultimo_follow.usuario_nome}` : ''}
-                          {lead.total_follows > 1 ? ` · ${lead.total_follows} follows` : ''}
-                        </span>
-                      </div>
-                      {lead.ultimo_follow.observacao && (
-                        <p className="mt-1 truncate" title={lead.ultimo_follow.observacao}>“{lead.ultimo_follow.observacao}”</p>
-                      )}
-                    </>
-                  ) : (
-                    <span>Nenhum follow registrado</span>
-                  )}
-                </div>
-
-                {/* Próximo + ação */}
-                <div className="flex items-center justify-between md:justify-end gap-3 md:w-72">
-                  {renderProximo(lead)}
-                  <button
-                    onClick={() => openFollowModal(lead)}
-                    className="text-xs font-bold px-3 py-2 rounded-xl whitespace-nowrap transition-all"
-                    style={atrasado
-                      ? { background: RED, color: '#fff' }
-                      : { background: 'var(--accent)', color: 'var(--accent-text)' }}
-                  >
-                    Registrar follow
-                  </button>
-                </div>
+        <div className="space-y-7">
+          {criticos.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle size={16} style={{ color: RED }} />
+                <h3 className="text-sm font-black uppercase tracking-wide" style={{ color: RED }}>Críticos · precisam de atenção agora</h3>
               </div>
-            );
-          })}
+              <div className="space-y-3">{criticos.map(renderLead)}</div>
+            </section>
+          )}
+          {demais.length > 0 && (
+            <section>
+              {(criticos.length > 0 || esquecidos.length > 0) && (
+                <h3 className="text-sm font-black uppercase tracking-wide mb-3" style={{ color: 'var(--text-sec)' }}>Demais follow-ups</h3>
+              )}
+              <div className="space-y-3">{demais.map(renderLead)}</div>
+            </section>
+          )}
+          {esquecidos.length > 0 && (
+            <section>
+              <h3 className="text-sm font-black uppercase tracking-wide" style={{ color: 'var(--text-sec)' }}>Esquecidos</h3>
+              <p className="text-xs mb-3 mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Mais de {ESQUECIDO_DIAS} dias sem atenção. Retome o contato ou mova para Loss no painel de leads.
+              </p>
+              <div className="space-y-3">{esquecidos.map(renderLead)}</div>
+            </section>
+          )}
         </div>
       )}
 
