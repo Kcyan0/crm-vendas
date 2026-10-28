@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2 } from "lucide-react";
+import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV } from '@/lib/exportUtils';
 import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
@@ -34,6 +34,9 @@ type Lead = {
 };
 
 
+// Cards desenhados por coluna antes do "Ver mais": desenhar os 1000+ leads de uma vez pesa no navegador
+const CARDS_POR_COLUNA = 50;
+
 const KANBAN_COLUMNS = [
   "Novo",
   "Follow-up",
@@ -53,6 +56,11 @@ export default function KanbanBoard() {
   const [refreshing, setRefreshing] = useState(false);
   const leadsRequestRef = useRef(0);
   const buscandoLeadsRef = useRef(false);
+  // Quantos cards cada coluna mostra (cresce com "Ver mais") e leads movidos nesta visita, que vão para o topo
+  const [limitePorColuna, setLimitePorColuna] = useState<Record<string, number>>({});
+  const [movidosAgora, setMovidosAgora] = useState<number[]>([]);
+  const marcarMovido = (id_lead: number) =>
+    setMovidosAgora(prev => [id_lead, ...prev.filter(id => id !== id_lead)]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSavingLead, setIsSavingLead] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
@@ -392,6 +400,7 @@ export default function KanbanBoard() {
         lead.id_lead === id_lead ? { ...lead, status_atual: status_novo } : lead
       )
     );
+    marcarMovido(id_lead);
 
     // Persist to DB + log activity
     try {
@@ -593,6 +602,7 @@ export default function KanbanBoard() {
       setSelectedProdutos([]);
       // Card vai para Venda na hora; a busca em segundo plano traz valores e formas de pagamento
       setLeads(prev => prev.map(l => l.id_lead === currentLeadId ? { ...l, status_atual: 'Venda' } : l));
+      marcarMovido(currentLeadId);
       fetchLeads();
 
     } catch (err: any) {
@@ -738,6 +748,7 @@ export default function KanbanBoard() {
       });
       await logActivity(refundLeadId, `Reembolsado — motivo: "${motivo}"`);
       setLeads(prev => prev.map(l => l.id_lead === refundLeadId ? { ...l, status_atual: 'Reembolsado' } : l));
+      marcarMovido(refundLeadId);
       rebuscarSeEmAndamento();
       setIsRefundModalOpen(false);
       setRefundLeadId(null);
@@ -813,6 +824,7 @@ export default function KanbanBoard() {
       await fetch('/api/leads', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_lead: detailLead.id_lead, status_atual: newStatus, usuario_nome: userName }) });
       setDetailLead(prev => prev ? { ...prev, status_atual: newStatus } : prev);
       setLeads(prev => prev.map(l => l.id_lead === detailLead.id_lead ? { ...l, status_atual: newStatus } : l));
+      marcarMovido(detailLead.id_lead);
       rebuscarSeEmAndamento();
       await logActivity(detailLead.id_lead, `Status alterado para "${newStatus}"`);
     } catch (err) { console.error(err); }
@@ -1081,7 +1093,7 @@ export default function KanbanBoard() {
       {/* Kanban Board Area */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 pb-4 px-1 md:px-0">
         {KANBAN_COLUMNS.map((col) => {
-          const columnLeads = leads.filter((l) => {
+          const filteredLeads = leads.filter((l) => {
             if (l.status_atual !== col && !(col === 'Loss' && l.status_atual === 'Nao prosseguiu')) return false;
             if (filterSdr && String(l.id_sdr_responsavel) !== filterSdr) return false;
             if (filterCloser && String(l.id_closer_responsavel) !== filterCloser) return false;
@@ -1096,7 +1108,15 @@ export default function KanbanBoard() {
             if (searchTerm && !l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && !l.telefone?.includes(searchTerm)) return false;
             return true;
           });
-
+          // Movidos nesta visita no topo (o último primeiro), para não caírem depois do limite da coluna
+          const movidos = movidosAgora
+            .map(id => filteredLeads.find(l => l.id_lead === id))
+            .filter((l): l is Lead => !!l);
+          const columnLeads = movidos.length > 0
+            ? [...movidos, ...filteredLeads.filter(l => !movidosAgora.includes(l.id_lead))]
+            : filteredLeads;
+          const limite = limitePorColuna[col] ?? CARDS_POR_COLUNA;
+          const restantes = columnLeads.length - limite;
 
           return (
             <div
@@ -1113,7 +1133,7 @@ export default function KanbanBoard() {
               </div>
 
               <div className="p-3 flex-1 overflow-y-auto space-y-3">
-                {columnLeads.map((lead) => {
+                {columnLeads.slice(0, limite).map((lead) => {
                   const followAtrasado = followSituacao(lead.data_proximo_follow, lead.status_atual) === 'atrasado';
                   return (
                   <div
@@ -1228,6 +1248,21 @@ export default function KanbanBoard() {
                   </div>
                   );
                 })}
+
+                {restantes > 0 && (
+                  <div className="pt-1 pb-2 flex flex-col items-center gap-1.5">
+                    <button
+                      onClick={() => setLimitePorColuna(prev => ({ ...prev, [col]: limite + CARDS_POR_COLUNA }))}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border border-str bg-surface text-sec hover:text-white transition-colors"
+                    >
+                      <ChevronDown size={14} />
+                      Ver mais {Math.min(CARDS_POR_COLUNA, restantes)}
+                    </button>
+                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      Mostrando {limite} de {columnLeads.length}
+                    </span>
+                  </div>
+                )}
 
                 {columnLeads.length === 0 && (
                   <div className="h-24 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-sec text-sm font-medium">
