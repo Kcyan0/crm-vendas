@@ -27,11 +27,16 @@ const RED = '#ef4444';
 
 const plural = (n: number, palavra: string) => `${n} ${palavra}${n === 1 ? '' : 's'}`;
 
-const SITUACAO_LABEL: Record<FollowSituacao, string> = {
+// Quadrados do resumo, na ordem em que aparecem; cada um filtra a lista ao ser clicado
+type FiltroResumo = 'critico' | FollowSituacao | 'esquecido';
+
+const RESUMO_LABEL: Record<FiltroResumo, string> = {
+  critico: 'Críticos',
   atrasado: 'Atrasados',
   hoje: 'Para hoje',
   agendado: 'Agendados',
   sem_data: 'Sem data',
+  esquecido: 'Esquecidos',
 };
 
 // "2026-10-28" → "28/10"
@@ -47,6 +52,7 @@ export default function FollowUpPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterVendedor, setFilterVendedor] = useState("");
+  const [filtroResumo, setFiltroResumo] = useState<FiltroResumo | null>(null);
 
   // Modal "Registrar follow"
   const [followLead, setFollowLead] = useState<FollowLead | null>(null);
@@ -131,22 +137,34 @@ export default function FollowUpPage() {
     String(l.id_closer_responsavel) === filterVendedor
   );
 
-  const contagem: Record<FollowSituacao, number> = { atrasado: 0, hoje: 0, agendado: 0, sem_data: 0 };
-  for (const l of visibleLeads) {
-    const s = followSituacao(l.data_proximo_follow, l.status_atual, hoje);
-    if (s) contagem[s] += 1;
-  }
-
-  // Críticos no topo e esquecidos no fim, cada grupo com quem espera há mais tempo primeiro
   const comAtencao = visibleLeads.map(lead => ({
     lead,
+    situacao: followSituacao(lead.data_proximo_follow, lead.status_atual, hoje),
     atencao: followAtencao(lead.data_proximo_follow, lead.status_atual, lead.ultimo_contato, hoje),
   }));
+  const noFiltro = (x: (typeof comAtencao)[number], filtro: FiltroResumo) =>
+    filtro === 'critico' || filtro === 'esquecido' ? x.atencao?.prioridade === filtro : x.situacao === filtro;
+
+  // Contagem antes do filtro do resumo, para os quadrados sempre mostrarem o total do vendedor
+  const contagem = Object.fromEntries(
+    (Object.keys(RESUMO_LABEL) as FiltroResumo[]).map(f => [f, comAtencao.filter(x => noFiltro(x, f)).length])
+  ) as Record<FiltroResumo, number>;
+
+  // Críticos no topo e esquecidos no fim, cada grupo com quem espera há mais tempo primeiro
+  const filtrados = filtroResumo ? comAtencao.filter(x => noFiltro(x, filtroResumo)) : comAtencao;
   const porDiasDesc = (a: { atencao: FollowAtencao | null }, b: { atencao: FollowAtencao | null }) =>
     (b.atencao?.dias ?? 0) - (a.atencao?.dias ?? 0);
-  const criticos = comAtencao.filter(x => x.atencao?.prioridade === 'critico').sort(porDiasDesc);
-  const esquecidos = comAtencao.filter(x => x.atencao?.prioridade === 'esquecido').sort(porDiasDesc);
-  const demais = comAtencao.filter(x => !x.atencao?.prioridade);
+  const criticos = filtrados.filter(x => x.atencao?.prioridade === 'critico').sort(porDiasDesc);
+  const esquecidos = filtrados.filter(x => x.atencao?.prioridade === 'esquecido').sort(porDiasDesc);
+  const demais = filtrados.filter(x => !x.atencao?.prioridade);
+
+  const estiloResumo = (f: FiltroResumo): React.CSSProperties => {
+    const neutro = { background: 'var(--bg-surface)', color: 'var(--text-sec)', border: '1px solid var(--border-str)' };
+    if (f === 'critico' && contagem.critico > 0) return { background: RED, color: '#fff', border: `1px solid ${RED}` };
+    if (f === 'atrasado' && contagem.atrasado > 0) return { background: 'rgba(239,68,68,0.12)', color: RED, border: '1px solid rgba(239,68,68,0.4)' };
+    if (f === 'esquecido') return { ...neutro, color: 'var(--text-muted)', border: '1px dashed var(--border-str)' };
+    return neutro;
+  };
 
   const renderProximo = (lead: FollowLead, atencao: FollowAtencao | null) => {
     const situacao = followSituacao(lead.data_proximo_follow, lead.status_atual, hoje);
@@ -304,36 +322,28 @@ export default function FollowUpPage() {
 
       {/* Resumo */}
       <div className="flex flex-wrap gap-2 mb-5">
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold"
-          style={criticos.length > 0
-            ? { background: RED, color: '#fff', border: `1px solid ${RED}` }
-            : { background: 'var(--bg-surface)', color: 'var(--text-sec)', border: '1px solid var(--border-str)' }}
-        >
-          <AlertTriangle size={13} />
-          <span>Críticos</span>
-          <span className="font-black">{criticos.length}</span>
-        </div>
-        {(Object.keys(SITUACAO_LABEL) as FollowSituacao[]).map(s => (
-          <div
-            key={s}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold"
-            style={s === 'atrasado' && contagem.atrasado > 0
-              ? { background: 'rgba(239,68,68,0.12)', color: RED, border: '1px solid rgba(239,68,68,0.4)' }
-              : { background: 'var(--bg-surface)', color: 'var(--text-sec)', border: '1px solid var(--border-str)' }}
-          >
-            <span>{SITUACAO_LABEL[s]}</span>
-            <span className="font-black" style={{ color: s === 'atrasado' && contagem.atrasado > 0 ? RED : 'var(--text-pri)' }}>{contagem[s]}</span>
-          </div>
-        ))}
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold"
-          style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)', border: '1px dashed var(--border-str)' }}
-          title={`Mais de ${ESQUECIDO_DIAS} dias sem atenção`}
-        >
-          <span>Esquecidos</span>
-          <span className="font-black" style={{ color: 'var(--text-sec)' }}>{esquecidos.length}</span>
-        </div>
+        {(Object.keys(RESUMO_LABEL) as FiltroResumo[]).map(f => {
+          const ativo = filtroResumo === f;
+          const estilo = estiloResumo(f);
+          const corNumero = f === 'critico' || f === 'atrasado' || f === 'esquecido' ? estilo.color : 'var(--text-pri)';
+          return (
+            <button
+              key={f}
+              type="button"
+              aria-pressed={ativo}
+              disabled={contagem[f] === 0 && !ativo}
+              onClick={() => setFiltroResumo(ativo ? null : f)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:brightness-110 disabled:cursor-default disabled:hover:brightness-100"
+              style={ativo ? { ...estilo, boxShadow: '0 0 0 2px var(--text-pri)' } : estilo}
+              title={ativo ? 'Mostrar todos' : f === 'esquecido' ? `Mais de ${ESQUECIDO_DIAS} dias sem atenção` : `Mostrar só ${RESUMO_LABEL[f].toLowerCase()}`}
+            >
+              {f === 'critico' && <AlertTriangle size={13} />}
+              <span>{RESUMO_LABEL[f]}</span>
+              <span className="font-black" style={{ color: corNumero }}>{contagem[f]}</span>
+              {ativo && <X size={12} />}
+            </button>
+          );
+        })}
       </div>
 
       {/* Lista */}
@@ -346,6 +356,11 @@ export default function FollowUpPage() {
       ) : visibleLeads.length === 0 ? (
         <div className="h-32 border-2 border-dashed border-str rounded-xl flex items-center justify-center text-sm font-medium text-sec">
           Nenhum lead em follow-up{filterVendedor ? ' para este vendedor' : ''}.
+        </div>
+      ) : filtrados.length === 0 && filtroResumo ? (
+        <div className="h-32 border-2 border-dashed border-str rounded-xl flex flex-col items-center justify-center gap-2 text-sm font-medium text-sec">
+          <span>Nenhum lead em &quot;{RESUMO_LABEL[filtroResumo]}&quot;{filterVendedor ? ' para este vendedor' : ''}.</span>
+          <button onClick={() => setFiltroResumo(null)} className="text-xs font-bold underline" style={{ color: 'var(--accent)' }}>Mostrar todos</button>
         </div>
       ) : (
         <div className="space-y-7">
