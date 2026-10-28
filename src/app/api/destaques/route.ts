@@ -34,13 +34,13 @@ export async function GET(request: Request) {
         const usersMap: Record<number, { nome: string; tipo: string | null }> = {};
         for (const u of usuarios) usersMap[u.id_usuario] = { nome: u.nome, tipo: u.tipo ?? null };
 
-        // Leads off_metricas ficam fora dos destaques, como no ranking do time
+        // Inclui leads off_metricas: nos destaques contam todas as vendas e follows (pedido em 28/10/2026),
+        // diferente do ranking do time na dashboard, que deixa os OFF de fora
         const leads = await fetchAll(
             supabase
                 .from('leads')
                 .select('id_lead, id_closer_responsavel, status_atual')
                 .eq('id_projeto', projectId)
-                .eq('off_metricas', false)
                 .order('id_lead', { ascending: true })
         );
         const leadMap: Record<number, { closer: number | null; status: string }> = {};
