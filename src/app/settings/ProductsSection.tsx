@@ -11,7 +11,7 @@ type Produto = {
   ativo: boolean;
 };
 
-export default function ProductsPage() {
+export function ProductsSection() {
   const { selectedProject, isAdmin } = useProject();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,10 +67,10 @@ export default function ProductsPage() {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="flex flex-col">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-black" style={{ color: 'var(--text-pri)' }}>Produtos</h1>
+          <h3 className="text-xl font-bold" style={{ color: 'var(--text-pri)' }}>Produtos</h3>
           <p className="text-sm mt-1" style={{ color: 'var(--text-sec)' }}>Catálogo do projeto <span className="font-semibold" style={{ color: 'var(--accent)' }}>{selectedProject.nome}</span></p>
         </div>
         {isAdmin && (

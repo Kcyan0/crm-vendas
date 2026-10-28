@@ -15,7 +15,7 @@ type User = {
     percentual_comissao_closer: number;
 };
 
-export default function TeamPage() {
+export function TeamSection() {
     const [team, setTeam] = useState<User[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -113,10 +113,10 @@ export default function TeamPage() {
     };
 
     return (
-        <div className="pt-4 h-full flex flex-col">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
+        <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-white tracking-tight">Gestão do Time</h2>
+                    <h3 className="text-xl font-bold text-white">Gestão do Time</h3>
                     <p className="text-sec mt-1">Configure permissões, comissionamentos e salários. A senha padrão inicial de novos membros é <span className="text-accent font-semibold">0000</span>.</p>
                 </div>
                 <button onClick={handleOpenCreate} className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2">

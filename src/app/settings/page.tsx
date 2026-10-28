@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Settings2, Target } from "lucide-react";
+import { Plus, Trash2, Settings2, Target, Users, Package } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
+import { TeamSection } from "./TeamSection";
+import { ProductsSection } from "./ProductsSection";
 
 type Gateway = {
     id_gateway: number;
@@ -18,7 +20,57 @@ type Gateway = {
 type TeamMeta = { meta_faturamento: number; meta_caixa: number; };
 type UserMeta = { id_usuario: number; nome: string; tipo: string; meta_faturamento: number; meta_caixa: number; };
 
+type Aba = 'geral' | 'time' | 'produtos';
+
+const ABAS: { id: Aba; nome: string; icon: typeof Settings2 }[] = [
+    { id: 'geral', nome: 'Geral', icon: Settings2 },
+    { id: 'time', nome: 'Meu Time', icon: Users },
+    { id: 'produtos', nome: 'Produtos', icon: Package },
+];
+
 export default function SettingsPage() {
+    const [aba, setAba] = useState<Aba>('geral');
+
+    // ?aba=time / ?aba=produtos abre direto na aba (os antigos /team e /products redirecionam para cá)
+    useEffect(() => {
+        const inicial = new URLSearchParams(window.location.search).get('aba');
+        if (inicial === 'time' || inicial === 'produtos') setAba(inicial);
+    }, []);
+
+    const trocarAba = (nova: Aba) => {
+        setAba(nova);
+        window.history.replaceState(null, '', nova === 'geral' ? '/settings' : `/settings?aba=${nova}`);
+    };
+
+    return (
+        <div className="pt-4 h-full flex flex-col">
+            <div className="mb-6">
+                <h2 className="text-3xl font-bold text-white tracking-tight">Configurações</h2>
+                <p className="text-sec mt-1">Metas, gateways, time e produtos do projeto.</p>
+            </div>
+
+            <div className="flex shrink-0 gap-1 mb-8 p-1 rounded-xl w-fit max-w-full overflow-x-auto" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-str)' }}>
+                {ABAS.map(({ id, nome, icon: Icon }) => (
+                    <button
+                        key={id}
+                        onClick={() => trocarAba(id)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all"
+                        style={aba === id ? { background: 'var(--accent)', color: 'var(--accent-text)' } : { color: 'var(--text-sec)' }}
+                    >
+                        <Icon size={16} />
+                        {nome}
+                    </button>
+                ))}
+            </div>
+
+            {aba === 'geral' && <GeneralSettings />}
+            {aba === 'time' && <TeamSection />}
+            {aba === 'produtos' && <ProductsSection />}
+        </div>
+    );
+}
+
+function GeneralSettings() {
     const { selectedProject } = useProject();
 
     // ── Gateways ──────────────────────────────────────────────
@@ -190,14 +242,7 @@ export default function SettingsPage() {
     const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
     return (
-        <div className="pt-4 h-full flex flex-col">
-            <div className="flex justify-between items-end mb-8">
-                <div>
-                    <h2 className="text-3xl font-bold text-white tracking-tight">Configurações Gerais</h2>
-                    <p className="text-sec mt-1">Gerencie Gateways, Formas de Pagamento e Metas do time.</p>
-                </div>
-            </div>
-
+        <div className="flex flex-col">
             {/* ── Metas do Time ─────────────────────────── */}
             <div className="glass-panel p-6 bg-surface border-str mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
