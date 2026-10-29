@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown } from "lucide-react";
+import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown, CalendarClock } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV } from '@/lib/exportUtils';
 import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
@@ -31,8 +31,12 @@ type Lead = {
   produtos_ids?: number[];
   off_metricas?: boolean;
   data_proximo_follow?: string | null;
+  data_call?: string | null;
 };
 
+
+// data_call é gravada com o fuso de Brasília; o input datetime-local trabalha com "YYYY-MM-DDTHH:mm"
+const callParaBanco = (local: string): string | null => local ? `${local}:00-03:00` : null;
 
 // Cards desenhados por coluna antes do "Ver mais": desenhar os 1000+ leads de uma vez pesa no navegador
 const CARDS_POR_COLUNA = 50;
@@ -89,6 +93,10 @@ export default function KanbanBoard() {
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [refundLeadId, setRefundLeadId] = useState<number | null>(null);
   const [refundMotivo, setRefundMotivo] = useState("");
+  // Remarcar: pede a nova data da call; a data de entrada do lead não muda
+  const [remarcarLead, setRemarcarLead] = useState<Lead | null>(null);
+  const [remarcarData, setRemarcarData] = useState("");
+  const [remarcarSalvando, setRemarcarSalvando] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
     telefone: "",
@@ -98,7 +106,8 @@ export default function KanbanBoard() {
     id_sdr_responsavel: "",
     id_closer_responsavel: "",
     observacoes_gerais: "",
-    data_entrada: ""
+    data_entrada: "",
+    data_call: ""
   });
 
   // Sales Modal State
@@ -328,6 +337,43 @@ export default function KanbanBoard() {
     if (buscandoLeadsRef.current) fetchLeads();
   };
 
+  const abrirRemarcar = (lead: Lead) => {
+    setRemarcarLead(lead);
+    setRemarcarData("");
+  };
+
+  const handleSaveRemarcar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!remarcarLead || !remarcarData || remarcarSalvando) return;
+    const lead = remarcarLead;
+    const dataCall = callParaBanco(remarcarData);
+    setRemarcarSalvando(true);
+    try {
+      // Só status e data da call: a data de entrada continua a mesma
+      const res = await fetch("/api/leads", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_lead: lead.id_lead, status_atual: "Remarcado", data_call: dataCall, usuario_nome: userName }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(`Erro ao remarcar: ${err.error || `HTTP ${res.status}`}`);
+        return;
+      }
+      setLeads(prev => prev.map(l => l.id_lead === lead.id_lead ? { ...l, status_atual: "Remarcado", data_call: dataCall } : l));
+      setDetailLead(prev => prev && prev.id_lead === lead.id_lead ? { ...prev, status_atual: "Remarcado", data_call: dataCall } : prev);
+      marcarMovido(lead.id_lead);
+      setRemarcarLead(null);
+      rebuscarSeEmAndamento();
+      await logActivity(lead.id_lead, `Status alterado para "Remarcado" (call em ${formatCallBr(dataCall)})`);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao remarcar. Tente de novo.");
+    } finally {
+      setRemarcarSalvando(false);
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent, id_lead: number) => {
     e.dataTransfer.setData("id_lead", id_lead.toString());
   };
@@ -394,6 +440,13 @@ export default function KanbanBoard() {
       return;
     }
 
+    // Remarcado: pede a nova data da call antes de mover
+    if (status_novo === "Remarcado") {
+      const leadInfo = leads.find((l) => l.id_lead === id_lead);
+      if (leadInfo) abrirRemarcar(leadInfo);
+      return;
+    }
+
     // Optimistic Update for standard columns
     setLeads((prev) =>
       prev.map((lead) =>
@@ -426,7 +479,8 @@ export default function KanbanBoard() {
     setOffMetricas(false);
     setFormData({
       nome: "", telefone: "", instagram: "", email: "", origem: "", id_sdr_responsavel: "", id_closer_responsavel: "", observacoes_gerais: "",
-      data_entrada: nowBrasiliaLocal()
+      data_entrada: nowBrasiliaLocal(),
+      data_call: ""
     });
     setIsModalOpen(true);
   };
@@ -454,8 +508,10 @@ export default function KanbanBoard() {
     setOffMetricas(lead.off_metricas ?? false);
 
     const dEntrada = lead.data_entrada ? new Date(lead.data_entrada) : new Date();
+    // data_entrada fica gravada com a hora de Brasília como foi digitada (o card mostra assim, sem converter fuso).
+    // Converter aqui abria o formulário 3h antes e cada edição salva puxava a entrada para trás
     const dataEntradaLocal = lead.data_entrada
-      ? dbDateToBrasiliaLocal(lead.data_entrada)
+      ? lead.data_entrada.replace(' ', 'T').slice(0, 16)
       : nowBrasiliaLocal();
 
     setFormData({
@@ -467,7 +523,8 @@ export default function KanbanBoard() {
       id_sdr_responsavel: lead.id_sdr_responsavel?.toString() || "",
       id_closer_responsavel: lead.id_closer_responsavel?.toString() || "",
       observacoes_gerais: observacoes,
-      data_entrada: dataEntradaLocal
+      data_entrada: dataEntradaLocal,
+      data_call: lead.data_call ? dbDateToBrasiliaLocal(lead.data_call) : ""
     });
     setIsModalOpen(true);
   };
@@ -495,6 +552,7 @@ export default function KanbanBoard() {
           id_projeto: selectedProject.id_projeto,
           usuario_nome: userName,
           off_metricas: offMetricas,
+          data_call: callParaBanco(formData.data_call),
         }),
       });
       if (!res.ok) {
@@ -518,11 +576,12 @@ export default function KanbanBoard() {
           sdr_nome: nomeUsuario(sdrId),
           closer_nome: nomeUsuario(closerId),
           off_metricas: offMetricas,
+          data_call: callParaBanco(formData.data_call),
         } : l));
       }
       setIsModalOpen(false);
       setFormData({
-        nome: "", telefone: "", instagram: "", email: "", origem: "", id_sdr_responsavel: "", id_closer_responsavel: "", observacoes_gerais: "", data_entrada: ""
+        nome: "", telefone: "", instagram: "", email: "", origem: "", id_sdr_responsavel: "", id_closer_responsavel: "", observacoes_gerais: "", data_entrada: "", data_call: ""
       });
       fetchLeads();
     } catch (err) {
@@ -771,6 +830,9 @@ export default function KanbanBoard() {
     }
   };
 
+  // data_call vem do banco em UTC; mostra no horário de Brasília
+  const formatCallBr = (dStr: string | null | undefined) => dStr ? formatDateBr(dbDateToBrasiliaLocal(dStr)) : "Sem data";
+
   const handleDeleteLead = async () => {
     if (!editingLeadId) return;
     if (!confirm('Deseja realmente excluir permanentemente este Lead?')) return;
@@ -817,6 +879,10 @@ export default function KanbanBoard() {
       setRefundLeadId(detailLead.id_lead);
       setRefundMotivo('');
       setIsRefundModalOpen(true);
+      return;
+    }
+    if (newStatus === 'Remarcado') {
+      abrirRemarcar(detailLead);
       return;
     }
     setDetailStatusSaving(true);
@@ -1202,6 +1268,17 @@ export default function KanbanBoard() {
                       );
                     })()}
 
+                    {lead.data_call && !['Venda', 'Loss', 'Reembolsado', 'Nao prosseguiu'].includes(lead.status_atual) && (
+                      <div
+                        className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-md"
+                        style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.4)' }}
+                        title="Data da call"
+                      >
+                        <CalendarClock size={11} />
+                        Call {formatCallBr(lead.data_call)}
+                      </div>
+                    )}
+
                     <div className="mt-4 pt-3 border-t border-[#222222] flex justify-between items-center">
                       <div className="flex -space-x-2">
                         {lead.sdr_nome && (
@@ -1232,7 +1309,7 @@ export default function KanbanBoard() {
                             ⊘ OFF
                           </span>
                         )}
-                        <div className="flex items-center gap-1 text-[10px] text-sec font-medium">
+                        <div className="flex items-center gap-1 text-[10px] text-sec font-medium" title="Data de entrada">
                           <Clock size={12} />
                           <span>{formatDateBr(lead.data_entrada)}</span>
                         </div>
@@ -1317,6 +1394,15 @@ export default function KanbanBoard() {
                     className="w-full bg-surface border border-str"
                     value={formData.data_entrada}
                     onChange={(e) => setFormData({ ...formData, data_entrada: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Data da Call</label>
+                  <input
+                    type="datetime-local"
+                    className="w-full bg-surface border border-str"
+                    value={formData.data_call}
+                    onChange={(e) => setFormData({ ...formData, data_call: e.target.value })}
                   />
                 </div>
                 <div>
@@ -1919,6 +2005,50 @@ export default function KanbanBoard() {
         </div>
       )}
 
+      {/* Remarcar: nova data da call */}
+      {remarcarLead && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="modal-surface glass-panel w-full max-w-md p-6 border border-amber-400/30 rounded-2xl shadow-[0_0_60px_rgba(245,158,11,0.12)]">
+            <div className="flex justify-between items-start mb-5">
+              <div>
+                <h3 className="text-xl font-bold text-white">Remarcar call</h3>
+                <p className="text-sm text-sec mt-1">{remarcarLead.nome}</p>
+              </div>
+              <button onClick={() => setRemarcarLead(null)} className="text-sec hover:text-white text-xl">✕</button>
+            </div>
+            <form onSubmit={handleSaveRemarcar} className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-sec"><Clock size={14}/> Data de entrada</span>
+                <span className="text-white font-medium">{formatDateBr(remarcarLead.data_entrada)} <span className="text-sec font-normal">(não muda)</span></span>
+              </div>
+              {remarcarLead.data_call && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-sec"><CalendarClock size={14}/> Call anterior</span>
+                  <span className="text-white font-medium">{formatCallBr(remarcarLead.data_call)}</span>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-sec mb-1">Nova data da call</label>
+                <input
+                  type="datetime-local"
+                  required
+                  autoFocus
+                  className="w-full bg-app border border-str text-white rounded-xl p-3 text-sm focus:border-amber-400 focus:outline-none"
+                  value={remarcarData}
+                  onChange={e => setRemarcarData(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-[#222]">
+                <button type="button" onClick={() => setRemarcarLead(null)} className="px-4 py-2 text-sec hover:text-white text-sm">Cancelar</button>
+                <button type="submit" disabled={remarcarSalvando} className="px-6 py-2 rounded-xl font-bold text-sm disabled:opacity-60" style={{ background: '#f59e0b', color: '#000' }}>
+                  {remarcarSalvando ? 'Salvando...' : 'Remarcar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── Lead Detail Panel ───────────────────────────────────── */}
       {isDetailOpen && detailLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsDetailOpen(false)}>
@@ -1982,6 +2112,12 @@ export default function KanbanBoard() {
                 <div className="flex items-center gap-2 text-sec text-sm"><Clock size={14}/> Entrada</div>
                 <span className="text-white text-sm font-medium">{formatDateBr(detailLead.data_entrada)}</span>
               </div>
+              {detailLead.data_call && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sec text-sm"><CalendarClock size={14}/> Call</div>
+                  <span className="text-sm font-bold" style={{ color: '#f59e0b' }}>{formatCallBr(detailLead.data_call)}</span>
+                </div>
+              )}
               {detailLead.closer_nome && (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sec text-sm">

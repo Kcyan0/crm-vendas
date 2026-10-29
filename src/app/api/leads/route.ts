@@ -36,7 +36,7 @@ export async function GET(request: Request) {
             .select(`
                 id_lead, nome, telefone, instagram, email, origem, status_atual,
                 id_sdr_responsavel, id_closer_responsavel, id_projeto, data_entrada,
-                motivo_reembolso, off_metricas, data_proximo_follow,
+                motivo_reembolso, off_metricas, data_proximo_follow, data_call,
                 sdr:usuarios!id_sdr_responsavel(nome),
                 closer:usuarios!id_closer_responsavel(nome),
                 oportunidades(valor_proposta, etapa_pipeline)
@@ -148,7 +148,7 @@ export async function PUT(request: Request) {
         const body = await request.json();
         const {
             id_lead, status_atual, nome, telefone, instagram, email, origem,
-            id_sdr_responsavel, id_closer_responsavel, observacoes_gerais, id_projeto, is_full_update, data_entrada, off_metricas
+            id_sdr_responsavel, id_closer_responsavel, observacoes_gerais, id_projeto, is_full_update, data_entrada, off_metricas, data_call
         } = body;
 
         if (!id_lead) return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
@@ -156,6 +156,7 @@ export async function PUT(request: Request) {
         if (is_full_update) {
             const updateData: any = { nome, telefone: telefone || null, instagram: instagram || null, email: email || null, origem: origem || null, id_sdr_responsavel: id_sdr_responsavel || null, id_closer_responsavel: id_closer_responsavel || null, observacoes_gerais: observacoes_gerais || null, id_projeto: id_projeto || null, off_metricas: off_metricas === true };
             if (data_entrada) updateData.data_entrada = data_entrada;
+            if (data_call !== undefined) updateData.data_call = data_call || null;
 
             const { error } = await supabase.from('leads').update(updateData).eq('id_lead', id_lead);
             if (error) throw error;
@@ -182,6 +183,8 @@ export async function PUT(request: Request) {
 
             const updatePayload: any = { status_atual };
             if (body.motivo_reembolso !== undefined) updatePayload.motivo_reembolso = body.motivo_reembolso;
+            // Remarcado: nova data da call; a data de entrada não muda
+            if (data_call !== undefined) updatePayload.data_call = data_call || null;
             const { error } = await supabase.from('leads').update(updatePayload).eq('id_lead', id_lead);
             if (error) throw error;
 
@@ -205,13 +208,14 @@ export async function PUT(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { nome, telefone, instagram, email, origem, id_sdr_responsavel, id_closer_responsavel, observacoes_gerais, id_projeto, data_entrada, off_metricas } = body;
+        const { nome, telefone, instagram, email, origem, id_sdr_responsavel, id_closer_responsavel, observacoes_gerais, id_projeto, data_entrada, off_metricas, data_call } = body;
 
         if (!nome) return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
         if (!id_projeto) return NextResponse.json({ error: 'Projeto é obrigatório' }, { status: 400 });
 
         const insertData: any = { nome, telefone: telefone || null, instagram: instagram || null, email: email || null, origem: origem || null, id_sdr_responsavel: id_sdr_responsavel || null, id_closer_responsavel: id_closer_responsavel || null, observacoes_gerais: observacoes_gerais || null, id_projeto, off_metricas: off_metricas === true };
         if (data_entrada) insertData.data_entrada = data_entrada;
+        if (data_call) insertData.data_call = data_call;
 
         const { data, error } = await supabase.from('leads').insert(insertData).select('id_lead').single();
         if (error) throw error;
