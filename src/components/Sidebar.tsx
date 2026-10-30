@@ -75,21 +75,11 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                     <div className="flex items-center gap-3">
                         <div
                             className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center transition-colors duration-300"
-                            style={{ background: 'var(--logo-bg)', border: '2px solid rgba(var(--accent-rgb), 0.3)', padding: '6px' }}
+                            style={{ background: 'var(--logo-bg)', border: '2px solid rgba(var(--accent-rgb), 0.3)' }}
                         >
-                            <img
-                                src="/logo-transparent.png"
-                                alt="H SALES Logo"
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                    const img = e.currentTarget as HTMLImageElement;
-                                    img.src = '/logo.png';
-                                    img.style.objectFit = 'cover';
-                                    img.style.margin = '-6px';
-                                    img.style.width = 'calc(100% + 12px)';
-                                    img.style.height = 'calc(100% + 12px)';
-                                }}
-                            />
+                            {/* /logo-transparent.png nunca existiu: o onError que trocava para /logo.png
+                                às vezes disparava antes de a página ficar interativa e a imagem ficava quebrada */}
+                            <img src="/logo.png" alt="H SALES Logo" className="w-full h-full object-cover" />
                         </div>
                         <div className="flex flex-col leading-tight">
                             <span className="font-black text-lg tracking-tight leading-none" style={{ color: 'var(--text-pri)' }}>H SALES</span>
