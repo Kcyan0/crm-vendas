@@ -202,7 +202,7 @@ export default function OverviewPage() {
                     {/* KPI Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <KpiCard icon={DollarSign} label="Receita Total" value={fmt(data?.totalReceita || 0)} sub={`${data?.totalVendas || 0} venda(s) no período`} color="var(--accent)" />
-                        <KpiCard icon={TrendingUp} label="Ticket Médio" value={fmt(data?.totalTicket || 0)} sub="Receita Total / Vendas" color="#00E5FF" />
+                        <KpiCard icon={TrendingUp} label="Ticket Médio" value={fmt(data?.totalTicket || 0)} sub="Vendas pagas, sem leads OFF" color="#00E5FF" />
                         <KpiCard icon={ShoppingCart} label="Caixa Líquido" value={fmt(data?.totalCaixa || 0)} sub="Caixa gerado no período" color="#A78BFA" />
                         <KpiCard icon={Users} label="Leads no Período" value={String(data?.totalLeads || 0)} sub="Leads com entrada no período" color="#FFB347" />
                         <KpiCard icon={Percent} label="Taxa de Conversão" value={`${data?.totalConversao || 0}%`} sub="Conversões / Leads" color="#FF6B6B" />
