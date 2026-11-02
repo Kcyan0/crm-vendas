@@ -34,7 +34,7 @@ function downloadCSV(csvContent: string, filename: string): void {
     URL.revokeObjectURL(url);
 }
 
-export function exportLeadsToCSV(leads: Row[]): void {
+export function exportLeadsToCSV(leads: Row[], filename?: string): void {
     const headers = [
         { key: 'id_lead', label: 'ID' },
         { key: 'nome', label: 'Nome' },
@@ -52,7 +52,7 @@ export function exportLeadsToCSV(leads: Row[]): void {
 
     const csv = toCSV(headers, leads);
     const date = new Date().toISOString().slice(0, 10);
-    downloadCSV(csv, `leads_${date}.csv`);
+    downloadCSV(csv, filename || `leads_${date}.csv`);
 }
 
 export function exportVendasToCSV(vendas: Row[]): void {

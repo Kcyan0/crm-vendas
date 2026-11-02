@@ -265,14 +265,51 @@ export default function KanbanBoard() {
     return acc;
   }, { bruto: 0, liquido: 0 });
 
+  // Filtros do quadro, fora a data (o período já vem na busca dos leads)
+  const passaFiltros = (l: Lead) => {
+    if (filterSdr && String(l.id_sdr_responsavel) !== filterSdr) return false;
+    if (filterCloser && String(l.id_closer_responsavel) !== filterCloser) return false;
+    if (filterFormas.length > 0) {
+      const leadFormas = l.formas_pagamento || [];
+      if (!filterFormas.some(f => leadFormas.includes(f))) return false;
+    }
+    if (filterProdutos.length > 0) {
+      const leadProdutos = l.produtos_ids || [];
+      if (!filterProdutos.some(pid => leadProdutos.includes(pid))) return false;
+    }
+    if (searchTerm && !l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && !l.telefone?.includes(searchTerm)) return false;
+    return true;
+  };
+
+  // Exporta só os leads que o quadro está mostrando: mesmo período de entrada e mesmos filtros
   const handleExportCSV = async () => {
+    if (refreshing) {
+      alert('Aguarde os leads do período carregarem e tente de novo.');
+      return;
+    }
+    const visiveis = new Set(
+      leads
+        .filter(l => (KANBAN_COLUMNS.includes(l.status_atual) || l.status_atual === 'Nao prosseguiu') && passaFiltros(l))
+        .map(l => l.id_lead)
+    );
+    if (visiveis.size === 0) {
+      alert('Nenhum lead para exportar com esses filtros.');
+      return;
+    }
     try {
-      const url = selectedProject
-        ? `/api/export-leads?projectId=${selectedProject.id_projeto}`
-        : '/api/export-leads';
-      const res = await fetch(url);
+      const query = new URLSearchParams();
+      if (selectedProject?.id_projeto) query.set('projectId', selectedProject.id_projeto.toString());
+      if (startDate) query.set('startDate', startDate);
+      if (endDate) query.set('endDate', endDate);
+      const res = await fetch(`/api/export-leads?${query.toString()}`);
       const data = await res.json();
-      exportLeadsToCSV(data);
+      if (!res.ok || !Array.isArray(data)) throw new Error(data?.error || 'Resposta inválida');
+      // As observações só vêm pela exportação; o que entra no arquivo é o que está no quadro
+      const periodo = startDate && endDate ? `${startDate}_a_${endDate}`
+        : startDate ? `desde_${startDate}`
+        : endDate ? `ate_${endDate}`
+        : todayBrasilia();
+      exportLeadsToCSV(data.filter((l: { id_lead: number }) => visiveis.has(l.id_lead)), `leads_${periodo}.csv`);
     } catch (e) {
       console.error('Erro ao exportar:', e);
       alert('Erro ao exportar dados. Tente novamente.');
@@ -1159,21 +1196,9 @@ export default function KanbanBoard() {
       {/* Kanban Board Area */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 pb-4 px-1 md:px-0">
         {KANBAN_COLUMNS.map((col) => {
-          const filteredLeads = leads.filter((l) => {
-            if (l.status_atual !== col && !(col === 'Loss' && l.status_atual === 'Nao prosseguiu')) return false;
-            if (filterSdr && String(l.id_sdr_responsavel) !== filterSdr) return false;
-            if (filterCloser && String(l.id_closer_responsavel) !== filterCloser) return false;
-            if (filterFormas.length > 0) {
-              const leadFormas = l.formas_pagamento || [];
-              if (!filterFormas.some(f => leadFormas.includes(f))) return false;
-            }
-            if (filterProdutos.length > 0) {
-              const leadProdutos = l.produtos_ids || [];
-              if (!filterProdutos.some(pid => leadProdutos.includes(pid))) return false;
-            }
-            if (searchTerm && !l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && !l.telefone?.includes(searchTerm)) return false;
-            return true;
-          });
+          const filteredLeads = leads.filter((l) =>
+            (l.status_atual === col || (col === 'Loss' && l.status_atual === 'Nao prosseguiu')) && passaFiltros(l)
+          );
           // Movidos nesta visita no topo (o último primeiro), para não caírem depois do limite da coluna
           const movidos = movidosAgora
             .map(id => filteredLeads.find(l => l.id_lead === id))

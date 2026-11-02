@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
+import { fetchAll } from '@/lib/fetchAll';
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
 
         let query = supabase
             .from('leads')
@@ -28,9 +31,12 @@ export async function GET(request: Request) {
             .order('data_entrada', { ascending: false });
 
         if (projectId) query = query.eq('id_projeto', projectId);
+        // Mesmo período do quadro de leads (data_entrada fica gravada com a hora de Brasília)
+        if (startDate) query = query.gte('data_entrada', `${startDate}T00:00:00`);
+        if (endDate) query = query.lte('data_entrada', `${endDate}T23:59:59`);
 
-        const { data, error } = await query;
-        if (error) throw error;
+        // Paginado: sem isso o Supabase corta em 1000 leads
+        const data = await fetchAll(query.order('id_lead', { ascending: false }));
 
         const leads = (data || []).map((lead: any) => {
             const validOport = lead.oportunidades?.filter((o: any) => o.etapa_pipeline !== 'Loss') || [];
