@@ -9,7 +9,8 @@ import { todayBrasilia } from '@/lib/brasilia';
 // - receita: pago + pendente, pela data da venda
 // - caixa: dinheiro recebido no período (data_recebimento), inclusive de vendas de meses anteriores
 // - leads OFF entram em receita e caixa, mas ficam fora de leads, conversão, chargeback e ticket médio
-type LeadRow = { id_lead: number; id_projeto: number; status_atual: string; off_metricas: boolean | null; data_entrada: string | null };
+// - leads: pela data da call (sem call, pela data de entrada); chargeback continua pela entrada
+type LeadRow = { id_lead: number; id_projeto: number; status_atual: string; off_metricas: boolean | null; data_entrada: string | null; data_call: string | null };
 type VendaRow = {
     id_venda: number; id_oportunidade: number | null; id_lead: number;
     valor_bruto: string | number | null; valor_liquido_caixa: string | number | null; numero_parcelas: number | null;
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
 
         // Tudo paginado: o Supabase corta em 1000 linhas sem avisar
         const [leads, vendasFat, caixaComData, caixaSemData] = await Promise.all([
-            fetchAll(supabase.from('leads').select('id_lead, id_projeto, status_atual, off_metricas, data_entrada').in('id_projeto', pids).order('id_lead', { ascending: true })) as Promise<LeadRow[]>,
+            fetchAll(supabase.from('leads').select('id_lead, id_projeto, status_atual, off_metricas, data_entrada, data_call').in('id_projeto', pids).order('id_lead', { ascending: true })) as Promise<LeadRow[]>,
             fetchAll(supabase.from('vendas').select(VENDA_SELECT).in('status_pagamento', ['pago', 'pendente']).gte('data_venda', inicio).lt('data_venda', fim).order('id_venda', { ascending: true })) as Promise<VendaRow[]>,
             fetchAll(supabase.from('vendas').select(VENDA_SELECT).eq('status_pagamento', 'pago').gte('data_recebimento', caixaStartBoundary).lte('data_recebimento', endDate).order('id_venda', { ascending: true })) as Promise<VendaRow[]>,
             // Sem data de recebimento: o caixa usa a data da venda
@@ -83,15 +84,19 @@ export async function GET(request: Request) {
         const foraDasMetricas: Record<number, boolean> = {};
         const inicioMs = new Date(inicio).getTime();
         const fimMs = new Date(fim).getTime();
+        const noPeriodo = (d: string | null) => {
+            if (!d) return false;
+            const t = new Date(d).getTime();
+            return t >= inicioMs && t < fimMs;
+        };
         for (const l of leads) {
             if (l.status_atual !== 'Reembolsado' && l.status_atual !== 'Loss') projetoDoLead[l.id_lead] = l.id_projeto;
             foraDasMetricas[l.id_lead] = l.off_metricas !== false;
-            // Leads com entrada no período (sem OFF): base de conversão e chargeback
-            if (foraDasMetricas[l.id_lead] || !l.data_entrada) continue;
-            const entrada = new Date(l.data_entrada).getTime();
-            if (entrada < inicioMs || entrada >= fimMs) continue;
-            if (l.status_atual !== 'No-show') porProjeto[l.id_projeto].leads++; // No-show não penaliza a conversão
-            if (l.status_atual === 'Reembolsado') porProjeto[l.id_projeto].reembolsados++;
+            if (foraDasMetricas[l.id_lead]) continue;
+            // Base de conversão: call no período (lead sem call conta pela entrada); No-show não penaliza
+            if (l.status_atual !== 'No-show' && noPeriodo(l.data_call || l.data_entrada)) porProjeto[l.id_projeto].leads++;
+            // Chargeback: reembolsados com entrada no período
+            if (l.status_atual === 'Reembolsado' && noPeriodo(l.data_entrada)) porProjeto[l.id_projeto].reembolsados++;
         }
 
         // Uma venda por oportunidade

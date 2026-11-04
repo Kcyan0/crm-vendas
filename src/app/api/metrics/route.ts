@@ -156,14 +156,14 @@ export async function GET(request: Request) {
         }
 
         // ─── Leads count ──────────────────────────────────────────────────────────
+        // Pela data da call; lead ainda sem call conta pela data de entrada
         // No-show excluído: closer não teve chance de converter, não deve penalizar a taxa
         let leadsQuery = supabase.from('leads').select('id_lead')
-            .gte('data_entrada', startVendaFilter)
-            .lt('data_entrada', endFilter)
+            .or(`and(data_call.gte.${startVendaFilter},data_call.lt.${endFilter}),and(data_call.is.null,data_entrada.gte.${startVendaFilter},data_entrada.lt.${endFilter})`)
             .eq('off_metricas', false)
             .neq('status_atual', 'No-show');
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
-        const leadsData = await fetchAll(leadsQuery);
+        const leadsData = await fetchAll(leadsQuery.order('id_lead', { ascending: true }));
         const leadsTotais = leadsData?.length || 0;
         const conversaoAproximada = leadsTotais > 0 ? ((vendasTotais / leadsTotais) * 100).toFixed(1) : '0.0';
 
