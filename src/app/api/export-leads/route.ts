@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 import { fetchAll } from '@/lib/fetchAll';
+import { dataDeReferenciaLocal, filtroCallOuEntrada } from '@/lib/periodoLead';
+import { dbDateToBrasiliaLocal } from '@/lib/brasilia';
 
 export async function GET(request: Request) {
     try {
@@ -31,12 +33,16 @@ export async function GET(request: Request) {
             .order('data_entrada', { ascending: false });
 
         if (projectId) query = query.eq('id_projeto', projectId);
-        // Mesmo período do quadro de leads (data_entrada fica gravada com a hora de Brasília)
-        if (startDate) query = query.gte('data_entrada', `${startDate}T00:00:00`);
-        if (endDate) query = query.lte('data_entrada', `${endDate}T23:59:59`);
+        // Mesmo período do quadro de leads: data da call; sem call, data de entrada
+        if (startDate || endDate) query = query.or(filtroCallOuEntrada(startDate, endDate, {
+            gte: startDate ? `${startDate}T00:00:00` : undefined,
+            lte: endDate ? `${endDate}T23:59:59` : undefined,
+        }));
 
         // Paginado: sem isso o Supabase corta em 1000 leads
         const data = await fetchAll(query.order('id_lead', { ascending: false }));
+        // Mesma ordem do quadro: data da call (ou entrada sem call), mais recentes primeiro
+        data.sort((a, b) => dataDeReferenciaLocal(b).localeCompare(dataDeReferenciaLocal(a)) || b.id_lead - a.id_lead);
 
         const leads = (data || []).map((lead: any) => {
             const validOport = lead.oportunidades?.filter((o: any) => o.etapa_pipeline !== 'Loss') || [];
@@ -58,6 +64,8 @@ export async function GET(request: Request) {
                 valor_proposta: maxProposta,
                 observacoes_gerais: lead.observacoes_gerais,
                 data_entrada: lead.data_entrada,
+                // data_call é um instante: vai no horário de Brasília
+                data_call: lead.data_call ? dbDateToBrasiliaLocal(lead.data_call).replace('T', ' ') : null,
                 // dados de venda se existir
                 valor_bruto: venda?.valor_bruto || null,
                 desconto_concedido: venda?.desconto_concedido || null,

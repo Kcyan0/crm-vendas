@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 
 import { baseGateway, caixaInPeriod } from '@/lib/financial';
+import { filtroCallOuEntrada } from '@/lib/periodoLead';
 
 async function fetchAll(queryBuilder: any) {
     let allData: any[] = [];
@@ -35,6 +36,8 @@ export async function GET(request: Request) {
         endDatePlusOne.setUTCDate(endDatePlusOne.getUTCDate() + 1);
         const endFilter = endDatePlusOne.toISOString();
         const startVendaFilter = `${startDate}T03:00:00.000Z`;
+        // Leads no período: pela data da call; sem call, pela data de entrada
+        const leadNoPeriodo = filtroCallOuEntrada(startDate, endDate, { gte: startVendaFilter, lt: endFilter });
 
         // ─── 1. FETCH SALES (FATURAMENTO) ─────────────────────────────────────────
         // Receita Bruta = sales originated in the period (pago + pendente) based on data_venda.
@@ -156,10 +159,9 @@ export async function GET(request: Request) {
         }
 
         // ─── Leads count ──────────────────────────────────────────────────────────
-        // Pela data da call; lead ainda sem call conta pela data de entrada
         // No-show excluído: closer não teve chance de converter, não deve penalizar a taxa
         let leadsQuery = supabase.from('leads').select('id_lead')
-            .or(`and(data_call.gte.${startVendaFilter},data_call.lt.${endFilter}),and(data_call.is.null,data_entrada.gte.${startVendaFilter},data_entrada.lt.${endFilter})`)
+            .or(leadNoPeriodo)
             .eq('off_metricas', false)
             .neq('status_atual', 'No-show');
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
@@ -314,16 +316,15 @@ export async function GET(request: Request) {
         const tmCaixaSdr          = Object.entries(sdrStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.count > 0 ? s.caixa / s.count : 0 })).sort((a, b) => b.value - a.value);
 
 
-        // ─── Funnel & Chargeback (filtered by period via data_entrada) ───────────
+        // ─── Funnel & Chargeback (leads no período: data da call, ou entrada sem call) ──
         const funnelStages = ['Novo', 'Follow-up', 'Agendado', 'Negociação', 'Venda', 'Reembolsado', 'Loss'];
         let periodFunnelQuery = supabase
             .from('leads')
             .select('id_lead, nome, status_atual, motivo_reembolso')
-            .gte('data_entrada', startVendaFilter)
-            .lt('data_entrada', endFilter)
+            .or(leadNoPeriodo)
             .eq('off_metricas', false);
         if (projectId) periodFunnelQuery = (periodFunnelQuery as any).eq('id_projeto', projectId);
-        const allLeads = await fetchAll(periodFunnelQuery);
+        const allLeads = await fetchAll(periodFunnelQuery.order('id_lead', { ascending: true }));
         const funnelData = funnelStages.map(stage => ({
             name: stage,
             value: (allLeads || []).filter((l: any) => l.status_atual === stage || (stage === 'Loss' && l.status_atual === 'Nao prosseguiu')).length
@@ -364,12 +365,11 @@ export async function GET(request: Request) {
 
         // ─── Status dos Leads no período ─────────────────────────────────────────
         const kanbanStatuses = ['Novo', 'Follow-up', 'Remarcado', 'No-show', 'Venda', 'Reembolsado', 'Loss'];
-        let periodLeadsQuery = supabase.from('leads').select('status_atual')
-            .gte('data_entrada', `${startDate}T03:00:00.000Z`)
-            .lt('data_entrada', endFilter)
+        let periodLeadsQuery = supabase.from('leads').select('id_lead, status_atual')
+            .or(leadNoPeriodo)
             .eq('off_metricas', false);
         if (projectId) periodLeadsQuery = (periodLeadsQuery as any).eq('id_projeto', projectId);
-        const { data: periodLeads } = await periodLeadsQuery;
+        const periodLeads = await fetchAll(periodLeadsQuery.order('id_lead', { ascending: true }));
 
         const statusCounts: Record<string, number> = {};
         for (const l of (periodLeads || [])) {

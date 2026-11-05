@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 import { logActivity } from '@/lib/logger';
 import { fetchAll } from '@/lib/fetchAll';
+import { dataDeReferenciaLocal, filtroCallOuEntrada } from '@/lib/periodoLead';
 
 // Lotes de 200 ids para a URL do .in() não ficar gigante; os lotes rodam em paralelo
 async function fetchInBatches(ids: number[], buildQuery: (ids: number[]) => Parameters<typeof fetchAll>[0]) {
@@ -44,8 +45,11 @@ export async function GET(request: Request) {
             .order('data_entrada', { ascending: false });
 
         if (projectId) query = query.eq('id_projeto', projectId);
-        if (startDate) query = query.gte('data_entrada', `${startDate}T00:00:00`);
-        if (endDate) query = query.lte('data_entrada', `${endDate}T23:59:59`);
+        // Período pela data da call; lead sem call, pela data de entrada (hora de Brasília como foi digitada)
+        if (startDate || endDate) query = query.or(filtroCallOuEntrada(startDate, endDate, {
+            gte: startDate ? `${startDate}T00:00:00` : undefined,
+            lte: endDate ? `${endDate}T23:59:59` : undefined,
+        }));
 
         // Paginado: sem isso o Supabase corta em 1000 leads e os mais antigos somem
         const data = await fetchAll(query.order('id_lead', { ascending: false }));
@@ -64,6 +68,8 @@ export async function GET(request: Request) {
                 oportunidades: undefined,
             };
         });
+        // Mais recentes primeiro pela mesma data do filtro (call, ou entrada sem call)
+        leads.sort((a, b) => dataDeReferenciaLocal(b).localeCompare(dataDeReferenciaLocal(a)) || b.id_lead - a.id_lead);
 
         // ─── Vendas dos leads: uma consulta só, em lotes paralelos ────────────
         const allLeadIds = leads.map((l: any) => l.id_lead);

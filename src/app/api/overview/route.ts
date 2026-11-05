@@ -9,7 +9,7 @@ import { todayBrasilia } from '@/lib/brasilia';
 // - receita: pago + pendente, pela data da venda
 // - caixa: dinheiro recebido no período (data_recebimento), inclusive de vendas de meses anteriores
 // - leads OFF entram em receita e caixa, mas ficam fora de leads, conversão, chargeback e ticket médio
-// - leads: pela data da call (sem call, pela data de entrada); chargeback continua pela entrada
+// - leads (conversão e chargeback): pela data da call; sem call, pela data de entrada
 type LeadRow = { id_lead: number; id_projeto: number; status_atual: string; off_metricas: boolean | null; data_entrada: string | null; data_call: string | null };
 type VendaRow = {
     id_venda: number; id_oportunidade: number | null; id_lead: number;
@@ -93,10 +93,10 @@ export async function GET(request: Request) {
             if (l.status_atual !== 'Reembolsado' && l.status_atual !== 'Loss') projetoDoLead[l.id_lead] = l.id_projeto;
             foraDasMetricas[l.id_lead] = l.off_metricas !== false;
             if (foraDasMetricas[l.id_lead]) continue;
-            // Base de conversão: call no período (lead sem call conta pela entrada); No-show não penaliza
-            if (l.status_atual !== 'No-show' && noPeriodo(l.data_call || l.data_entrada)) porProjeto[l.id_projeto].leads++;
-            // Chargeback: reembolsados com entrada no período
-            if (l.status_atual === 'Reembolsado' && noPeriodo(l.data_entrada)) porProjeto[l.id_projeto].reembolsados++;
+            // Base de conversão e chargeback: call no período (lead sem call conta pela entrada)
+            if (!noPeriodo(l.data_call || l.data_entrada)) continue;
+            if (l.status_atual !== 'No-show') porProjeto[l.id_projeto].leads++; // No-show não penaliza a conversão
+            if (l.status_atual === 'Reembolsado') porProjeto[l.id_projeto].reembolsados++;
         }
 
         // Uma venda por oportunidade

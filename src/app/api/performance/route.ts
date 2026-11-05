@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 import { caixaInPeriod } from '@/lib/financial';
 import { todayBrasilia } from '@/lib/brasilia';
+import { filtroCallOuEntrada } from '@/lib/periodoLead';
 
 async function fetchAll(queryBuilder: any) {
     let allData: any[] = [];
@@ -43,13 +44,16 @@ export async function GET(request: Request) {
             }
         });
 
-        // Leads created on this date (No-show excluído — closer não teve chance de converter)
+        // Leads no período: data da call; sem call, data de entrada (hora de Brasília como foi digitada)
+        const leadNoPeriodo = filtroCallOuEntrada(startDate, endDate, { gte: `${startDate}T00:00:00`, lte: `${endDate}T23:59:59` });
+
+        // No-show excluído — closer não teve chance de converter
         let leadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual')
-            .gte('data_entrada', `${startDate}T00:00:00`).lte('data_entrada', `${endDate}T23:59:59`)
+            .or(leadNoPeriodo)
             .eq('off_metricas', false)
             .neq('status_atual', 'No-show');
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
-        const leads = await fetchAll(leadsQuery);
+        const leads = await fetchAll(leadsQuery.order('id_lead', { ascending: true }));
 
         (leads || []).forEach((l: any) => {
             const sdrId = l.id_sdr_responsavel;
@@ -197,15 +201,14 @@ export async function GET(request: Request) {
         });
 
 
-        // Reembolsos per user — filtered by data_entrada in selected period
+        // Reembolsos per user — leads no período (mesmo critério acima)
         let reembolsadosQuery = supabase
             .from('leads')
-            .select('id_sdr_responsavel, id_closer_responsavel')
+            .select('id_lead, id_sdr_responsavel, id_closer_responsavel')
             .eq('status_atual', 'Reembolsado')
-            .gte('data_entrada', `${startDate}T00:00:00`)
-            .lte('data_entrada', `${endDate}T23:59:59`);
+            .or(leadNoPeriodo);
         if (projectId) reembolsadosQuery = reembolsadosQuery.eq('id_projeto', projectId);
-        const reembolsados = await fetchAll(reembolsadosQuery);
+        const reembolsados = await fetchAll(reembolsadosQuery.order('id_lead', { ascending: true }));
         (reembolsados || []).forEach((l: any) => {
             if (l.id_sdr_responsavel && performanceSDR[l.id_sdr_responsavel]) {
                 performanceSDR[l.id_sdr_responsavel].reembolsos = (performanceSDR[l.id_sdr_responsavel].reembolsos || 0) + 1;

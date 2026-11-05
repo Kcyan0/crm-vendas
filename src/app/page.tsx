@@ -1293,17 +1293,6 @@ export default function KanbanBoard() {
                       );
                     })()}
 
-                    {lead.data_call && !['Venda', 'Loss', 'Reembolsado', 'Nao prosseguiu'].includes(lead.status_atual) && (
-                      <div
-                        className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-md"
-                        style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.4)' }}
-                        title="Data da call"
-                      >
-                        <CalendarClock size={11} />
-                        Call {formatCallBr(lead.data_call)}
-                      </div>
-                    )}
-
                     <div className="mt-4 pt-3 border-t border-[#222222] flex justify-between items-center">
                       <div className="flex -space-x-2">
                         {lead.sdr_nome && (
@@ -1334,10 +1323,22 @@ export default function KanbanBoard() {
                             ⊘ OFF
                           </span>
                         )}
-                        <div className="flex items-center gap-1 text-[10px] text-sec font-medium" title="Data de entrada">
-                          <Clock size={12} />
-                          <span>{formatDateBr(lead.data_entrada)}</span>
-                        </div>
+                        {/* Uma data só: a da call; sem call, a de entrada (a de entrada fica no detalhe) */}
+                        {lead.data_call ? (
+                          <div
+                            className="flex items-center gap-1 text-[10px] font-bold"
+                            style={{ color: ['Venda', 'Loss', 'Reembolsado', 'Nao prosseguiu'].includes(lead.status_atual) ? 'var(--text-sec)' : '#f59e0b' }}
+                            title="Data da call"
+                          >
+                            <CalendarClock size={12} />
+                            <span>{formatCallBr(lead.data_call)}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-[10px] text-sec font-medium" title="Data de entrada">
+                            <Clock size={12} />
+                            <span>{formatDateBr(lead.data_entrada)}</span>
+                          </div>
+                        )}
                       </div>
 
                       {lead.status_atual === 'Venda' && (
