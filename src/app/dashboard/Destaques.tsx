@@ -8,8 +8,8 @@ type Destaque = {
     pessoas: { id_usuario: number; nome: string; cargo: string | null }[];
 } | null;
 
-type Destaques = {
-    semana: { inicio: string; fim: string };
+type DadosDestaques = {
+    periodo: { inicio: string; fim: string };
     maisVendeu: Destaque;
     maisFollow: Destaque;
     maisResultado: Destaque;
@@ -17,34 +17,50 @@ type Destaques = {
 
 const CARGO_LABEL: Record<string, string> = { CLOSER: 'Closer', SDR: 'SDR', ADMIN: 'Admin', EXPERT: 'Expert' };
 
-// "2026-10-27" → "27/10"
-const formatDia = (dateStr: string) => {
-    const [, m, d] = dateStr.split('-');
-    return `${d}/${m}`;
+// "2026-10-27" → "27/10" (com o ano, "27/10/26", quando o período passa de um ano para outro)
+const formatDia = (dateStr: string, comAno: boolean) => {
+    const [a, m, d] = dateStr.split('-');
+    return comAno ? `${d}/${m}/${a.slice(2)}` : `${d}/${m}`;
 };
 
-export function DestaquesSemana({ projectId, formatBRL }: { projectId?: number; formatBRL: (v: number) => string }) {
-    const [data, setData] = useState<Destaques | null>(null);
+const formatPeriodo = ({ inicio, fim }: { inicio: string; fim: string }) => {
+    const comAno = inicio.slice(0, 4) !== fim.slice(0, 4);
+    return inicio === fim ? formatDia(inicio, comAno) : `${formatDia(inicio, comAno)} – ${formatDia(fim, comAno)}`;
+};
+
+// Período e projeto do filtro aplicado na Dashboard (o que o botão Filtrar buscou)
+export function Destaques({ projectId, startDate, endDate, formatBRL }: {
+    projectId?: number;
+    startDate?: string;
+    endDate?: string;
+    formatBRL: (v: number) => string;
+}) {
+    const [data, setData] = useState<DadosDestaques | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(false);
 
     useEffect(() => {
-        if (!projectId) return;
+        if (!projectId || !startDate || !endDate) return;
+        let atual = true; // ignora a resposta de um filtro que já foi trocado
         const fetchDestaques = async () => {
             setIsLoading(true);
             try {
-                const res = await fetch(`/api/destaques?projectId=${projectId}`);
+                const query = new URLSearchParams({ projectId: String(projectId), startDate, endDate });
+                const res = await fetch(`/api/destaques?${query.toString()}`);
                 if (!res.ok) throw new Error();
-                setData(await res.json());
+                const json = await res.json();
+                if (!atual) return;
+                setData(json);
                 setError(false);
             } catch {
-                setError(true);
+                if (atual) setError(true);
             } finally {
-                setIsLoading(false);
+                if (atual) setIsLoading(false);
             }
         };
         fetchDestaques();
-    }, [projectId]);
+        return () => { atual = false; };
+    }, [projectId, startDate, endDate]);
 
     const items = [
         { titulo: 'Mais vendeu', icon: BriefcaseBusiness, destaque: data?.maisVendeu, formato: (v: number) => `${v} venda${v > 1 ? 's' : ''}` },
@@ -59,17 +75,17 @@ export function DestaquesSemana({ projectId, formatBRL }: { projectId?: number; 
                     <div className="p-1.5 rounded-lg" style={{ background: 'rgba(var(--accent-rgb),0.12)' }}>
                         <Trophy size={16} style={{ color: 'var(--accent)' }} />
                     </div>
-                    <span className="font-bold text-white text-sm">Destaques da semana</span>
-                    {data?.semana && (
+                    <span className="font-bold text-white text-sm">Destaques</span>
+                    {data?.periodo && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full text-sec bg-white/5">
-                            {formatDia(data.semana.inicio)} – {formatDia(data.semana.fim)}
+                            {formatPeriodo(data.periodo)}
                         </span>
                     )}
                 </div>
             </div>
 
             {error ? (
-                <p className="text-xs text-sec">Não foi possível carregar os destaques da semana.</p>
+                <p className="text-xs text-sec">Não foi possível carregar os destaques.</p>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {items.map(({ titulo, icon: Icon, destaque, formato }) => (
@@ -98,7 +114,7 @@ export function DestaquesSemana({ projectId, formatBRL }: { projectId?: number; 
                                     {destaque.pessoas.length > 1 && <p className="text-[10px] text-sec -mt-1">Empate</p>}
                                 </>
                             ) : (
-                                <p className="text-sm text-sec">Ninguém ainda nesta semana</p>
+                                <p className="text-sm text-sec">Ninguém ainda neste período</p>
                             )}
                         </div>
                     ))}

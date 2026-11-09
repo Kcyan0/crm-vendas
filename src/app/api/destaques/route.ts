@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import supabase from '@/lib/db';
 import { fetchAll } from '@/lib/fetchAll';
-import { todayBrasilia, addDaysToDate, startOfDayBrasiliaISO, mondayOf } from '@/lib/brasilia';
+import { todayBrasilia, addDaysToDate, startOfDayBrasiliaISO } from '@/lib/brasilia';
 
 type Destaque = {
     valor: number;
     pessoas: { id_usuario: number; nome: string; cargo: string | null }[];
 } | null;
 
-// GET ?projectId=X → destaques da semana atual (segunda a domingo, fuso de Brasília)
+// GET ?projectId=X&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD → destaques do período filtrado na Dashboard.
+// Sem datas, vale o mês atual, como a Dashboard (/api/metrics) faz sem filtro. Fuso de Brasília.
 export async function GET(request: Request) {
     try {
         const supabaseAuth = await createClient();
@@ -22,10 +23,15 @@ export async function GET(request: Request) {
         const projectId = searchParams.get('projectId');
         if (!projectId) return NextResponse.json({ error: 'Projeto é obrigatório' }, { status: 400 });
 
-        const segunda = mondayOf(todayBrasilia());
-        const domingo = addDaysToDate(segunda, 6);
-        const inicio = startOfDayBrasiliaISO(segunda);
-        const fim = startOfDayBrasiliaISO(addDaysToDate(segunda, 7));
+        const hoje = todayBrasilia();
+        const primeiroDoMes = `${hoje.slice(0, 8)}01`;
+        const [ano, mes] = hoje.split('-').map(Number);
+        const ultimoDoMes = addDaysToDate(`${mes === 12 ? ano + 1 : ano}-${String(mes === 12 ? 1 : mes + 1).padStart(2, '0')}-01`, -1);
+        const dataValida = (d: string | null) => (d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null);
+        const startDate = dataValida(searchParams.get('startDate')) || primeiroDoMes;
+        const endDate = dataValida(searchParams.get('endDate')) || ultimoDoMes;
+        const inicio = startOfDayBrasiliaISO(startDate);
+        const fim = startOfDayBrasiliaISO(addDaysToDate(endDate, 1));
 
         // Nome e cargo por id_usuario (nunca por nome: há pessoas com nomes iguais)
         const usuarios = await fetchAll(
@@ -46,7 +52,7 @@ export async function GET(request: Request) {
         const leadMap: Record<number, { closer: number | null; status: string }> = {};
         for (const l of leads) leadMap[l.id_lead] = { closer: l.id_closer_responsavel ?? null, status: l.status_atual };
 
-        // ─── Vendas da semana (pago + pendente), uma por oportunidade como na dashboard ──
+        // ─── Vendas do período pela data da venda (pago + pendente), uma por oportunidade como na Dashboard ──
         const vendas = await fetchAll(
             supabase
                 .from('vendas')
@@ -74,7 +80,7 @@ export async function GET(request: Request) {
             faturamentoPorUsuario[venda.closer] = (faturamentoPorUsuario[venda.closer] || 0) + venda.valor;
         }
 
-        // ─── Follows registrados na semana ────────────────────────────────────────
+        // ─── Follows registrados no período, pela data em que foram feitos ─────────
         const follows = await fetchAll(
             supabase
                 .from('follow_ups')
@@ -107,7 +113,7 @@ export async function GET(request: Request) {
         };
 
         return NextResponse.json({
-            semana: { inicio: segunda, fim: domingo },
+            periodo: { inicio: startDate, fim: endDate },
             maisVendeu: destaque(vendasPorUsuario),
             maisFollow: destaque(followsPorUsuario),
             maisResultado: destaque(faturamentoPorUsuario),

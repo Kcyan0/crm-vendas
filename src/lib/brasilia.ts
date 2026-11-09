@@ -87,11 +87,3 @@ export function addDaysToDate(dateStr: string, days: number): string {
 export function startOfDayBrasiliaISO(dateStr: string): string {
     return new Date(`${dateStr}T00:00:00-03:00`).toISOString();
 }
-
-/**
- * Segunda-feira da semana (segunda a domingo) que contém a data "YYYY-MM-DD".
- */
-export function mondayOf(dateStr: string): string {
-    const weekday = new Date(`${dateStr}T12:00:00Z`).getUTCDay(); // 0 = domingo
-    return addDaysToDate(dateStr, -((weekday + 6) % 7));
-}

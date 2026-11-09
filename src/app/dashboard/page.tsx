@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Settings } from "lucide-react";
 import { DashboardGrid } from "./DashboardGrid";
-import { DestaquesSemana } from "./DestaquesSemana";
+import { Destaques } from "./Destaques";
 
 import {
     TrendingUp,
@@ -255,6 +255,8 @@ export default function Dashboard() {
         const d = String(now.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
     });
+    // Período que a Dashboard de fato buscou (as datas digitadas só valem depois do Filtrar)
+    const [periodoAplicado, setPeriodoAplicado] = useState<{ startDate: string; endDate: string } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditMode, setIsEditMode] = useState(false);
 
@@ -312,6 +314,7 @@ export default function Dashboard() {
             if (data.period) {
                 if (!start) setStartDate(data.period.startDate);
                 if (!end) setEndDate(data.period.endDate);
+                setPeriodoAplicado({ startDate: data.period.startDate, endDate: data.period.endDate });
             }
         } catch (error) {
             console.error(error);
@@ -418,8 +421,9 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* ── Destaques da semana ───────────────────────────────────── */}
-            <DestaquesSemana projectId={selectedProject?.id_projeto} formatBRL={formatBRL} />
+            {/* ── Destaques do período filtrado ─────────────────────────── */}
+            <Destaques projectId={selectedProject?.id_projeto} startDate={periodoAplicado?.startDate}
+                endDate={periodoAplicado?.endDate} formatBRL={formatBRL} />
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
