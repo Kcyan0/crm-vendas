@@ -133,9 +133,8 @@ export async function GET(request: Request) {
                 vendas: vendasCount,
                 leads: p.leads,
                 conversao: p.leads > 0 ? parseFloat(((vendasCount / p.leads) * 100).toFixed(1)) : 0,
-                chargebackRate: (vendasCount + p.reembolsados) > 0
-                    ? parseFloat(((p.reembolsados / (vendasCount + p.reembolsados)) * 100).toFixed(1))
-                    : 0,
+                // Chargeback: reembolsados sobre os leads do período (mesma base da conversão)
+                chargebackRate: p.leads > 0 ? parseFloat(((p.reembolsados / p.leads) * 100).toFixed(1)) : 0,
                 ticketFaturamento: ticketValores.length > 0 ? ticketReceita / ticketValores.length : 0,
                 ticketCaixa: vendasCount > 0 ? p.caixa / vendasCount : 0,
             });

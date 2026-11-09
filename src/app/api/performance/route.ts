@@ -206,6 +206,7 @@ export async function GET(request: Request) {
             .from('leads')
             .select('id_lead, id_sdr_responsavel, id_closer_responsavel')
             .eq('status_atual', 'Reembolsado')
+            .eq('off_metricas', false) // mesma base dos leads da tabela, para a taxa sobre leads
             .or(leadNoPeriodo);
         if (projectId) reembolsadosQuery = reembolsadosQuery.eq('id_projeto', projectId);
         const reembolsados = await fetchAll(reembolsadosQuery.order('id_lead', { ascending: true }));

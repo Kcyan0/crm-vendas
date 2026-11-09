@@ -211,7 +211,7 @@ export function DashboardGrid({
                                     const vendas = sdr.vendasFechadas || 0;
                                     const reembolsos = sdr.reembolsos || 0;
                                     const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
-                                    const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
+                                    const taxaReemb = leads > 0 ? ((reembolsos / leads) * 100).toFixed(1) : "0.0";
                                     const c = ['#fff', 'var(--accent)', '#22D3EE', '#A78BFA', '#F472B6'][idx % 5];
                                     return (
                                         <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
@@ -255,7 +255,7 @@ export function DashboardGrid({
                                     const vendas = closer.vendas || 0;
                                     const reembolsos = closer.reembolsos || 0;
                                     const taxaConv = leads > 0 ? ((vendas / leads) * 100).toFixed(1) : "0.0";
-                                    const taxaReemb = vendas > 0 ? ((reembolsos / vendas) * 100).toFixed(1) : "0.0";
+                                    const taxaReemb = leads > 0 ? ((reembolsos / leads) * 100).toFixed(1) : "0.0";
                                     const c = ['#A78BFA', '#22D3EE', 'var(--accent)', '#F472B6', '#fff'][idx % 5];
                                     return (
                                         <tr key={idx} className="hover:bg-white/[0.02] transition-colors">

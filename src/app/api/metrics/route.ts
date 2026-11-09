@@ -330,10 +330,10 @@ export async function GET(request: Request) {
             value: (allLeads || []).filter((l: any) => l.status_atual === stage || (stage === 'Loss' && l.status_atual === 'Nao prosseguiu')).length
         })).filter(s => s.value > 0);
 
-        // ─── Chargeback (same period cohort) ──────────────────────────────────────
+        // ─── Chargeback: reembolsados sobre os Leads Totais do período ───────────
         const reembolsados = (allLeads || []).filter((l: any) => l.status_atual === 'Reembolsado');
-        const chargebackRate = (groupedSalesFat.length + reembolsados.length) > 0
-            ? ((reembolsados.length / (groupedSalesFat.length + reembolsados.length)) * 100).toFixed(1)
+        const chargebackRate = leadsTotais > 0
+            ? ((reembolsados.length / leadsTotais) * 100).toFixed(1)
             : '0.0';
         const recentRefundReasons = reembolsados.filter((l: any) => l.motivo_reembolso).slice(0, 5).map((l: any) => l.motivo_reembolso);
 
