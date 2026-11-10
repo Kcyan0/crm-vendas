@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { todayBrasilia } from "@/lib/brasilia";
 import { Settings } from "lucide-react";
 import { DashboardGrid } from "./DashboardGrid";
 import { Destaques } from "./Destaques";
@@ -233,6 +234,20 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Última resposta de cada filtro (projeto + período), só na memória desta aba.
+// Ao voltar a um filtro já visto, a Dashboard aparece na hora e se atualiza logo em seguida.
+type RespostaPerformance = { sdr?: unknown[]; closer?: unknown[] };
+type DadosDashboard = {
+    data: Metrics & { period?: { startDate: string; endDate: string } };
+    perfData: RespostaPerformance;
+    perfTodayData: RespostaPerformance;
+};
+const cacheDashboard = new Map<string, DadosDashboard>();
+const guardarNoCache = (chave: string, dados: DadosDashboard) => {
+    cacheDashboard.delete(chave);
+    cacheDashboard.set(chave, dados);
+    if (cacheDashboard.size > 30) cacheDashboard.delete(cacheDashboard.keys().next().value as string);
+};
 
 export default function Dashboard() {
     const { selectedProject, user } = useProject();
@@ -259,67 +274,86 @@ export default function Dashboard() {
     const [periodoAplicado, setPeriodoAplicado] = useState<{ startDate: string; endDate: string } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditMode, setIsEditMode] = useState(false);
+    // Só a resposta do último filtro pedido vale (evita uma resposta atrasada sobrescrever a mais nova)
+    const ultimoPedido = useRef(0);
+
+    const aplicarDados = ({ data, perfData, perfTodayData }: DadosDashboard, start?: string, end?: string) => {
+        // ─── Single source of truth for Caixa per user ───────────────────────────
+        // /api/metrics has the canonical per-user caixa (installment-aware, deduplicated).
+        // Override the independently-calculated values from /api/performance so every
+        // UI component (commission table, donut, MetasPanel goals) shows the same number.
+        const closerCaixaMap: Record<string, number> = {};
+        (data.comissaoCloserDetalhes || []).forEach((d: any) => {
+            closerCaixaMap[d.nome] = d.caixa;
+        });
+        const sdrCaixaMap: Record<string, number> = {};
+        (data.comissaoSdrDetalhes || []).forEach((d: any) => {
+            sdrCaixaMap[d.nome] = d.caixa;
+        });
+
+        const normalizeClosers = (arr: any[]) =>
+            arr.map((c: any) => ({
+                ...c,
+                caixa: closerCaixaMap[c.nome] ?? c.caixa ?? 0,
+            }));
+        const normalizeSdrs = (arr: any[]) =>
+            arr.map((s: any) => ({
+                ...s,
+                caixa: sdrCaixaMap[s.nome] ?? s.caixa ?? 0,
+            }));
+
+        setMetrics(data);
+        setSdrs(normalizeSdrs(perfData.sdr || []));
+        setClosers(normalizeClosers(perfData.closer || []));
+        setSdrsToday(normalizeSdrs(perfTodayData.sdr || []));
+        setClosersToday(normalizeClosers(perfTodayData.closer || []));
+
+        if (data.period) {
+            if (!start) setStartDate(data.period.startDate);
+            if (!end) setEndDate(data.period.endDate);
+            setPeriodoAplicado({ startDate: data.period.startDate, endDate: data.period.endDate });
+        }
+    };
 
     const fetchMetrics = async (start?: string, end?: string) => {
-        setIsLoading(true);
-        try {
-            const query = new URLSearchParams();
-            if (start) query.set('startDate', start);
-            if (end) query.set('endDate', end);
-            if (selectedProject?.id_projeto) query.set('projectId', selectedProject.id_projeto.toString());
-            
-            const paramsToday = new URLSearchParams();
-            if (selectedProject?.id_projeto) paramsToday.set('projectId', selectedProject.id_projeto.toString());
+        const pedido = ++ultimoPedido.current;
+        const query = new URLSearchParams();
+        if (start) query.set('startDate', start);
+        if (end) query.set('endDate', end);
+        if (selectedProject?.id_projeto) query.set('projectId', selectedProject.id_projeto.toString());
 
+        const paramsToday = new URLSearchParams();
+        if (selectedProject?.id_projeto) paramsToday.set('projectId', selectedProject.id_projeto.toString());
+
+        // Com as duas datas, os Destaques já começam junto (é o mesmo período que a metrics devolve)
+        if (start && end) setPeriodoAplicado({ startDate: start, endDate: end });
+
+        const chave = query.toString();
+        const emCache = cacheDashboard.get(chave);
+        if (emCache) aplicarDados(emCache, start, end);
+        setIsLoading(!emCache);
+        try {
+            // Período = hoje: a performance de hoje é a mesma consulta, então não pede duas vezes
+            const hoje = todayBrasilia();
+            const periodoEhHoje = start === hoje && end === hoje;
             const [metricsRes, perfRes, perfTodayRes] = await Promise.all([
                 fetch(`/api/metrics?${query.toString()}`),
                 fetch(`/api/performance?${query.toString()}`),
-                fetch(`/api/performance?${paramsToday.toString()}`)
+                periodoEhHoje ? null : fetch(`/api/performance?${paramsToday.toString()}`)
             ]);
-            
+
             const data = await metricsRes.json();
             const perfData = await perfRes.json();
-            const perfTodayData = await perfTodayRes.json();
+            const perfTodayData = perfTodayRes ? await perfTodayRes.json() : perfData;
+            if (pedido !== ultimoPedido.current) return; // outro filtro já foi pedido
 
-            // ─── Single source of truth for Caixa per user ───────────────────────────
-            // /api/metrics has the canonical per-user caixa (installment-aware, deduplicated).
-            // Override the independently-calculated values from /api/performance so every
-            // UI component (commission table, donut, MetasPanel goals) shows the same number.
-            const closerCaixaMap: Record<string, number> = {};
-            (data.comissaoCloserDetalhes || []).forEach((d: any) => {
-                closerCaixaMap[d.nome] = d.caixa;
-            });
-            const sdrCaixaMap: Record<string, number> = {};
-            (data.comissaoSdrDetalhes || []).forEach((d: any) => {
-                sdrCaixaMap[d.nome] = d.caixa;
-            });
-
-            const normalizeClosers = (arr: any[]) =>
-                arr.map((c: any) => ({
-                    ...c,
-                    caixa: closerCaixaMap[c.nome] ?? c.caixa ?? 0,
-                }));
-            const normalizeSdrs = (arr: any[]) =>
-                arr.map((s: any) => ({
-                    ...s,
-                    caixa: sdrCaixaMap[s.nome] ?? s.caixa ?? 0,
-                }));
-
-            setMetrics(data);
-            setSdrs(normalizeSdrs(perfData.sdr || []));
-            setClosers(normalizeClosers(perfData.closer || []));
-            setSdrsToday(normalizeSdrs(perfTodayData.sdr || []));
-            setClosersToday(normalizeClosers(perfTodayData.closer || []));
-
-            if (data.period) {
-                if (!start) setStartDate(data.period.startDate);
-                if (!end) setEndDate(data.period.endDate);
-                setPeriodoAplicado({ startDate: data.period.startDate, endDate: data.period.endDate });
-            }
+            const dados = { data, perfData, perfTodayData };
+            if (metricsRes.ok && perfRes.ok && (!perfTodayRes || perfTodayRes.ok)) guardarNoCache(chave, dados);
+            aplicarDados(dados, start, end);
         } catch (error) {
             console.error(error);
         } finally {
-            setIsLoading(false);
+            if (pedido === ultimoPedido.current) setIsLoading(false);
         }
     };
 

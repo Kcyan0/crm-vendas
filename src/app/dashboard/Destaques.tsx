@@ -15,6 +15,9 @@ type DadosDestaques = {
     maisResultado: Destaque;
 };
 
+// Última resposta de cada filtro, só na memória desta aba: ao voltar, aparece na hora e se atualiza em seguida
+const cacheDestaques = new Map<string, DadosDestaques>();
+
 const CARGO_LABEL: Record<string, string> = { CLOSER: 'Closer', SDR: 'SDR', ADMIN: 'Admin', EXPERT: 'Expert' };
 
 // "2026-10-27" → "27/10" (com o ano, "27/10/26", quando o período passa de um ano para outro)
@@ -42,18 +45,26 @@ export function Destaques({ projectId, startDate, endDate, formatBRL }: {
     useEffect(() => {
         if (!projectId || !startDate || !endDate) return;
         let atual = true; // ignora a resposta de um filtro que já foi trocado
+        const query = new URLSearchParams({ projectId: String(projectId), startDate, endDate }).toString();
+        const emCache = cacheDestaques.get(query);
         const fetchDestaques = async () => {
-            setIsLoading(true);
+            if (emCache) {
+                setData(emCache);
+                setError(false);
+            }
+            setIsLoading(!emCache);
             try {
-                const query = new URLSearchParams({ projectId: String(projectId), startDate, endDate });
-                const res = await fetch(`/api/destaques?${query.toString()}`);
+                const res = await fetch(`/api/destaques?${query}`);
                 if (!res.ok) throw new Error();
                 const json = await res.json();
+                cacheDestaques.delete(query);
+                cacheDestaques.set(query, json);
+                if (cacheDestaques.size > 30) cacheDestaques.delete(cacheDestaques.keys().next().value as string);
                 if (!atual) return;
                 setData(json);
                 setError(false);
             } catch {
-                if (atual) setError(true);
+                if (atual && !emCache) setError(true); // com dados guardados, continua mostrando eles
             } finally {
                 if (atual) setIsLoading(false);
             }

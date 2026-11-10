@@ -33,35 +33,50 @@ export async function GET(request: Request) {
         const inicio = startOfDayBrasiliaISO(startDate);
         const fim = startOfDayBrasiliaISO(addDaysToDate(endDate, 1));
 
-        // Nome e cargo por id_usuario (nunca por nome: há pessoas com nomes iguais)
-        const usuarios = await fetchAll(
-            supabase.from('usuarios').select('id_usuario, nome, tipo').order('id_usuario', { ascending: true })
-        );
+        // As quatro consultas são independentes e saem juntas
+        const [usuarios, leads, vendas, follows] = await Promise.all([
+            // Nome e cargo por id_usuario (nunca por nome: há pessoas com nomes iguais)
+            fetchAll(
+                supabase.from('usuarios').select('id_usuario, nome, tipo').order('id_usuario', { ascending: true })
+            ),
+            // Inclui leads off_metricas: nos destaques contam todas as vendas e follows (pedido em 28/10/2026),
+            // diferente do ranking do time na dashboard, que deixa os OFF de fora
+            fetchAll(
+                supabase
+                    .from('leads')
+                    .select('id_lead, id_closer_responsavel, status_atual')
+                    .eq('id_projeto', projectId)
+                    .order('id_lead', { ascending: true })
+            ),
+            // Vendas do período pela data da venda (pago + pendente), uma por oportunidade como na Dashboard
+            fetchAll(
+                supabase
+                    .from('vendas')
+                    .select('id_venda, id_oportunidade, id_lead, id_closer, valor_bruto')
+                    .in('status_pagamento', ['pago', 'pendente'])
+                    .gte('data_venda', inicio)
+                    .lt('data_venda', fim)
+                    .order('id_venda', { ascending: true })
+            ),
+            // Follows registrados no período, pela data em que foram feitos
+            fetchAll(
+                supabase
+                    .from('follow_ups')
+                    .select('id_follow, id_lead, id_usuario')
+                    .eq('id_projeto', projectId)
+                    .gte('data_feito', inicio)
+                    .lt('data_feito', fim)
+                    .order('id_follow', { ascending: true })
+            ),
+        ]);
+
         const usersMap: Record<number, { nome: string; tipo: string | null }> = {};
         for (const u of usuarios) usersMap[u.id_usuario] = { nome: u.nome, tipo: u.tipo ?? null };
 
-        // Inclui leads off_metricas: nos destaques contam todas as vendas e follows (pedido em 28/10/2026),
-        // diferente do ranking do time na dashboard, que deixa os OFF de fora
-        const leads = await fetchAll(
-            supabase
-                .from('leads')
-                .select('id_lead, id_closer_responsavel, status_atual')
-                .eq('id_projeto', projectId)
-                .order('id_lead', { ascending: true })
-        );
         const leadMap: Record<number, { closer: number | null; status: string }> = {};
         for (const l of leads) leadMap[l.id_lead] = { closer: l.id_closer_responsavel ?? null, status: l.status_atual };
 
-        // ─── Vendas do período pela data da venda (pago + pendente), uma por oportunidade como na Dashboard ──
-        const vendas = await fetchAll(
-            supabase
-                .from('vendas')
-                .select('id_venda, id_oportunidade, id_lead, id_closer, valor_bruto')
-                .in('status_pagamento', ['pago', 'pendente'])
-                .gte('data_venda', inicio)
-                .lt('data_venda', fim)
-                .order('id_venda', { ascending: true })
-        );
+        // ─── Vendas: uma por oportunidade, para o closer da venda ──────────────────
         const porOportunidade: Record<string, { closer: number | null; valor: number }> = {};
         for (const v of vendas) {
             const lead = leadMap[v.id_lead];
@@ -80,16 +95,7 @@ export async function GET(request: Request) {
             faturamentoPorUsuario[venda.closer] = (faturamentoPorUsuario[venda.closer] || 0) + venda.valor;
         }
 
-        // ─── Follows registrados no período, pela data em que foram feitos ─────────
-        const follows = await fetchAll(
-            supabase
-                .from('follow_ups')
-                .select('id_follow, id_lead, id_usuario')
-                .eq('id_projeto', projectId)
-                .gte('data_feito', inicio)
-                .lt('data_feito', fim)
-                .order('id_follow', { ascending: true })
-        );
+        // ─── Follows por quem registrou ──────────────────────────────────────────
         const followsPorUsuario: Record<number, number> = {};
         for (const f of follows) {
             if (!f.id_usuario || !leadMap[f.id_lead]) continue;

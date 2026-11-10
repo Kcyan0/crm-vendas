@@ -28,10 +28,76 @@ export async function GET(request: Request) {
         const endDate = searchParams.get('endDate') || searchParams.get('date') || todayStr;
         const projectId = searchParams.get('projectId');
 
-        // Fetch active users
+        // Leads no período: data da call; sem call, data de entrada (hora de Brasília como foi digitada)
+        const leadNoPeriodo = filtroCallOuEntrada(startDate, endDate, { gte: `${startDate}T00:00:00`, lte: `${endDate}T23:59:59` });
+
+        // Caixa: pagamentos dos últimos 2 anos, para pegar parcelas que caem neste período
+        const caixaStartObj = new Date(`${startDate}T00:00:00Z`);
+        caixaStartObj.setFullYear(caixaStartObj.getFullYear() - 2);
+        const caixaStartBoundary = caixaStartObj.toISOString().split('T')[0];
+        const CAIXA_SELECT = 'id_lead, id_closer, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_recebimento, data_venda';
+
+        // Active users
         let usersQuery = supabase.from('usuarios').select('id_usuario, nome, tipo').eq('ativo', true).in('tipo', ['SDR', 'CLOSER']);
         if (projectId) usersQuery = usersQuery.eq('id_projeto', projectId);
-        const users = await fetchAll(usersQuery);
+
+        // No-show excluído — closer não teve chance de converter
+        let leadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual')
+            .or(leadNoPeriodo)
+            .eq('off_metricas', false)
+            .neq('status_atual', 'No-show');
+        if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
+
+        // Sales in the selected period (pago + pendente) — VGV de closers e SDRs
+        const vendasQuery = supabase
+            .from('vendas')
+            .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa, id_oportunidade, forma_pagamento')
+            .in('status_pagamento', ['pago', 'pendente'])
+            .gte('data_venda', `${startDate}T00:00:00`)
+            .lte('data_venda', `${endDate}T23:59:59`);
+
+        // ALL leads of the project, to cover sales outside the start/end window for SDR attribution & filtering
+        let allLeadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual');
+        if (projectId) allLeadsQuery = allLeadsQuery.eq('id_projeto', projectId);
+
+        // Caixa — two queries because .lte('data_recebimento', endDate) drops rows where data_recebimento IS NULL;
+        // for those rows caixaInPeriod falls back to data_venda.
+        const caixaQueryA = supabase
+            .from('vendas')
+            .select(CAIXA_SELECT)
+            .eq('status_pagamento', 'pago')
+            .gte('data_recebimento', caixaStartBoundary)
+            .lte('data_recebimento', endDate);
+        const caixaQueryB = supabase
+            .from('vendas')
+            .select(CAIXA_SELECT)
+            .eq('status_pagamento', 'pago')
+            .is('data_recebimento', null)
+            .gte('data_venda', `${startDate}T00:00:00`)
+            .lte('data_venda', `${endDate}T23:59:59`);
+
+        // Reembolsos per user — leads no período (mesmo critério dos leads acima)
+        let reembolsadosQuery = supabase
+            .from('leads')
+            .select('id_lead, id_sdr_responsavel, id_closer_responsavel')
+            .eq('status_atual', 'Reembolsado')
+            .eq('off_metricas', false) // mesma base dos leads da tabela, para a taxa sobre leads
+            .or(leadNoPeriodo);
+        if (projectId) reembolsadosQuery = reembolsadosQuery.eq('id_projeto', projectId);
+
+        // Todas as consultas são independentes e saem juntas (antes eram ~8 idas ao banco, uma depois da outra).
+        // Cada fetchAll tem .order estável para a paginação de 1000 em 1000 não repetir nem pular linhas.
+        const [users, leads, vendasPeriod, allLeads, caixaWithDate, caixaNoDate, reembolsados, overridesRes] = await Promise.all([
+            fetchAll(usersQuery.order('id_usuario', { ascending: true })),
+            fetchAll(leadsQuery.order('id_lead', { ascending: true })),
+            fetchAll(vendasQuery.order('id_venda', { ascending: true })),
+            fetchAll(allLeadsQuery.order('id_lead', { ascending: true })),
+            fetchAll(caixaQueryA.order('id_venda', { ascending: true })),
+            fetchAll(caixaQueryB.order('id_venda', { ascending: true })),
+            fetchAll(reembolsadosQuery.order('id_lead', { ascending: true })),
+            // Manual overrides
+            supabase.from('metricas_performance').select('*').gte('data_referencia', startDate).lte('data_referencia', endDate),
+        ]);
 
         const performanceSDR: Record<number, any> = {};
         const performanceCloser: Record<number, any> = {};
@@ -43,17 +109,6 @@ export async function GET(request: Request) {
                 performanceCloser[u.id_usuario] = { id: u.id_usuario, nome: u.nome, callsAgendadas: 0, reagendamentos: 0, noShows: 0, totalCalls: 0, vendas: 0, vgv: 0, caixa: 0, isManual: false };
             }
         });
-
-        // Leads no período: data da call; sem call, data de entrada (hora de Brasília como foi digitada)
-        const leadNoPeriodo = filtroCallOuEntrada(startDate, endDate, { gte: `${startDate}T00:00:00`, lte: `${endDate}T23:59:59` });
-
-        // No-show excluído — closer não teve chance de converter
-        let leadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual')
-            .or(leadNoPeriodo)
-            .eq('off_metricas', false)
-            .neq('status_atual', 'No-show');
-        if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
-        const leads = await fetchAll(leadsQuery.order('id_lead', { ascending: true }));
 
         (leads || []).forEach((l: any) => {
             const sdrId = l.id_sdr_responsavel;
@@ -77,22 +132,6 @@ export async function GET(request: Request) {
                 }
             }
         });
-
-        // Sales for closers in the selected period — for VGV/Caixa financial metrics only
-        let vendasQuery = supabase
-            .from('vendas')
-            .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa, id_oportunidade, forma_pagamento')
-            .in('status_pagamento', ['pago', 'pendente'])
-            .gte('data_venda', `${startDate}T00:00:00`)
-            .lte('data_venda', `${endDate}T23:59:59`);
-
-        const vendasPeriod = await fetchAll(vendasQuery);
-
-        // Also fetch ALL leads for this project to cover sales outside the start/end window for accurate SDR attribution & filtering
-        let allLeadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual');
-
-        if (projectId) allLeadsQuery = allLeadsQuery.eq('id_projeto', projectId);
-        const allLeads = await fetchAll(allLeadsQuery);
 
         const validLeadIds = new Set<number>();
         const leadToSdr: Record<number, number> = {};
@@ -119,16 +158,8 @@ export async function GET(request: Request) {
         });
 
 
-        // SDR vgv/caixa — fetch sales for leads where the SDR is responsible
-        let vendasSdrQuery = supabase
-            .from('vendas')
-            .select('id_lead, valor_bruto, valor_liquido_caixa')
-            .in('status_pagamento', ['pago', 'pendente'])
-            .gte('data_venda', `${startDate}T00:00:00`)
-            .lte('data_venda', `${endDate}T23:59:59`);
-        const vendasSdr = await fetchAll(vendasSdrQuery);
-
-        (vendasSdr || []).forEach((v: any) => {
+        // SDR vgv — mesmas vendas do período (pago + pendente), creditadas ao SDR do lead
+        (vendasPeriod || []).forEach((v: any) => {
             if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
             
             const sdrId = leadToSdr[v.id_lead];
@@ -141,35 +172,7 @@ export async function GET(request: Request) {
 
 
 
-        // ─── CAIXA QUERY (correct installment-aware calculation) ──────────────────
-        // Pull all paid sales going back 2 years to capture installments landing in this period.
-        // NOTE: We run TWO queries and merge because SQL NULL comparisons always return false,
-        // so .lte('data_recebimento', endDate) silently drops rows where data_recebimento IS NULL.
-        // For those rows, caixaInPeriod falls back to data_venda — so we fetch them separately.
-        const caixaStartObj = new Date(`${startDate}T00:00:00Z`);
-        caixaStartObj.setFullYear(caixaStartObj.getFullYear() - 2);
-        const caixaStartBoundary = caixaStartObj.toISOString().split('T')[0];
-
-        const CAIXA_SELECT = 'id_lead, id_closer, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_recebimento, data_venda';
-
-        // Query A: sales with an explicit data_recebimento in range (includes installments)
-        const caixaQueryA = supabase
-            .from('vendas')
-            .select(CAIXA_SELECT)
-            .eq('status_pagamento', 'pago')
-            .gte('data_recebimento', caixaStartBoundary)
-            .lte('data_recebimento', endDate);
-
-        // Query B: sales where data_recebimento is NULL — use data_venda as the date
-        const caixaQueryB = supabase
-            .from('vendas')
-            .select(CAIXA_SELECT)
-            .eq('status_pagamento', 'pago')
-            .is('data_recebimento', null)
-            .gte('data_venda', `${startDate}T00:00:00`)
-            .lte('data_venda', `${endDate}T23:59:59`);
-
-        const [caixaWithDate, caixaNoDate] = await Promise.all([fetchAll(caixaQueryA), fetchAll(caixaQueryB)]);
+        // ─── CAIXA (installment-aware): pagamentos já buscados acima, com e sem data_recebimento ──
         const caixaPeriod = [...(caixaWithDate || []), ...(caixaNoDate || [])];
 
         // ─── Group by id_oportunidade (same deduplication as metrics API) ────────
@@ -202,14 +205,6 @@ export async function GET(request: Request) {
 
 
         // Reembolsos per user — leads no período (mesmo critério acima)
-        let reembolsadosQuery = supabase
-            .from('leads')
-            .select('id_lead, id_sdr_responsavel, id_closer_responsavel')
-            .eq('status_atual', 'Reembolsado')
-            .eq('off_metricas', false) // mesma base dos leads da tabela, para a taxa sobre leads
-            .or(leadNoPeriodo);
-        if (projectId) reembolsadosQuery = reembolsadosQuery.eq('id_projeto', projectId);
-        const reembolsados = await fetchAll(reembolsadosQuery.order('id_lead', { ascending: true }));
         (reembolsados || []).forEach((l: any) => {
             if (l.id_sdr_responsavel && performanceSDR[l.id_sdr_responsavel]) {
                 performanceSDR[l.id_sdr_responsavel].reembolsos = (performanceSDR[l.id_sdr_responsavel].reembolsos || 0) + 1;
@@ -220,8 +215,7 @@ export async function GET(request: Request) {
         });
 
         // Manual overrides
-        const { data: overrides } = await supabase.from('metricas_performance')
-            .select('*').gte('data_referencia', startDate).lte('data_referencia', endDate);
+        const overrides = overridesRes.data;
 
         (overrides || []).forEach((ov: any) => {
             const uid = ov.id_usuario;

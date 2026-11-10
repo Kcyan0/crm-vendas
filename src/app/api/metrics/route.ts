@@ -39,29 +39,34 @@ export async function GET(request: Request) {
         // Leads no período: pela data da call; sem call, pela data de entrada
         const leadNoPeriodo = filtroCallOuEntrada(startDate, endDate, { gte: startVendaFilter, lt: endFilter });
 
-        // ─── 1. FETCH SALES (FATURAMENTO) ─────────────────────────────────────────
-        // Receita Bruta = sales originated in the period (pago + pendente) based on data_venda.
-        const vendasFatQuery = supabase
-            .from('vendas')
-            .select('id_venda, id_oportunidade, valor_bruto, data_venda, id_lead, forma_pagamento, status_pagamento')
-            .in('status_pagamento', ['pago', 'pendente'])
-            .gte('data_venda', startVendaFilter)
-            .lt('data_venda', endFilter);
-        const vendasFat = await fetchAll(vendasFatQuery);
-
-        
         const startDateObj = new Date(`${startDate}T00:00:00Z`);
         startDateObj.setFullYear(startDateObj.getFullYear() - 2); // 24 months back
         const caixaStartBoundary = startDateObj.toISOString().split('T')[0];
 
-        // ─── 2. FETCH CASH (CAIXA LÍQUIDO) ────────────────────────────────────────
-        // Caixa Líquido = payments received in the period (pago only) based on data_recebimento.
-        // NOTE: We run TWO queries and merge because SQL NULL comparisons always return false,
-        // so .lte('data_recebimento', endDate) silently drops rows where data_recebimento IS NULL.
-        // For those rows, caixaInPeriod falls back to data_venda — so we fetch them separately.
         const CAIXA_SELECT_M = 'id_venda, id_oportunidade, id_closer, valor_bruto, valor_liquido_caixa, numero_parcelas, data_venda, data_recebimento, forma_pagamento, id_lead';
+        // Leads do projeto: vendas válidas, ticket (sem OFF) e dono de cada lead
+        let leadsDoProjetoQuery = supabase.from('leads').select('id_lead, status_atual, off_metricas, id_sdr_responsavel, id_closer_responsavel');
+        if (projectId) leadsDoProjetoQuery = leadsDoProjetoQuery.eq('id_projeto', projectId);
+        // Leads no período (call; sem call, entrada), sem OFF: Leads Totais, funil, chargeback e status
+        let leadsDoPeriodoQuery = supabase.from('leads').select('id_lead, nome, status_atual, motivo_reembolso').or(leadNoPeriodo).eq('off_metricas', false);
+        if (projectId) leadsDoPeriodoQuery = leadsDoPeriodoQuery.eq('id_projeto', projectId);
 
-        const [caixaWithDate, caixaNoDate] = await Promise.all([
+        // Todas as consultas independentes saem juntas (antes eram ~10 idas ao banco, uma depois da outra).
+        // Cada fetchAll tem .order estável para a paginação de 1000 em 1000 não repetir nem pular linhas.
+        const [vendasFat, caixaWithDate, caixaNoDate, leadsDoProjeto, usersRes, leadsDoPeriodo] = await Promise.all([
+            // ─── 1. FATURAMENTO: vendas do período (pago + pendente) pela data da venda
+            fetchAll(
+                supabase
+                    .from('vendas')
+                    .select('id_venda, id_oportunidade, valor_bruto, data_venda, id_lead, forma_pagamento, status_pagamento')
+                    .in('status_pagamento', ['pago', 'pendente'])
+                    .gte('data_venda', startVendaFilter)
+                    .lt('data_venda', endFilter)
+                    .order('id_venda', { ascending: true })
+            ),
+            // ─── 2. CAIXA LÍQUIDO: pagamentos recebidos no período (só pago) pela data de recebimento.
+            // Duas consultas porque .lte('data_recebimento') descarta as linhas com data_recebimento NULL;
+            // para essas, caixaInPeriod usa a data da venda.
             fetchAll(
                 supabase
                     .from('vendas')
@@ -69,6 +74,7 @@ export async function GET(request: Request) {
                     .eq('status_pagamento', 'pago')
                     .gte('data_recebimento', caixaStartBoundary)
                     .lte('data_recebimento', endDate)
+                    .order('id_venda', { ascending: true })
             ),
             fetchAll(
                 supabase
@@ -78,29 +84,25 @@ export async function GET(request: Request) {
                     .is('data_recebimento', null)
                     .gte('data_venda', startVendaFilter)
                     .lt('data_venda', endFilter)
+                    .order('id_venda', { ascending: true })
             ),
+            fetchAll(leadsDoProjetoQuery.order('id_lead', { ascending: true })),
+            // ─── Usuários: nomes e % de comissão
+            supabase
+                .from('usuarios')
+                .select('id_usuario, nome, percentual_comissao_closer, percentual_comissao_sdr')
+                .in('tipo', ['SDR', 'CLOSER', 'ADMIN']),
+            fetchAll(leadsDoPeriodoQuery.order('id_lead', { ascending: true })),
         ]);
         const vendasCaixa = [...(caixaWithDate || []), ...(caixaNoDate || [])];
 
         // ─── Filter by project (inclui off_metricas → caixa e faturamento completos) ──
-        let validLeadIds: Set<number> | null = null;
-        if (projectId) {
-            const projLeads = await fetchAll(supabase.from('leads').select('id_lead').eq('id_projeto', projectId).not('status_atual', 'in', '("Reembolsado","Loss")'));
-            validLeadIds = new Set((projLeads || []).map((l: any) => l.id_lead));
-        } else {
-            const projLeads = await fetchAll(supabase.from('leads').select('id_lead').not('status_atual', 'in', '("Reembolsado","Loss")'));
-            validLeadIds = new Set((projLeads || []).map((l: any) => l.id_lead));
-        }
-
+        // Mesmo critério do antigo .not('status_atual', 'in', '("Reembolsado","Loss")'), que também deixava de fora status nulo
+        const leadsValidos = (leadsDoProjeto || []).filter((l: any) =>
+            l.status_atual != null && l.status_atual !== 'Reembolsado' && l.status_atual !== 'Loss');
+        const validLeadIds = new Set<number>(leadsValidos.map((l: any) => l.id_lead));
         // ─── Filter sem off_metricas → usado APENAS para Ticket Médio ─────────────
-        let validLeadIdsTicket: Set<number> | null = null;
-        if (projectId) {
-            const projLeads = await fetchAll(supabase.from('leads').select('id_lead').eq('id_projeto', projectId).eq('off_metricas', false).not('status_atual', 'in', '("Reembolsado","Loss")'));
-            validLeadIdsTicket = new Set((projLeads || []).map((l: any) => l.id_lead));
-        } else {
-            const projLeads = await fetchAll(supabase.from('leads').select('id_lead').eq('off_metricas', false).not('status_atual', 'in', '("Reembolsado","Loss")'));
-            validLeadIdsTicket = new Set((projLeads || []).map((l: any) => l.id_lead));
-        }
+        const validLeadIdsTicket = new Set<number>(leadsValidos.filter((l: any) => l.off_metricas === false).map((l: any) => l.id_lead));
 
         const filteredFat = (vendasFat || []).filter((v: any) => validLeadIds!.has(v.id_lead));
         const filteredCaixa = (vendasCaixa || []).filter((v: any) => validLeadIds!.has(v.id_lead));
@@ -160,13 +162,8 @@ export async function GET(request: Request) {
 
         // ─── Leads count ──────────────────────────────────────────────────────────
         // No-show excluído: closer não teve chance de converter, não deve penalizar a taxa
-        let leadsQuery = supabase.from('leads').select('id_lead')
-            .or(leadNoPeriodo)
-            .eq('off_metricas', false)
-            .neq('status_atual', 'No-show');
-        if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
-        const leadsData = await fetchAll(leadsQuery.order('id_lead', { ascending: true }));
-        const leadsTotais = leadsData?.length || 0;
+        // (mesmo critério do antigo .neq('status_atual', 'No-show'), que também deixava de fora status nulo)
+        const leadsTotais = (leadsDoPeriodo || []).filter((l: any) => l.status_atual != null && l.status_atual !== 'No-show').length;
         const conversaoAproximada = leadsTotais > 0 ? ((vendasTotais / leadsTotais) * 100).toFixed(1) : '0.0';
 
         // ─── Ticket Médio (exclui off_metricas) ──────────────────────────────────
@@ -192,10 +189,7 @@ export async function GET(request: Request) {
         const receitaPorPagamentoCaixa = Object.entries(byPaymentCaixa).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
         // ─── User map: names + commission % ──────────────────────────────────────
-        const { data: usersData } = await supabase
-            .from('usuarios')
-            .select('id_usuario, nome, percentual_comissao_closer, percentual_comissao_sdr')
-            .in('tipo', ['SDR', 'CLOSER', 'ADMIN']);
+        const usersData = usersRes.data;
         const usersMap: Record<number, string> = {};
         const userCommissionMap: Record<number, { pctCloser: number; pctSdr: number }> = {};
         (usersData || []).forEach((u: any) => {
@@ -206,13 +200,9 @@ export async function GET(request: Request) {
             };
         });
 
-        // ─── Lead → owner map ─────────────────────────────────────────────────────
-        const { data: leadsInfoData } = await supabase
-            .from('leads')
-            .select('id_lead, id_sdr_responsavel, id_closer_responsavel')
-            .in('id_lead', Array.from(validLeadIds!));
+        // ─── Lead → owner map (leads válidos do projeto, já buscados acima) ─────────
         const leadOwnerMap: Record<number, { sdr: number; closer: number }> = {};
-        (leadsInfoData || []).forEach((l: any) => {
+        leadsValidos.forEach((l: any) => {
             leadOwnerMap[l.id_lead] = { sdr: l.id_sdr_responsavel, closer: l.id_closer_responsavel };
         });
 
@@ -318,13 +308,7 @@ export async function GET(request: Request) {
 
         // ─── Funnel & Chargeback (leads no período: data da call, ou entrada sem call) ──
         const funnelStages = ['Novo', 'Follow-up', 'Agendado', 'Negociação', 'Venda', 'Reembolsado', 'Loss'];
-        let periodFunnelQuery = supabase
-            .from('leads')
-            .select('id_lead, nome, status_atual, motivo_reembolso')
-            .or(leadNoPeriodo)
-            .eq('off_metricas', false);
-        if (projectId) periodFunnelQuery = (periodFunnelQuery as any).eq('id_projeto', projectId);
-        const allLeads = await fetchAll(periodFunnelQuery.order('id_lead', { ascending: true }));
+        const allLeads = leadsDoPeriodo;
         const funnelData = funnelStages.map(stage => ({
             name: stage,
             value: (allLeads || []).filter((l: any) => l.status_atual === stage || (stage === 'Loss' && l.status_atual === 'Nao prosseguiu')).length
@@ -337,16 +321,25 @@ export async function GET(request: Request) {
             : '0.0';
         const recentRefundReasons = reembolsados.filter((l: any) => l.motivo_reembolso).slice(0, 5).map((l: any) => l.motivo_reembolso);
 
-        // ─── Valor Total Perdido por Reembolso (no período) ──────────────────────
+        // ─── Segunda leva, em paralelo: vendas dos reembolsados e produtos das vendas do período ──
         const reembolsadoLeadIds = reembolsados.map((l: any) => l.id_lead).filter(Boolean);
+        const vendasIds = filteredFat.map((v: any) => v.id_venda).filter(Boolean);
+        const [reembolsadasRes, vendaProdRes] = await Promise.all([
+            reembolsadoLeadIds.length > 0
+                ? supabase.from('vendas').select('id_venda, id_lead, valor_bruto, status_pagamento').in('id_lead', reembolsadoLeadIds)
+                : Promise.resolve(null),
+            vendasIds.length > 0
+                ? Promise.resolve(supabase.from('venda_produtos').select('id_venda, id_produto, produtos(nome)').in('id_venda', vendasIds))
+                    .catch((e) => { console.warn('Produto metrics error:', e); return null; })
+                : Promise.resolve(null),
+        ]);
+
+        // ─── Valor Total Perdido por Reembolso (no período) ──────────────────────
         let valorPerdidoReembolso = 0;
         let detalhesReembolsos: { leadId: number; nome: string; valor: number; motivo: string }[] = [];
 
         if (reembolsadoLeadIds.length > 0) {
-            const { data: vendasReembolsadas } = await supabase
-                .from('vendas')
-                .select('id_venda, id_lead, valor_bruto, status_pagamento')
-                .in('id_lead', reembolsadoLeadIds);
+            const vendasReembolsadas = reembolsadasRes?.data;
 
             const valorPorLead: Record<number, number> = {};
             for (const vr of (vendasReembolsadas || [])) {
@@ -365,11 +358,7 @@ export async function GET(request: Request) {
 
         // ─── Status dos Leads no período ─────────────────────────────────────────
         const kanbanStatuses = ['Novo', 'Follow-up', 'Remarcado', 'No-show', 'Venda', 'Reembolsado', 'Loss'];
-        let periodLeadsQuery = supabase.from('leads').select('id_lead, status_atual')
-            .or(leadNoPeriodo)
-            .eq('off_metricas', false);
-        if (projectId) periodLeadsQuery = (periodLeadsQuery as any).eq('id_projeto', projectId);
-        const periodLeads = await fetchAll(periodLeadsQuery.order('id_lead', { ascending: true }));
+        const periodLeads = leadsDoPeriodo; // mesmos filtros: período, sem OFF, projeto
 
         const statusCounts: Record<string, number> = {};
         for (const l of (periodLeads || [])) {
@@ -385,13 +374,9 @@ export async function GET(request: Request) {
         // ─── Métricas por Produto ──────────────────────────────────────────────────
         let produtosMetrics: any[] = [];
         try {
-            // Get all vendas IDs that are in our filteredFat set
-            const vendasIds = filteredFat.map((v: any) => v.id_venda).filter(Boolean);
             if (vendasIds.length > 0) {
-                const { data: vendaProdData } = await supabase
-                    .from('venda_produtos')
-                    .select('id_venda, id_produto, produtos(nome)')
-                    .in('id_venda', vendasIds);
+                const vendaProdData = vendaProdRes?.data;
+                const vendaPorId = new Map<number, any>(filteredFat.map((v: any) => [v.id_venda, v]));
 
                 // Build product stats map
                 const prodMap: Record<number, { nome: string; vendas: number; receita: number }> = {};
@@ -400,7 +385,7 @@ export async function GET(request: Request) {
                     const nomeProd = (vp as any).produtos?.nome || 'Desconhecido';
                     if (!prodMap[pid]) prodMap[pid] = { nome: nomeProd, vendas: 0, receita: 0 };
                     // Find the venda value
-                    const vendaRow = filteredFat.find((v: any) => v.id_venda === vp.id_venda);
+                    const vendaRow = vendaPorId.get(vp.id_venda);
                     if (vendaRow) prodMap[pid].receita += parseFloat(vendaRow.valor_bruto) || 0;
                     prodMap[pid].vendas += 1;
                 }
