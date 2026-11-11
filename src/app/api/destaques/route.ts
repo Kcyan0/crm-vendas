@@ -52,7 +52,7 @@ export async function GET(request: Request) {
             fetchAll(
                 supabase
                     .from('vendas')
-                    .select('id_venda, id_oportunidade, id_lead, id_closer, valor_bruto')
+                    .select('id_venda, id_oportunidade, id_lead, id_closer, valor_bruto, status_pagamento')
                     .in('status_pagamento', ['pago', 'pendente'])
                     .gte('data_venda', inicio)
                     .lt('data_venda', fim)
@@ -85,7 +85,8 @@ export async function GET(request: Request) {
             if (!porOportunidade[chave]) porOportunidade[chave] = { closer: null, valor: 0 };
             // Closer da venda; sem ele, o closer responsável pelo lead
             porOportunidade[chave].closer ??= v.id_closer ?? lead.closer;
-            porOportunidade[chave].valor += parseFloat(v.valor_bruto) || 0;
+            // Mais deu resultado = faturamento: só pagamento Pago; mais vendeu conta a venda mesmo pendente
+            if (v.status_pagamento === 'pago') porOportunidade[chave].valor += parseFloat(v.valor_bruto) || 0;
         }
         const vendasPorUsuario: Record<number, number> = {};
         const faturamentoPorUsuario: Record<number, number> = {};

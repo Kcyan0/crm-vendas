@@ -48,10 +48,10 @@ export async function GET(request: Request) {
             .neq('status_atual', 'No-show');
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
 
-        // Sales in the selected period (pago + pendente) — VGV de closers e SDRs
+        // Sales in the selected period (pago + pendente); o VGV soma só as pagas
         const vendasQuery = supabase
             .from('vendas')
-            .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa, id_oportunidade, forma_pagamento')
+            .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa, id_oportunidade, forma_pagamento, status_pagamento')
             .in('status_pagamento', ['pago', 'pendente'])
             .gte('data_venda', `${startDate}T00:00:00`)
             .lte('data_venda', `${endDate}T23:59:59`);
@@ -146,9 +146,11 @@ export async function GET(request: Request) {
         });
 
         // Accumulate VGV/Caixa per closer
+        // VGV = faturamento: só pagamento Pago (o pendente entra quando for marcado como pago)
         (vendasPeriod || []).forEach((v: any) => {
             if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
-            
+            if (v.status_pagamento !== 'pago') return;
+
             // Fallback ao closer do lead quando id_closer não está na venda
             const closerId = v.id_closer ?? leadToCloser[v.id_lead] ?? null;
             if (!closerId || !performanceCloser[closerId]) return;
@@ -158,10 +160,11 @@ export async function GET(request: Request) {
         });
 
 
-        // SDR vgv — mesmas vendas do período (pago + pendente), creditadas ao SDR do lead
+        // SDR vgv — mesmas vendas do período, só as pagas, creditadas ao SDR do lead
         (vendasPeriod || []).forEach((v: any) => {
             if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
-            
+            if (v.status_pagamento !== 'pago') return; // VGV só pago
+
             const sdrId = leadToSdr[v.id_lead];
             if (sdrId && performanceSDR[sdrId]) {
                 performanceSDR[sdrId].vgv = (performanceSDR[sdrId].vgv || 0) + (parseFloat(v.valor_bruto) || 0);
