@@ -124,7 +124,9 @@ export async function GET(request: Request) {
             }
             const closerId = l.id_closer_responsavel;
             if (closerId && performanceCloser[closerId]) {
-                performanceCloser[closerId].totalCalls += 1;
+                // Lead em Novo ainda não teve call: fica fora dos leads do closer, base da conversão e do
+                // reembolso na tabela Conversão Closer (pedido em 2026-11-18). A conversão de SDR não muda.
+                if (l.status_atual !== 'Novo') performanceCloser[closerId].totalCalls += 1;
                 performanceCloser[closerId].callsAgendadas += 1;
                 // Count vendas from period leads (same cohort as Leads column)
                 if (l.status_atual === 'Venda') {
