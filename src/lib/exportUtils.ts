@@ -49,6 +49,8 @@ export function exportLeadsToCSV(leads: Row[], filename?: string): void {
         { key: 'observacoes_gerais', label: 'Observações' },
         { key: 'data_entrada', label: 'Data de Entrada' },
         { key: 'data_call', label: 'Data da Call' },
+        { key: 'motivo_loss', label: 'Motivo do Loss' },
+        { key: 'detalhe_loss', label: 'Detalhe do Loss' },
     ];
 
     const csv = toCSV(headers, leads);

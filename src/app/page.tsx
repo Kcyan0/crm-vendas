@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown, CalendarClock } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV } from '@/lib/exportUtils';
+import { MOTIVOS_LOSS, MOTIVO_LOSS_OUTRO, validarMotivoLoss } from '@/lib/motivosLoss';
 import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
 import { createClient as createBrowserClient } from '@/lib/supabase/browser';
 import { followSituacao, diasDeAtraso } from '@/lib/followUp';
@@ -32,6 +33,11 @@ type Lead = {
   off_metricas?: boolean;
   data_proximo_follow?: string | null;
   data_call?: string | null;
+  // Motivo do Loss (pedido ao mover para Loss); quem marcou é id_usuario
+  motivo_loss?: string | null;
+  detalhe_loss?: string | null;
+  id_usuario_loss?: number | null;
+  data_loss?: string | null;
 };
 
 
@@ -97,6 +103,11 @@ export default function KanbanBoard() {
   const [remarcarLead, setRemarcarLead] = useState<Lead | null>(null);
   const [remarcarData, setRemarcarData] = useState("");
   const [remarcarSalvando, setRemarcarSalvando] = useState(false);
+  // Loss: pede o motivo (lista fixa + detalhe); cancelar deixa o lead onde estava
+  const [lossLead, setLossLead] = useState<Lead | null>(null);
+  const [lossMotivo, setLossMotivo] = useState("");
+  const [lossDetalhe, setLossDetalhe] = useState("");
+  const [lossSalvando, setLossSalvando] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
     telefone: "",
@@ -411,6 +422,51 @@ export default function KanbanBoard() {
     }
   };
 
+  const abrirLoss = (lead: Lead) => {
+    setLossLead(lead);
+    setLossMotivo("");
+    setLossDetalhe("");
+  };
+
+  const handleSaveLoss = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lossLead || lossSalvando) return;
+    const erro = validarMotivoLoss(lossMotivo, lossDetalhe);
+    if (erro) { alert(erro); return; }
+    const lead = lossLead;
+    setLossSalvando(true);
+    try {
+      const res = await fetch("/api/leads", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_lead: lead.id_lead, status_atual: "Loss", motivo_loss: lossMotivo, detalhe_loss: lossDetalhe, usuario_nome: userName }),
+      });
+      const salvo = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(`Erro ao mover para Loss: ${salvo.error || `HTTP ${res.status}`}`);
+        return;
+      }
+      const dadosLoss = {
+        status_atual: "Loss",
+        motivo_loss: salvo.motivo_loss ?? lossMotivo,
+        detalhe_loss: salvo.detalhe_loss ?? (lossDetalhe.trim() || null),
+        id_usuario_loss: salvo.id_usuario_loss ?? null,
+        data_loss: salvo.data_loss ?? new Date().toISOString(),
+      };
+      setLeads(prev => prev.map(l => l.id_lead === lead.id_lead ? { ...l, ...dadosLoss } : l));
+      setDetailLead(prev => prev && prev.id_lead === lead.id_lead ? { ...prev, ...dadosLoss } : prev);
+      marcarMovido(lead.id_lead);
+      setLossLead(null);
+      rebuscarSeEmAndamento();
+      await logActivity(lead.id_lead, `Status alterado para "Loss" — motivo: "${dadosLoss.motivo_loss}"${dadosLoss.detalhe_loss ? ` (${dadosLoss.detalhe_loss})` : ""}`);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao mover para Loss. Tente de novo.");
+    } finally {
+      setLossSalvando(false);
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent, id_lead: number) => {
     e.dataTransfer.setData("id_lead", id_lead.toString());
   };
@@ -481,6 +537,13 @@ export default function KanbanBoard() {
     if (status_novo === "Remarcado") {
       const leadInfo = leads.find((l) => l.id_lead === id_lead);
       if (leadInfo) abrirRemarcar(leadInfo);
+      return;
+    }
+
+    // Loss: pede o motivo antes de mover (solto na própria coluna Loss, nada muda)
+    if (status_novo === "Loss") {
+      const leadInfo = leads.find((l) => l.id_lead === id_lead);
+      if (leadInfo && leadInfo.status_atual !== "Loss") abrirLoss(leadInfo);
       return;
     }
 
@@ -920,6 +983,10 @@ export default function KanbanBoard() {
     }
     if (newStatus === 'Remarcado') {
       abrirRemarcar(detailLead);
+      return;
+    }
+    if (newStatus === 'Loss') {
+      abrirLoss(detailLead);
       return;
     }
     setDetailStatusSaving(true);
@@ -2075,6 +2142,69 @@ export default function KanbanBoard() {
         </div>
       )}
 
+      {/* Loss: motivo obrigatório (lista fixa + detalhe) */}
+      {lossLead && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="modal-surface glass-panel w-full max-w-md p-6 border border-red-500/30 rounded-2xl shadow-[0_0_60px_rgba(220,38,38,0.12)] max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-5">
+              <div>
+                <h3 className="text-xl font-bold text-white">Motivo do Loss</h3>
+                <p className="text-sm text-sec mt-1">{lossLead.nome}</p>
+              </div>
+              <button type="button" onClick={() => setLossLead(null)} className="text-sec hover:text-white text-xl" aria-label="Cancelar">✕</button>
+            </div>
+            <form onSubmit={handleSaveLoss} className="space-y-4">
+              <fieldset>
+                <legend className="block text-sm font-medium text-sec mb-2">Por que a venda não aconteceu?</legend>
+                <div className="space-y-2">
+                  {MOTIVOS_LOSS.map(motivo => (
+                    <label
+                      key={motivo}
+                      className="flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm cursor-pointer transition"
+                      style={{
+                        borderColor: lossMotivo === motivo ? '#dc2626' : 'var(--border-str, rgba(255,255,255,0.1))',
+                        background: lossMotivo === motivo ? 'rgba(220,38,38,0.10)' : 'transparent',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="motivo_loss"
+                        value={motivo}
+                        required
+                        checked={lossMotivo === motivo}
+                        onChange={() => setLossMotivo(motivo)}
+                        className="accent-red-600"
+                      />
+                      <span className="text-white">{motivo}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <div>
+                <label htmlFor="detalhe_loss" className="block text-sm font-medium text-sec mb-1">
+                  Detalhe {lossMotivo === MOTIVO_LOSS_OUTRO ? <span className="text-red-400">(obrigatório)</span> : <span className="font-normal">(opcional)</span>}
+                </label>
+                <textarea
+                  id="detalhe_loss"
+                  rows={3}
+                  required={lossMotivo === MOTIVO_LOSS_OUTRO}
+                  placeholder="O que o lead disse, objeção, contexto..."
+                  className="w-full bg-app border border-str text-white rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none resize-none"
+                  value={lossDetalhe}
+                  onChange={e => setLossDetalhe(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-[#222]">
+                <button type="button" onClick={() => setLossLead(null)} className="px-4 py-2 text-sec hover:text-white text-sm">Cancelar</button>
+                <button type="submit" disabled={lossSalvando} className="px-6 py-2 rounded-xl font-bold text-sm disabled:opacity-60" style={{ background: '#dc2626', color: '#fff' }}>
+                  {lossSalvando ? 'Salvando...' : 'Mover para Loss'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── Lead Detail Panel ───────────────────────────────────── */}
       {isDetailOpen && detailLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsDetailOpen(false)}>
@@ -2142,6 +2272,24 @@ export default function KanbanBoard() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sec text-sm"><CalendarClock size={14}/> Call</div>
                   <span className="text-sm font-bold" style={{ color: '#f59e0b' }}>{formatCallBr(detailLead.data_call)}</span>
+                </div>
+              )}
+              {detailLead.status_atual === 'Loss' && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-sec text-sm shrink-0"><X size={14}/> Motivo do Loss</div>
+                    <span className="text-sm font-bold text-right" style={{ color: detailLead.motivo_loss ? '#f87171' : 'var(--text-sec)' }}>
+                      {detailLead.motivo_loss || 'Não informado'}
+                    </span>
+                  </div>
+                  {detailLead.detalhe_loss && (
+                    <p className="text-white text-sm mt-2 whitespace-pre-wrap break-words">{detailLead.detalhe_loss}</p>
+                  )}
+                  {detailLead.data_loss && (
+                    <p className="text-sec text-xs mt-1.5">
+                      {[users.find(u => u.id_usuario === detailLead.id_usuario_loss)?.nome, formatCallBr(detailLead.data_loss)].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
                 </div>
               )}
               {detailLead.closer_nome && (

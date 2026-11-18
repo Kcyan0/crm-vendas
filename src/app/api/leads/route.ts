@@ -3,6 +3,8 @@ import supabase from '@/lib/db';
 import { logActivity } from '@/lib/logger';
 import { fetchAll } from '@/lib/fetchAll';
 import { dataDeReferenciaLocal, filtroCallOuEntrada } from '@/lib/periodoLead';
+import { validarMotivoLoss } from '@/lib/motivosLoss';
+import { createClient } from '@/lib/supabase/server';
 
 // Lotes de 200 ids para a URL do .in() não ficar gigante; os lotes rodam em paralelo
 async function fetchInBatches(ids: number[], buildQuery: (ids: number[]) => Parameters<typeof fetchAll>[0]) {
@@ -38,6 +40,7 @@ export async function GET(request: Request) {
                 id_lead, nome, telefone, instagram, email, origem, status_atual,
                 id_sdr_responsavel, id_closer_responsavel, id_projeto, data_entrada,
                 motivo_reembolso, off_metricas, data_proximo_follow, data_call,
+                motivo_loss, detalhe_loss, id_usuario_loss, data_loss,
                 sdr:usuarios!id_sdr_responsavel(nome),
                 closer:usuarios!id_closer_responsavel(nome),
                 oportunidades(valor_proposta, etapa_pipeline)
@@ -191,6 +194,34 @@ export async function PUT(request: Request) {
             if (body.motivo_reembolso !== undefined) updatePayload.motivo_reembolso = body.motivo_reembolso;
             // Remarcado: nova data da call; a data de entrada não muda
             if (data_call !== undefined) updatePayload.data_call = data_call || null;
+
+            // Loss: motivo obrigatório (lista fixa + detalhe), com quem marcou e quando. Se o lead sair de Loss
+            // e voltar, o motivo novo substitui o antigo (pedido em 2026-11-18)
+            if (status_atual === 'Loss') {
+                const erroMotivo = validarMotivoLoss(body.motivo_loss, body.detalhe_loss);
+                if (erroMotivo) return NextResponse.json({ error: erroMotivo }, { status: 400 });
+
+                // Quem marcou é identificado por id_usuario (há pessoas com nomes iguais), pela sessão de login
+                let idUsuarioLoss: number | null = null;
+                const supabaseAuth = await createClient();
+                const { data: { user } } = await supabaseAuth.auth.getUser();
+                if (user?.email && projetoId) {
+                    const { data: usuario } = await supabase
+                        .from('usuarios')
+                        .select('id_usuario')
+                        .ilike('email', user.email)
+                        .eq('id_projeto', projetoId)
+                        .limit(1)
+                        .maybeSingle();
+                    idUsuarioLoss = usuario?.id_usuario ?? null;
+                }
+
+                updatePayload.motivo_loss = body.motivo_loss;
+                updatePayload.detalhe_loss = typeof body.detalhe_loss === 'string' && body.detalhe_loss.trim() ? body.detalhe_loss.trim() : null;
+                updatePayload.id_usuario_loss = idUsuarioLoss;
+                updatePayload.data_loss = new Date().toISOString();
+            }
+
             const { error } = await supabase.from('leads').update(updatePayload).eq('id_lead', id_lead);
             if (error) throw error;
 
@@ -200,11 +231,19 @@ export async function PUT(request: Request) {
                 usuario_nome: body.usuario_nome ?? null,
                 usuario_tipo: body.usuario_tipo ?? null,
                 tipo: 'status_alterado',
-                descricao: `"${leadNome}" movido de ${statusAnterior} → ${status_atual}`,
-                meta: { lead_id: id_lead, lead_nome: leadNome, status_de: statusAnterior, status_para: status_atual },
+                descricao: `"${leadNome}" movido de ${statusAnterior} → ${status_atual}` + (updatePayload.motivo_loss ? ` (motivo: ${updatePayload.motivo_loss})` : ''),
+                meta: { lead_id: id_lead, lead_nome: leadNome, status_de: statusAnterior, status_para: status_atual, ...(updatePayload.motivo_loss ? { motivo_loss: updatePayload.motivo_loss } : {}) },
             });
 
-            return NextResponse.json({ success: true, id_lead, status_atual });
+            return NextResponse.json({
+                success: true, id_lead, status_atual,
+                ...(status_atual === 'Loss' ? {
+                    motivo_loss: updatePayload.motivo_loss,
+                    detalhe_loss: updatePayload.detalhe_loss,
+                    id_usuario_loss: updatePayload.id_usuario_loss,
+                    data_loss: updatePayload.data_loss,
+                } : {}),
+            });
         }
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

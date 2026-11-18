@@ -66,6 +66,9 @@ export async function GET(request: Request) {
                 data_entrada: lead.data_entrada,
                 // data_call é um instante: vai no horário de Brasília
                 data_call: lead.data_call ? dbDateToBrasiliaLocal(lead.data_call).replace('T', ' ') : null,
+                // Motivo do Loss só nos leads em Loss (quem saiu de Loss pode ter um motivo antigo gravado)
+                motivo_loss: lead.status_atual === 'Loss' ? lead.motivo_loss ?? null : null,
+                detalhe_loss: lead.status_atual === 'Loss' ? lead.detalhe_loss ?? null : null,
                 // dados de venda se existir
                 valor_bruto: venda?.valor_bruto || null,
                 desconto_concedido: venda?.desconto_concedido || null,
