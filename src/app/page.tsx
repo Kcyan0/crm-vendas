@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown, CalendarClock } from "lucide-react";
+import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown, CalendarClock, SlidersHorizontal } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV } from '@/lib/exportUtils';
 import { MOTIVOS_LOSS, MOTIVO_LOSS_OUTRO, validarMotivoLoss } from '@/lib/motivosLoss';
@@ -83,10 +83,27 @@ export default function KanbanBoard() {
   const [searchTerm, setSearchTerm] = useState("");
   // Payment method filter (multi-select)
   const [filterFormas, setFilterFormas] = useState<string[]>([]);
-  const [showFormasFilter, setShowFormasFilter] = useState(false);
   // Product filter (multi-select)
   const [filterProdutos, setFilterProdutos] = useState<number[]>([]);
-  const [showProdutosFilter, setShowProdutosFilter] = useState(false);
+  // Off métricas: todos, só os OFF ou só os que contam nas métricas
+  const [filterOff, setFilterOff] = useState<'todos' | 'off' | 'metricas'>('todos');
+  // Painel "Filtros" (SDR, Closer, Off métricas, Pagamento e Produto num botão só)
+  const [showFiltros, setShowFiltros] = useState(false);
+  const filtrosAtivos = [filterSdr, filterCloser, filterFormas.length > 0, filterProdutos.length > 0, filterOff !== 'todos'].filter(Boolean).length;
+  // Esc fecha o painel de filtros
+  useEffect(() => {
+    if (!showFiltros) return;
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowFiltros(false); };
+    window.addEventListener('keydown', aoTeclar);
+    return () => window.removeEventListener('keydown', aoTeclar);
+  }, [showFiltros]);
+  const limparFiltros = () => {
+    setFilterSdr("");
+    setFilterCloser("");
+    setFilterFormas([]);
+    setFilterProdutos([]);
+    setFilterOff('todos');
+  };
 
   // Export menu state
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -288,6 +305,8 @@ export default function KanbanBoard() {
       const leadProdutos = l.produtos_ids || [];
       if (!filterProdutos.some(pid => leadProdutos.includes(pid))) return false;
     }
+    if (filterOff === 'off' && !l.off_metricas) return false;
+    if (filterOff === 'metricas' && l.off_metricas) return false;
     if (searchTerm && !l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && !l.telefone?.includes(searchTerm)) return false;
     return true;
   };
@@ -1098,152 +1117,164 @@ export default function KanbanBoard() {
           {showExportMenu && (
             <div className="fixed inset-0 z-20" onClick={() => setShowExportMenu(false)} />
           )}
-          <div className="relative">
-            <select
-              className="appearance-none bg-surface border border-str text-sec text-sm rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-orange-400 w-full"
-              value={filterSdr}
-              onChange={e => setFilterSdr(e.target.value)}
-            >
-              <option value="">Todos SDRs</option>
-              {users.filter((u: any) => u.tipo === 'SDR' || u.tipo === 'ADM').map((u: any) => (
-                <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] opacity-50" style={{ color: 'var(--text-sec)' }}>▼</span>
-          </div>
-          <div className="relative">
-            <select
-              className="appearance-none bg-surface border border-str text-sec text-sm rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-orange-400 w-full"
-              value={filterCloser}
-              onChange={e => setFilterCloser(e.target.value)}
-            >
-              <option value="">Todos Closers</option>
-              {users.filter((u: any) => u.tipo === 'CLOSER' || u.tipo === 'ADM').map((u: any) => (
-                <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] opacity-50" style={{ color: 'var(--text-sec)' }}>▼</span>
-          </div>
-          {/* ─── Payment method filter — accordion ───────────────── */}
+          {/* ─── Filtros: SDR, Closer, Off métricas, Pagamento e Produto num botão só ─── */}
           {(() => {
             const allFormas = Array.from(
               new Set(leads.flatMap(l => l.formas_pagamento || []))
             ).sort();
-            if (allFormas.length === 0) return null;
+            const leadsNoQuadro = leads.filter(l =>
+              (KANBAN_COLUMNS.includes(l.status_atual) || l.status_atual === 'Nao prosseguiu') && passaFiltros(l)
+            ).length;
+            const chip = (ativo: boolean) => ({
+              background: ativo ? 'var(--accent)' : 'var(--bg-app)',
+              color: ativo ? 'var(--accent-text)' : 'var(--text-sec)',
+              border: `1px solid ${ativo ? 'var(--accent)' : 'var(--border-str)'}`,
+            });
+            const seletor = "appearance-none bg-app border border-str text-sm rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-[var(--accent)] w-full";
+            const rotulo = "block text-[11px] font-bold uppercase tracking-wide mb-1.5";
             return (
-              <div className="flex flex-col gap-1.5">
-                {/* Toggle button */}
+              <div className="relative">
                 <button
-                  onClick={() => setShowFormasFilter(v => !v)}
-                  className="bg-surface border border-str text-sec text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400 flex items-center gap-1.5 whitespace-nowrap transition-all duration-150"
-                  style={filterFormas.length > 0 ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : {}}
+                  type="button"
+                  onClick={() => setShowFiltros(v => !v)}
+                  aria-expanded={showFiltros}
+                  aria-haspopup="dialog"
+                  className="bg-surface border border-str text-sec text-sm rounded-xl px-3 py-2 flex items-center gap-2 whitespace-nowrap transition-colors"
+                  style={filtrosAtivos > 0 ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : {}}
                 >
-                  Pagamento
-                  {filterFormas.length > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black" style={{ background: 'var(--accent)', color: '#0A0A0A' }}>
-                      {filterFormas.length}
-                    </span>
-                  )}
-                  <span className="text-[10px] opacity-50" style={{ transform: showFormasFilter ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
+                  <SlidersHorizontal size={15} />
+                  <span className="font-medium">Filtros{filtrosAtivos > 0 ? ` · ${filtrosAtivos}` : ''}</span>
+                  <span className="text-[10px] opacity-50" style={{ transform: showFiltros ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
                 </button>
 
-                {/* Collapsible chip row */}
-                {showFormasFilter && (
-                  <div
-                    className="flex items-center gap-1.5 flex-wrap p-2 rounded-xl"
-                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-str)' }}
-                  >
-                    {allFormas.map(forma => {
-                      const isActive = filterFormas.includes(forma);
-                      return (
+                {showFiltros && (
+                  <>
+                    {/* Fora do painel fecha; no celular escurece o fundo */}
+                    <div className="fixed inset-0 z-20 bg-black/40 md:bg-transparent" onClick={() => setShowFiltros(false)} />
+                    <div
+                      role="dialog"
+                      aria-label="Filtros do quadro"
+                      className="fixed inset-x-3 bottom-3 z-30 md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-full md:mt-2 md:w-80 max-h-[75vh] overflow-y-auto rounded-2xl border border-str shadow-xl p-4 space-y-4"
+                      style={{ background: 'var(--bg-surface)' }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold" style={{ color: 'var(--text-pri)' }}>Filtros</span>
                         <button
-                          key={forma}
-                          onClick={() =>
-                            setFilterFormas(prev =>
-                              isActive ? prev.filter(f => f !== forma) : [...prev, forma]
-                            )
-                          }
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-150 whitespace-nowrap"
-                          style={{
-                            background: isActive ? 'var(--accent)' : 'var(--bg-app)',
-                            color: isActive ? '#0A0A0A' : 'var(--text-sec)',
-                            border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-str)'}`,
-                          }}
+                          type="button"
+                          onClick={limparFiltros}
+                          disabled={filtrosAtivos === 0}
+                          className="text-xs font-bold px-2.5 py-1 rounded-lg transition-opacity disabled:opacity-40"
+                          style={{ color: 'var(--text-sec)', border: '1px solid var(--border-str)', background: 'var(--bg-app)' }}
                         >
-                          {forma}
-                          {isActive && <span className="ml-0.5 opacity-70 text-[10px]">✕</span>}
+                          Limpar filtros
                         </button>
-                      );
-                    })}
-          {filterFormas.length > 0 && (
-                      <button
-                        onClick={() => setFilterFormas([])}
-                        className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
-                        style={{ color: 'var(--text-sec)', border: '1px solid var(--border-str)', background: 'var(--bg-app)' }}
-                      >
-                        Limpar
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+                      </div>
 
-          {/* ─── Product filter — accordion ───────────────────────────── */}
-          {produtos.length > 0 && (() => {
-            return (
-              <div className="flex flex-col gap-1.5">
-                <button
-                  onClick={() => setShowProdutosFilter(v => !v)}
-                  className="bg-surface border border-str text-sec text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-orange-400 flex items-center gap-1.5 whitespace-nowrap transition-all duration-150"
-                  style={filterProdutos.length > 0 ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : {}}
-                >
-                  Produto
-                  {filterProdutos.length > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black" style={{ background: 'var(--accent)', color: '#0A0A0A' }}>
-                      {filterProdutos.length}
-                    </span>
-                  )}
-                  <span className="text-[10px] opacity-50" style={{ transform: showProdutosFilter ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>▼</span>
-                </button>
-                {showProdutosFilter && (
-                  <div
-                    className="flex items-center gap-1.5 flex-wrap p-2 rounded-xl"
-                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-str)' }}
-                  >
-                    {produtos.map((p: any) => {
-                      const isActive = filterProdutos.includes(p.id_produto);
-                      return (
+                      <div>
+                        <label htmlFor="filtro_sdr" className={rotulo} style={{ color: 'var(--text-sec)' }}>SDR</label>
+                        <div className="relative">
+                          <select id="filtro_sdr" className={seletor} style={{ color: 'var(--text-pri)' }} value={filterSdr} onChange={e => setFilterSdr(e.target.value)}>
+                            <option value="">Todos SDRs</option>
+                            {users.filter((u: any) => u.tipo === 'SDR' || u.tipo === 'ADM').map((u: any) => (
+                              <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
+                            ))}
+                          </select>
+                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] opacity-50" style={{ color: 'var(--text-sec)' }}>▼</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="filtro_closer" className={rotulo} style={{ color: 'var(--text-sec)' }}>Closer</label>
+                        <div className="relative">
+                          <select id="filtro_closer" className={seletor} style={{ color: 'var(--text-pri)' }} value={filterCloser} onChange={e => setFilterCloser(e.target.value)}>
+                            <option value="">Todos Closers</option>
+                            {users.filter((u: any) => u.tipo === 'CLOSER' || u.tipo === 'ADM').map((u: any) => (
+                              <option key={u.id_usuario} value={u.id_usuario}>{u.nome}</option>
+                            ))}
+                          </select>
+                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] opacity-50" style={{ color: 'var(--text-sec)' }}>▼</span>
+                        </div>
+                      </div>
+
+                      <fieldset>
+                        <legend className={rotulo} style={{ color: 'var(--text-sec)' }}>Off métricas</legend>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {([['todos', 'Todos'], ['off', 'Só OFF'], ['metricas', 'Só nas métricas']] as const).map(([valor, texto]) => (
+                            <button
+                              key={valor}
+                              type="button"
+                              aria-pressed={filterOff === valor}
+                              onClick={() => setFilterOff(valor)}
+                              className="px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 leading-tight"
+                              style={chip(filterOff === valor)}
+                            >
+                              {texto}
+                            </button>
+                          ))}
+                        </div>
+                      </fieldset>
+
+                      {allFormas.length > 0 && (
+                        <fieldset>
+                          <legend className={rotulo} style={{ color: 'var(--text-sec)' }}>Pagamento</legend>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {allFormas.map(forma => {
+                              const isActive = filterFormas.includes(forma);
+                              return (
+                                <button
+                                  key={forma}
+                                  type="button"
+                                  aria-pressed={isActive}
+                                  onClick={() => setFilterFormas(prev => isActive ? prev.filter(f => f !== forma) : [...prev, forma])}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-150 whitespace-nowrap"
+                                  style={chip(isActive)}
+                                >
+                                  {forma}
+                                  {isActive && <span className="ml-0.5 opacity-70 text-[10px]">✕</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </fieldset>
+                      )}
+
+                      {produtos.length > 0 && (
+                        <fieldset>
+                          <legend className={rotulo} style={{ color: 'var(--text-sec)' }}>Produto</legend>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {produtos.map((p: any) => {
+                              const isActive = filterProdutos.includes(p.id_produto);
+                              return (
+                                <button
+                                  key={p.id_produto}
+                                  type="button"
+                                  aria-pressed={isActive}
+                                  onClick={() => setFilterProdutos(prev => isActive ? prev.filter(id => id !== p.id_produto) : [...prev, p.id_produto])}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-150 whitespace-nowrap"
+                                  style={chip(isActive)}
+                                >
+                                  {p.nome}
+                                  {isActive && <span className="ml-0.5 opacity-70 text-[10px]">✕</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </fieldset>
+                      )}
+
+                      <div className="flex items-center justify-between pt-3 border-t border-str">
+                        <span className="text-xs" style={{ color: 'var(--text-sec)' }}>{leadsNoQuadro} {leadsNoQuadro === 1 ? 'lead' : 'leads'} no quadro</span>
                         <button
-                          key={p.id_produto}
-                          onClick={() =>
-                            setFilterProdutos(prev =>
-                              isActive ? prev.filter(id => id !== p.id_produto) : [...prev, p.id_produto]
-                            )
-                          }
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-150 whitespace-nowrap"
-                          style={{
-                            background: isActive ? 'var(--accent)' : 'var(--bg-app)',
-                            color: isActive ? '#0A0A0A' : 'var(--text-sec)',
-                            border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-str)'}`,
-                          }}
+                          type="button"
+                          onClick={() => setShowFiltros(false)}
+                          className="px-4 py-1.5 rounded-xl text-sm font-bold"
+                          style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
                         >
-                          {p.nome}
-                          {isActive && <span className="ml-0.5 opacity-70 text-[10px]">✕</span>}
+                          Fechar
                         </button>
-                      );
-                    })}
-                    {filterProdutos.length > 0 && (
-                      <button
-                        onClick={() => setFilterProdutos([])}
-                        className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
-                        style={{ color: 'var(--text-sec)', border: '1px solid var(--border-str)', background: 'var(--bg-app)' }}
-                      >
-                        Limpar
-                      </button>
-                    )}
-                  </div>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             );
@@ -1384,7 +1415,8 @@ export default function KanbanBoard() {
                         {lead.off_metricas && (
                           <span
                             className="text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wide"
-                            style={{ background: '#1c1c1c', color: '#888', border: '1px solid #333' }}
+                            // Cores do tema: o cinza fixo de antes sumia no card escuro
+                            style={{ background: 'var(--bg-surface-3)', color: 'var(--text-pri)', border: '1px dashed var(--text-sec)' }}
                             title="Fora das métricas comerciais"
                           >
                             ⊘ OFF
@@ -2439,15 +2471,13 @@ export default function KanbanBoard() {
 
       {/* \u2500\u2500\u2500 Exportar Nomes Modal \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
       {showNamesModal && (() => {
-        // Collect names filtered by selected columns (respecting existing filters)
+        // Nomes das colunas escolhidas, com os mesmos filtros do quadro (como o CSV)
         const namesByCol: Record<string, string[]> = {};
         selectedNamesColumns.forEach(col => {
           namesByCol[col] = leads
             .filter(l => {
               if (l.status_atual !== col && !(col === 'Loss' && l.status_atual === 'Nao prosseguiu')) return false;
-              if (filterSdr && String(l.id_sdr_responsavel) !== filterSdr) return false;
-              if (filterCloser && String(l.id_closer_responsavel) !== filterCloser) return false;
-              return true;
+              return passaFiltros(l);
             })
             .map(l => l.nome);
         });
