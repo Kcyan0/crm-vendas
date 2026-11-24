@@ -33,6 +33,8 @@ type Lead = {
   off_metricas?: boolean;
   data_proximo_follow?: string | null;
   data_call?: string | null;
+  // Remarcado sem nova data ("A definir"); data_call continua com a call anterior
+  call_a_definir?: boolean;
   // Motivo do Loss (pedido ao mover para Loss); quem marcou é id_usuario
   motivo_loss?: string | null;
   detalhe_loss?: string | null;
@@ -43,6 +45,10 @@ type Lead = {
 
 // data_call é gravada com o fuso de Brasília; o input datetime-local trabalha com "YYYY-MM-DDTHH:mm"
 const callParaBanco = (local: string): string | null => local ? `${local}:00-03:00` : null;
+
+// Remarcado sem data da próxima call: marcado como "A definir", ou sem data nenhuma
+const callADefinir = (l: Pick<Lead, 'status_atual' | 'data_call' | 'call_a_definir'>) =>
+  l.status_atual === 'Remarcado' && (l.call_a_definir === true || !l.data_call);
 
 // Cards desenhados por coluna antes do "Ver mais": desenhar os 1000+ leads de uma vez pesa no navegador
 const CARDS_POR_COLUNA = 50;
@@ -427,12 +433,42 @@ export default function KanbanBoard() {
         alert(`Erro ao remarcar: ${err.error || `HTTP ${res.status}`}`);
         return;
       }
-      setLeads(prev => prev.map(l => l.id_lead === lead.id_lead ? { ...l, status_atual: "Remarcado", data_call: dataCall } : l));
-      setDetailLead(prev => prev && prev.id_lead === lead.id_lead ? { ...prev, status_atual: "Remarcado", data_call: dataCall } : prev);
+      setLeads(prev => prev.map(l => l.id_lead === lead.id_lead ? { ...l, status_atual: "Remarcado", data_call: dataCall, call_a_definir: false } : l));
+      setDetailLead(prev => prev && prev.id_lead === lead.id_lead ? { ...prev, status_atual: "Remarcado", data_call: dataCall, call_a_definir: false } : prev);
       marcarMovido(lead.id_lead);
       setRemarcarLead(null);
       rebuscarSeEmAndamento();
       await logActivity(lead.id_lead, `Status alterado para "Remarcado" (call em ${formatCallBr(dataCall)})`);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao remarcar. Tente de novo.");
+    } finally {
+      setRemarcarSalvando(false);
+    }
+  };
+
+  // Remarcado sem nova data: a call anterior fica guardada em data_call e o card mostra "Data a definir"
+  const handleRemarcarADefinir = async () => {
+    if (!remarcarLead || remarcarSalvando) return;
+    const lead = remarcarLead;
+    setRemarcarSalvando(true);
+    try {
+      const res = await fetch("/api/leads", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_lead: lead.id_lead, status_atual: "Remarcado", call_a_definir: true, usuario_nome: userName }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(`Erro ao remarcar: ${err.error || `HTTP ${res.status}`}`);
+        return;
+      }
+      setLeads(prev => prev.map(l => l.id_lead === lead.id_lead ? { ...l, status_atual: "Remarcado", call_a_definir: true } : l));
+      setDetailLead(prev => prev && prev.id_lead === lead.id_lead ? { ...prev, status_atual: "Remarcado", call_a_definir: true } : prev);
+      marcarMovido(lead.id_lead);
+      setRemarcarLead(null);
+      rebuscarSeEmAndamento();
+      await logActivity(lead.id_lead, `Status alterado para "Remarcado" (data da call a definir${lead.data_call ? `; call anterior em ${formatCallBr(lead.data_call)}` : ''})`);
     } catch (err) {
       console.error(err);
       alert("Erro ao remarcar. Tente de novo.");
@@ -643,7 +679,8 @@ export default function KanbanBoard() {
       id_closer_responsavel: lead.id_closer_responsavel?.toString() || "",
       observacoes_gerais: observacoes,
       data_entrada: dataEntradaLocal,
-      data_call: lead.data_call ? dbDateToBrasiliaLocal(lead.data_call) : ""
+      // Remarcado a definir: o campo abre vazio para a nova data; a call anterior aparece embaixo dele
+      data_call: lead.data_call && !callADefinir(lead) ? dbDateToBrasiliaLocal(lead.data_call) : ""
     });
     setIsModalOpen(true);
   };
@@ -658,6 +695,11 @@ export default function KanbanBoard() {
       const method = isEdit ? "PUT" : "POST";
       const sdrId = formData.id_sdr_responsavel ? parseInt(formData.id_sdr_responsavel) : null;
       const closerId = formData.id_closer_responsavel ? parseInt(formData.id_closer_responsavel) : null;
+      // Remarcado a definir: campo vazio mantém a call anterior; preenchido vira a nova call e tira o "a definir"
+      const leadEditado = isEdit ? leads.find(l => l.id_lead === editingLeadId) : undefined;
+      const esperandoData = !!leadEditado && callADefinir(leadEditado);
+      const manterCallAnterior = esperandoData && !formData.data_call;
+      const novaCall = manterCallAnterior ? undefined : callParaBanco(formData.data_call);
 
       const res = await fetch("/api/leads", {
         method,
@@ -671,7 +713,8 @@ export default function KanbanBoard() {
           id_projeto: selectedProject.id_projeto,
           usuario_nome: userName,
           off_metricas: offMetricas,
-          data_call: callParaBanco(formData.data_call),
+          data_call: novaCall,
+          ...(esperandoData && !manterCallAnterior ? { call_a_definir: false } : {}),
         }),
       });
       if (!res.ok) {
@@ -695,7 +738,7 @@ export default function KanbanBoard() {
           sdr_nome: nomeUsuario(sdrId),
           closer_nome: nomeUsuario(closerId),
           off_metricas: offMetricas,
-          data_call: callParaBanco(formData.data_call),
+          ...(manterCallAnterior ? {} : { data_call: novaCall, call_a_definir: false }),
         } : l));
       }
       setIsModalOpen(false);
@@ -1422,8 +1465,17 @@ export default function KanbanBoard() {
                             ⊘ OFF
                           </span>
                         )}
-                        {/* Uma data só: a da call; sem call, a de entrada (a de entrada fica no detalhe) */}
-                        {lead.data_call ? (
+                        {/* Uma data só: a da call; sem call, a de entrada (a de entrada fica no detalhe).
+                            Remarcado sem nova data: selo "Data a definir" no lugar da data */}
+                        {callADefinir(lead) ? (
+                          <div
+                            className="selo-a-definir inline-flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-md"
+                            title={lead.data_call ? `Call anterior: ${formatCallBr(lead.data_call)}` : 'Sem data da próxima call'}
+                          >
+                            <CalendarClock size={11} />
+                            Data a definir
+                          </div>
+                        ) : lead.data_call ? (
                           <div
                             className="flex items-center gap-1 text-[10px] font-bold"
                             style={{ color: ['Venda', 'Loss', 'Reembolsado', 'Nao prosseguiu'].includes(lead.status_atual) ? 'var(--text-sec)' : '#f59e0b' }}
@@ -1529,6 +1581,15 @@ export default function KanbanBoard() {
                     value={formData.data_call}
                     onChange={(e) => setFormData({ ...formData, data_call: e.target.value })}
                   />
+                  {(() => {
+                    const leadEditado = editingLeadId !== null ? leads.find(l => l.id_lead === editingLeadId) : undefined;
+                    if (!leadEditado || !callADefinir(leadEditado)) return null;
+                    return (
+                      <p className="text-xs mt-1.5" style={{ color: '#d97706' }}>
+                        Data a definir{leadEditado.data_call ? ` · call anterior em ${formatCallBr(leadEditado.data_call)}` : ''}. Preencha quando tiver a nova data.
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">Telefone</label>
@@ -2163,8 +2224,19 @@ export default function KanbanBoard() {
                   onChange={e => setRemarcarData(e.target.value)}
                 />
               </div>
-              <div className="flex justify-end gap-3 pt-2 border-t border-[#222]">
+              <p className="text-xs text-sec">
+                Ainda sem data? Use <b>A definir</b>: o lead vai para Remarcado com o selo &quot;Data a definir&quot;{remarcarLead.data_call ? ' e a call anterior fica guardada' : ''}.
+              </p>
+              <div className="flex flex-wrap justify-end gap-3 pt-2 border-t border-[#222]">
                 <button type="button" onClick={() => setRemarcarLead(null)} className="px-4 py-2 text-sec hover:text-white text-sm">Cancelar</button>
+                <button
+                  type="button"
+                  onClick={handleRemarcarADefinir}
+                  disabled={remarcarSalvando}
+                  className="selo-a-definir px-4 py-2 rounded-xl font-bold text-sm disabled:opacity-60"
+                >
+                  A definir
+                </button>
                 <button type="submit" disabled={remarcarSalvando} className="px-6 py-2 rounded-xl font-bold text-sm disabled:opacity-60" style={{ background: '#f59e0b', color: '#000' }}>
                   {remarcarSalvando ? 'Salvando...' : 'Remarcar'}
                 </button>
@@ -2300,7 +2372,24 @@ export default function KanbanBoard() {
                 <div className="flex items-center gap-2 text-sec text-sm"><Clock size={14}/> Entrada</div>
                 <span className="text-white text-sm font-medium">{formatDateBr(detailLead.data_entrada)}</span>
               </div>
-              {detailLead.data_call && (
+              {callADefinir(detailLead) ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sec text-sm"><CalendarClock size={14}/> Call</div>
+                    <span
+                      className="selo-a-definir inline-flex items-center gap-1.5 text-[11px] font-black px-2 py-1 rounded-md"
+                    >
+                      Data a definir
+                    </span>
+                  </div>
+                  {detailLead.data_call && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sec text-sm"><CalendarClock size={14}/> Call anterior</div>
+                      <span className="text-sm font-medium text-sec">{formatCallBr(detailLead.data_call)}</span>
+                    </div>
+                  )}
+                </>
+              ) : detailLead.data_call && (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sec text-sm"><CalendarClock size={14}/> Call</div>
                   <span className="text-sm font-bold" style={{ color: '#f59e0b' }}>{formatCallBr(detailLead.data_call)}</span>

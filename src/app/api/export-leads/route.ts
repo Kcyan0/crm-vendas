@@ -50,6 +50,10 @@ export async function GET(request: Request) {
                 ? Math.max(...validOport.map((o: any) => o.valor_proposta || 0))
                 : null;
             const venda = lead.vendas?.[0] || null;
+            // data_call é um instante: vai no horário de Brasília
+            const dataCall = lead.data_call ? dbDateToBrasiliaLocal(lead.data_call).replace('T', ' ') : null;
+            // Remarcado sem nova data: "A definir", com a call anterior quando houver
+            const callADefinir = lead.status_atual === 'Remarcado' && (lead.call_a_definir === true || !lead.data_call);
 
             return {
                 id_lead: lead.id_lead,
@@ -64,8 +68,7 @@ export async function GET(request: Request) {
                 valor_proposta: maxProposta,
                 observacoes_gerais: lead.observacoes_gerais,
                 data_entrada: lead.data_entrada,
-                // data_call é um instante: vai no horário de Brasília
-                data_call: lead.data_call ? dbDateToBrasiliaLocal(lead.data_call).replace('T', ' ') : null,
+                data_call: callADefinir ? (dataCall ? `A definir (call anterior: ${dataCall})` : 'A definir') : dataCall,
                 // Motivo do Loss só nos leads em Loss (quem saiu de Loss pode ter um motivo antigo gravado)
                 motivo_loss: lead.status_atual === 'Loss' ? lead.motivo_loss ?? null : null,
                 detalhe_loss: lead.status_atual === 'Loss' ? lead.detalhe_loss ?? null : null,

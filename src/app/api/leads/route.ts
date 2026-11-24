@@ -39,7 +39,7 @@ export async function GET(request: Request) {
             .select(`
                 id_lead, nome, telefone, instagram, email, origem, status_atual,
                 id_sdr_responsavel, id_closer_responsavel, id_projeto, data_entrada,
-                motivo_reembolso, off_metricas, data_proximo_follow, data_call,
+                motivo_reembolso, off_metricas, data_proximo_follow, data_call, call_a_definir,
                 motivo_loss, detalhe_loss, id_usuario_loss, data_loss,
                 sdr:usuarios!id_sdr_responsavel(nome),
                 closer:usuarios!id_closer_responsavel(nome),
@@ -166,6 +166,8 @@ export async function PUT(request: Request) {
             const updateData: any = { nome, telefone: telefone || null, instagram: instagram || null, email: email || null, origem: origem || null, id_sdr_responsavel: id_sdr_responsavel || null, id_closer_responsavel: id_closer_responsavel || null, observacoes_gerais: observacoes_gerais || null, id_projeto: id_projeto || null, off_metricas: off_metricas === true };
             if (data_entrada) updateData.data_entrada = data_entrada;
             if (data_call !== undefined) updateData.data_call = data_call || null;
+            // Remarcado a definir: o formulário manda false quando a nova data da call é preenchida
+            if (body.call_a_definir === false) updateData.call_a_definir = false;
 
             const { error } = await supabase.from('leads').update(updateData).eq('id_lead', id_lead);
             if (error) throw error;
@@ -194,6 +196,10 @@ export async function PUT(request: Request) {
             if (body.motivo_reembolso !== undefined) updatePayload.motivo_reembolso = body.motivo_reembolso;
             // Remarcado: nova data da call; a data de entrada não muda
             if (data_call !== undefined) updatePayload.data_call = data_call || null;
+            // Remarcado "A definir": sem nova data; a call anterior fica em data_call (pedido em 2026-11-24).
+            // Remarcar com data ou sair do Remarcado tira a marca
+            if (status_atual === 'Remarcado') updatePayload.call_a_definir = body.call_a_definir === true;
+            else if (statusAnterior === 'Remarcado') updatePayload.call_a_definir = false;
 
             // Loss: motivo obrigatório (lista fixa + detalhe), com quem marcou e quando. Se o lead sair de Loss
             // e voltar, o motivo novo substitui o antigo (pedido em 2026-11-18)
@@ -231,7 +237,9 @@ export async function PUT(request: Request) {
                 usuario_nome: body.usuario_nome ?? null,
                 usuario_tipo: body.usuario_tipo ?? null,
                 tipo: 'status_alterado',
-                descricao: `"${leadNome}" movido de ${statusAnterior} → ${status_atual}` + (updatePayload.motivo_loss ? ` (motivo: ${updatePayload.motivo_loss})` : ''),
+                descricao: `"${leadNome}" movido de ${statusAnterior} → ${status_atual}`
+                    + (updatePayload.motivo_loss ? ` (motivo: ${updatePayload.motivo_loss})` : '')
+                    + (updatePayload.call_a_definir ? ' (data da call a definir)' : ''),
                 meta: { lead_id: id_lead, lead_nome: leadNome, status_de: statusAnterior, status_para: status_atual, ...(updatePayload.motivo_loss ? { motivo_loss: updatePayload.motivo_loss } : {}) },
             });
 

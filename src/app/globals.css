@@ -172,3 +172,17 @@ button.btn-primary:active { transform: translateY(0); }
 }
 .chart-card .recharts-cartesian-axis-tick text { fill: #888 !important; }
 .chart-card .recharts-cartesian-grid line      { stroke: rgba(255,255,255,0.05) !important; }
+
+/* ── Selo "Data a definir" (Remarcado sem nova data) ─────────────────────── */
+/* Âmbar do Remarcado; nos temas claros, mais escuro para dar leitura */
+.selo-a-definir {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+[data-mode="cinza"] .selo-a-definir,
+[data-mode="branco"] .selo-a-definir {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  border-color: rgba(180, 83, 9, 0.45);
+}
