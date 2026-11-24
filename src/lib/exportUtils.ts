@@ -34,25 +34,28 @@ function downloadCSV(csvContent: string, filename: string): void {
     URL.revokeObjectURL(url);
 }
 
-export function exportLeadsToCSV(leads: Row[], filename?: string): void {
-    const headers = [
-        { key: 'id_lead', label: 'ID' },
-        { key: 'nome', label: 'Nome' },
-        { key: 'telefone', label: 'Telefone' },
-        { key: 'instagram', label: 'Instagram' },
-        { key: 'email', label: 'E-mail' },
-        { key: 'origem', label: 'Origem' },
-        { key: 'status_atual', label: 'Status' },
-        { key: 'sdr_nome', label: 'SDR' },
-        { key: 'closer_nome', label: 'Closer' },
-        { key: 'valor_proposta', label: 'Valor Proposta (R$)' },
-        { key: 'observacoes_gerais', label: 'Observações' },
-        { key: 'data_entrada', label: 'Data de Entrada' },
-        { key: 'data_call', label: 'Data da Call' },
-        { key: 'motivo_loss', label: 'Motivo do Loss' },
-        { key: 'detalhe_loss', label: 'Detalhe do Loss' },
-    ];
+// Colunas do CSV de leads, na ordem do arquivo (o Exportar personalizado deixa escolher quais vão)
+export const COLUNAS_CSV_LEADS = [
+    { key: 'id_lead', label: 'ID' },
+    { key: 'nome', label: 'Nome' },
+    { key: 'telefone', label: 'Telefone' },
+    { key: 'instagram', label: 'Instagram' },
+    { key: 'email', label: 'E-mail' },
+    { key: 'origem', label: 'Origem' },
+    { key: 'status_atual', label: 'Status' },
+    { key: 'sdr_nome', label: 'SDR' },
+    { key: 'closer_nome', label: 'Closer' },
+    { key: 'valor_proposta', label: 'Valor Proposta (R$)' },
+    { key: 'observacoes_gerais', label: 'Observações' },
+    { key: 'data_entrada', label: 'Data de Entrada' },
+    { key: 'data_call', label: 'Data da Call' },
+    { key: 'motivo_loss', label: 'Motivo do Loss' },
+    { key: 'detalhe_loss', label: 'Detalhe do Loss' },
+];
 
+/** colunas: keys de COLUNAS_CSV_LEADS que entram no arquivo; sem ela, todas */
+export function exportLeadsToCSV(leads: Row[], filename?: string, colunas?: string[]): void {
+    const headers = colunas ? COLUNAS_CSV_LEADS.filter(c => colunas.includes(c.key)) : COLUNAS_CSV_LEADS;
     const csv = toCSV(headers, leads);
     const date = new Date().toISOString().slice(0, 10);
     downloadCSV(csv, filename || `leads_${date}.csv`);

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown, CalendarClock, SlidersHorizontal } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
-import { exportLeadsToCSV } from '@/lib/exportUtils';
+import { exportLeadsToCSV, COLUNAS_CSV_LEADS } from '@/lib/exportUtils';
 import { MOTIVOS_LOSS, MOTIVO_LOSS_OUTRO, validarMotivoLoss } from '@/lib/motivosLoss';
 import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
 import { createClient as createBrowserClient } from '@/lib/supabase/browser';
@@ -49,6 +49,44 @@ const callParaBanco = (local: string): string | null => local ? `${local}:00-03:
 // Remarcado sem data da próxima call: marcado como "A definir", ou sem data nenhuma
 const callADefinir = (l: Pick<Lead, 'status_atual' | 'data_call' | 'call_a_definir'>) =>
   l.status_atual === 'Remarcado' && (l.call_a_definir === true || !l.data_call);
+
+// Nome do arquivo exportado conforme o período
+const nomePeriodo = (inicio: string, fim: string) =>
+  inicio && fim ? `${inicio}_a_${fim}` : inicio ? `desde_${inicio}` : fim ? `ate_${fim}` : todayBrasilia();
+
+// Exportar personalizado: filtros próprios, sem mexer nos do quadro. Lista vazia = sem restrição
+type FiltrosExport = {
+  inicio: string; fim: string;
+  sdrs: number[]; closers: number[]; status: string[]; produtos: number[]; formas: string[];
+  off: 'todos' | 'off' | 'metricas'; motivos: string[]; colunas: string[];
+};
+const filtrosExportIniciais = (inicio: string, fim: string): FiltrosExport => ({
+  inicio, fim, sdrs: [], closers: [], status: [], produtos: [], formas: [], off: 'todos', motivos: [],
+  colunas: COLUNAS_CSV_LEADS.map(c => c.key),
+});
+const SEM_MOTIVO_LOSS = 'Não informado';
+const passaExportPersonalizado = (l: Lead, f: FiltrosExport) => {
+  // Mesmos status que o quadro mostra; "Nao prosseguiu" fica na coluna Loss
+  const status = l.status_atual === 'Nao prosseguiu' ? 'Loss' : l.status_atual;
+  if (!KANBAN_COLUMNS.includes(status)) return false;
+  if (f.sdrs.length > 0 && !f.sdrs.includes(l.id_sdr_responsavel ?? -1)) return false;
+  if (f.closers.length > 0 && !f.closers.includes(l.id_closer_responsavel ?? -1)) return false;
+  if (f.status.length > 0 && !f.status.includes(status)) return false;
+  if (f.produtos.length > 0 && !f.produtos.some(p => (l.produtos_ids || []).includes(p))) return false;
+  if (f.formas.length > 0 && !f.formas.some(fp => (l.formas_pagamento || []).includes(fp))) return false;
+  if (f.off === 'off' && !l.off_metricas) return false;
+  if (f.off === 'metricas' && l.off_metricas) return false;
+  // Motivo do Loss só existe nos leads em Loss
+  if (f.motivos.length > 0 && (l.status_atual !== 'Loss' || !f.motivos.includes(l.motivo_loss || SEM_MOTIVO_LOSS))) return false;
+  return true;
+};
+
+// Chip de filtro (ligado/desligado) nas cores do tema
+const estiloChip = (ativo: boolean) => ({
+  background: ativo ? 'var(--accent)' : 'var(--bg-app)',
+  color: ativo ? 'var(--accent-text)' : 'var(--text-sec)',
+  border: `1px solid ${ativo ? 'var(--accent)' : 'var(--border-str)'}`,
+});
 
 // Cards desenhados por coluna antes do "Ver mais": desenhar os 1000+ leads de uma vez pesa no navegador
 const CARDS_POR_COLUNA = 50;
@@ -116,6 +154,13 @@ export default function KanbanBoard() {
   const [showNamesModal, setShowNamesModal] = useState(false);
   const [selectedNamesColumns, setSelectedNamesColumns] = useState<string[]>([...KANBAN_COLUMNS]);
   const [namesCopied, setNamesCopied] = useState(false);
+  // Exportar personalizado: leads do período escolhido no modal (null = carregando)
+  const [showExportCustom, setShowExportCustom] = useState(false);
+  const [expFiltros, setExpFiltros] = useState<FiltrosExport>(() => filtrosExportIniciais("", ""));
+  const [expLeads, setExpLeads] = useState<Lead[] | null>(null);
+  const [expErro, setExpErro] = useState(false);
+  const [expBaixando, setExpBaixando] = useState(false);
+  const expRequestRef = useRef(0);
   // Off métricas state (separate from formData to avoid reset conflicts)
   const [offMetricas, setOffMetricas] = useState(false);
   // Refund modal state
@@ -341,14 +386,73 @@ export default function KanbanBoard() {
       const data = await res.json();
       if (!res.ok || !Array.isArray(data)) throw new Error(data?.error || 'Resposta inválida');
       // As observações só vêm pela exportação; o que entra no arquivo é o que está no quadro
-      const periodo = startDate && endDate ? `${startDate}_a_${endDate}`
-        : startDate ? `desde_${startDate}`
-        : endDate ? `ate_${endDate}`
-        : todayBrasilia();
-      exportLeadsToCSV(data.filter((l: { id_lead: number }) => visiveis.has(l.id_lead)), `leads_${periodo}.csv`);
+      exportLeadsToCSV(data.filter((l: { id_lead: number }) => visiveis.has(l.id_lead)), `leads_${nomePeriodo(startDate, endDate)}.csv`);
     } catch (e) {
       console.error('Erro ao exportar:', e);
       alert('Erro ao exportar dados. Tente novamente.');
+    }
+  };
+
+  // Exportar personalizado: no mesmo período do quadro usa os leads já carregados; noutro, busca os do período
+  const expUsaQuadro = expFiltros.inicio === startDate && expFiltros.fim === endDate;
+  const expBase: Lead[] | null = expUsaQuadro ? (refreshing ? null : leads) : expLeads;
+  const expSelecionados = expBase ? expBase.filter(l => passaExportPersonalizado(l, expFiltros)) : [];
+
+  useEffect(() => {
+    if (!showExportCustom || expUsaQuadro || !selectedProject) return;
+    const requestId = ++expRequestRef.current;
+    setExpLeads(null);
+    setExpErro(false);
+    // Espera a data terminar de ser digitada antes de buscar
+    const timer = setTimeout(async () => {
+      try {
+        const query = new URLSearchParams({ projectId: String(selectedProject.id_projeto) });
+        if (expFiltros.inicio) query.set('startDate', expFiltros.inicio);
+        if (expFiltros.fim) query.set('endDate', expFiltros.fim);
+        const res = await fetch(`/api/leads?${query.toString()}`);
+        const data = await res.json();
+        if (requestId !== expRequestRef.current) return;
+        if (!res.ok || !Array.isArray(data)) throw new Error(data?.error || `HTTP ${res.status}`);
+        setExpLeads(data);
+      } catch (e) {
+        console.error('Erro ao carregar leads do export personalizado:', e);
+        if (requestId === expRequestRef.current) setExpErro(true);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [showExportCustom, expUsaQuadro, expFiltros.inicio, expFiltros.fim, selectedProject]);
+
+  const abrirExportPersonalizado = () => {
+    setExpFiltros(filtrosExportIniciais(startDate, endDate));
+    setExpErro(false);
+    setShowExportCustom(true);
+  };
+
+  // Mesma rota e mesmo formato do Exportar CSV; só entram os leads que passam nos filtros do modal
+  const handleExportPersonalizado = async () => {
+    if (!expBase || expBaixando) return;
+    const ids = new Set(expSelecionados.map(l => l.id_lead));
+    if (ids.size === 0 || expFiltros.colunas.length === 0) return;
+    setExpBaixando(true);
+    try {
+      const query = new URLSearchParams();
+      if (selectedProject?.id_projeto) query.set('projectId', selectedProject.id_projeto.toString());
+      if (expFiltros.inicio) query.set('startDate', expFiltros.inicio);
+      if (expFiltros.fim) query.set('endDate', expFiltros.fim);
+      const res = await fetch(`/api/export-leads?${query.toString()}`);
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data)) throw new Error(data?.error || 'Resposta inválida');
+      exportLeadsToCSV(
+        data.filter((l: { id_lead: number }) => ids.has(l.id_lead)),
+        `leads_personalizado_${nomePeriodo(expFiltros.inicio, expFiltros.fim)}.csv`,
+        expFiltros.colunas,
+      );
+      setShowExportCustom(false);
+    } catch (e) {
+      console.error('Erro ao exportar:', e);
+      alert('Erro ao exportar dados. Tente novamente.');
+    } finally {
+      setExpBaixando(false);
     }
   };
 
@@ -1152,6 +1256,15 @@ export default function KanbanBoard() {
                   <span style={{ color: 'var(--accent)', fontSize: 14 }}>📋</span>
                   Exportar Nomes
                 </button>
+                <div style={{ height: '1px', background: 'var(--border-str)' }} />
+                <button
+                  onClick={() => { setShowExportMenu(false); abrirExportPersonalizado(); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/5 text-left whitespace-nowrap"
+                  style={{ color: 'var(--text-pri)' }}
+                >
+                  <SlidersHorizontal size={14} style={{ color: 'var(--accent)' }} />
+                  Exportar personalizado
+                </button>
               </div>
             )}
           </div>
@@ -1168,11 +1281,7 @@ export default function KanbanBoard() {
             const leadsNoQuadro = leads.filter(l =>
               (KANBAN_COLUMNS.includes(l.status_atual) || l.status_atual === 'Nao prosseguiu') && passaFiltros(l)
             ).length;
-            const chip = (ativo: boolean) => ({
-              background: ativo ? 'var(--accent)' : 'var(--bg-app)',
-              color: ativo ? 'var(--accent-text)' : 'var(--text-sec)',
-              border: `1px solid ${ativo ? 'var(--accent)' : 'var(--border-str)'}`,
-            });
+            const chip = estiloChip;
             const seletor = "appearance-none bg-app border border-str text-sm rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-[var(--accent)] w-full";
             const rotulo = "block text-[11px] font-bold uppercase tracking-wide mb-1.5";
             return (
@@ -2684,6 +2793,165 @@ export default function KanbanBoard() {
                 >
                   {namesCopied ? '✓ Copiado!' : '📋 Copiar nomes'}
                 </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+
+      {/* ─── Exportar personalizado: filtros próprios, sem mexer nos do quadro ─── */}
+      {showExportCustom && (() => {
+        const f = expFiltros;
+        const alterar = (parcial: Partial<FiltrosExport>) => setExpFiltros(prev => ({ ...prev, ...parcial }));
+        const alternar = <T,>(lista: T[], valor: T) => lista.includes(valor) ? lista.filter(v => v !== valor) : [...lista, valor];
+        // Pelo tipo e por quem aparece nos leads do período (há admin como closer)
+        const sdrsNosLeads = new Set((expBase || []).map(l => l.id_sdr_responsavel));
+        const closersNosLeads = new Set((expBase || []).map(l => l.id_closer_responsavel));
+        const usuarios = users as { id_usuario: number; nome: string; tipo: string }[];
+        const sdrs = usuarios.filter(u => u.tipo === 'SDR' || sdrsNosLeads.has(u.id_usuario));
+        const closers = usuarios.filter(u => u.tipo === 'CLOSER' || closersNosLeads.has(u.id_usuario));
+        const formas = Array.from(new Set((expBase || []).flatMap(l => l.formas_pagamento || []))).sort();
+        const total = expSelecionados.length;
+        const podeBaixar = !!expBase && total > 0 && f.colunas.length > 0 && !expBaixando;
+        const rotulo = "block text-[11px] font-bold uppercase tracking-wide mb-1.5";
+        const chipCls = "px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-150 whitespace-nowrap";
+        // Atualiza a partir do valor mais recente: dois cliques seguidos não se sobrescrevem
+        const grupoChips = (titulo: string, campo: 'sdrs' | 'closers' | 'status' | 'produtos' | 'formas' | 'motivos', opcoes: { valor: string | number; texto: string }[]) => {
+          const escolhidos = f[campo] as (string | number)[];
+          return (
+          <fieldset>
+            <legend className={rotulo} style={{ color: 'var(--text-sec)' }}>
+              {titulo}{escolhidos.length > 0 ? ` · ${escolhidos.length}` : ''}
+            </legend>
+            <div className="flex flex-wrap gap-1.5">
+              {opcoes.map(o => {
+                const ativo = escolhidos.includes(o.valor);
+                return (
+                  <button key={String(o.valor)} type="button" aria-pressed={ativo} onClick={() => setExpFiltros(prev => ({ ...prev, [campo]: alternar(prev[campo] as (string | number)[], o.valor) }))} className={chipCls} style={estiloChip(ativo)}>
+                    {o.texto}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+          );
+        };
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 sm:p-4"
+            onClick={() => setShowExportCustom(false)}
+          >
+            <div
+              role="dialog"
+              aria-label="Exportar personalizado"
+              className="modal-surface glass-panel w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl border border-str shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-str">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Exportar personalizado</h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-sec)' }}>
+                    Escolha os leads e as colunas. Os filtros do quadro não mudam.
+                  </p>
+                </div>
+                <button onClick={() => setShowExportCustom(false)} className="text-sec hover:text-white transition-colors text-xl">✕</button>
+              </div>
+
+              <div className="px-5 py-4 space-y-4 overflow-y-auto">
+                <div>
+                  <span className={rotulo} style={{ color: 'var(--text-sec)' }}>Período</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      aria-label="Data inicial"
+                      value={f.inicio}
+                      onChange={e => alterar({ inicio: e.target.value })}
+                      className="flex-1 min-w-0 bg-app border border-str text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--accent)]"
+                      style={{ color: 'var(--text-pri)' }}
+                    />
+                    <span style={{ color: 'var(--text-sec)' }}>a</span>
+                    <input
+                      type="date"
+                      aria-label="Data final"
+                      value={f.fim}
+                      onChange={e => alterar({ fim: e.target.value })}
+                      className="flex-1 min-w-0 bg-app border border-str text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--accent)]"
+                      style={{ color: 'var(--text-pri)' }}
+                    />
+                  </div>
+                  <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-sec)' }}>
+                    Pela data da call; lead sem call, pela data de entrada. Sem datas, todos os leads.
+                  </p>
+                </div>
+
+                {sdrs.length > 0 && grupoChips('SDRs', 'sdrs', sdrs.map(u => ({ valor: u.id_usuario, texto: u.nome })))}
+                {closers.length > 0 && grupoChips('Closers', 'closers', closers.map(u => ({ valor: u.id_usuario, texto: u.nome })))}
+                {grupoChips('Status', 'status', KANBAN_COLUMNS.map(c => ({ valor: c, texto: c })))}
+                {produtos.length > 0 && grupoChips('Produto', 'produtos', (produtos as { id_produto: number; nome: string }[]).map(p => ({ valor: p.id_produto, texto: p.nome })))}
+                {formas.length > 0 && grupoChips('Pagamento', 'formas', formas.map(fp => ({ valor: fp, texto: fp })))}
+
+                <fieldset>
+                  <legend className={rotulo} style={{ color: 'var(--text-sec)' }}>Off métricas</legend>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([['todos', 'Todos'], ['off', 'Só OFF'], ['metricas', 'Só nas métricas']] as const).map(([valor, texto]) => (
+                      <button key={valor} type="button" aria-pressed={f.off === valor} onClick={() => alterar({ off: valor })} className="px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 leading-tight" style={estiloChip(f.off === valor)}>
+                        {texto}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                {grupoChips('Motivo do Loss', 'motivos', [...MOTIVOS_LOSS, SEM_MOTIVO_LOSS].map(m => ({ valor: m, texto: m })))}
+
+                <fieldset aria-label="Colunas do arquivo">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-sec)' }}>
+                      Colunas · {f.colunas.length} de {COLUNAS_CSV_LEADS.length}
+                    </span>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => alterar({ colunas: COLUNAS_CSV_LEADS.map(c => c.key) })} className="text-[11px] font-bold" style={{ color: 'var(--accent)' }}>Todas</button>
+                      <button type="button" onClick={() => alterar({ colunas: [] })} className="text-[11px] font-bold" style={{ color: 'var(--text-sec)' }}>Nenhuma</button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    {COLUNAS_CSV_LEADS.map(c => (
+                      <label key={c.key} className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text-pri)' }}>
+                        <input
+                          type="checkbox"
+                          checked={f.colunas.includes(c.key)}
+                          // Mantém a ordem do arquivo, seja qual for a ordem dos cliques
+                          onChange={() => setExpFiltros(prev => ({ ...prev, colunas: COLUNAS_CSV_LEADS.map(x => x.key).filter(k => k === c.key ? !prev.colunas.includes(k) : prev.colunas.includes(k)) }))}
+                          className="accent-[var(--accent)]"
+                        />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-t border-str">
+                <span className="text-sm font-bold" style={{ color: expErro ? '#ef4444' : 'var(--text-pri)' }} aria-live="polite">
+                  {expErro ? 'Erro ao carregar os leads do período'
+                    : !expBase ? 'Carregando leads...'
+                    : `${total} ${total === 1 ? 'lead será exportado' : 'leads serão exportados'}`}
+                </span>
+                <div className="flex items-center gap-2 ml-auto">
+                  <button onClick={() => setExpFiltros(filtrosExportIniciais(f.inicio, f.fim))} className="px-3 py-2 text-sm font-medium transition-colors" style={{ color: 'var(--text-sec)' }}>
+                    Limpar filtros
+                  </button>
+                  <button
+                    onClick={handleExportPersonalizado}
+                    disabled={!podeBaixar}
+                    className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+                    style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+                  >
+                    {expBaixando ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                    Baixar CSV
+                  </button>
+                </div>
               </div>
             </div>
           </div>
