@@ -164,13 +164,12 @@ export async function GET(request: Request) {
             }
         }
 
-        // ─── Leads count ──────────────────────────────────────────────────────────
+        // ─── Base da conversão e do chargeback ────────────────────────────────────
         // No-show excluído: closer não teve chance de converter, não deve penalizar a taxa
-        // (mesmo critério do antigo .neq('status_atual', 'No-show'), que também deixava de fora status nulo)
-        const leadsTotais = (leadsDoPeriodo || []).filter((l: any) => l.status_atual != null && l.status_atual !== 'No-show').length;
-        // No-show que ficaram fora: o card mostra, para o número bater com o quadro de leads
-        const noShowsFora = (leadsDoPeriodo || []).filter((l: { status_atual: string | null }) => l.status_atual === 'No-show').length;
-        const conversaoAproximada = leadsTotais > 0 ? ((vendasTotais / leadsTotais) * 100).toFixed(1) : '0.0';
+        // (mesmo critério do antigo .neq('status_atual', 'No-show'), que também deixava de fora status nulo).
+        // O card Leads Totais mostra todos, com No-show: é o total do Status dos Leads (pedido em 2026-11-25).
+        const leadsBaseConversao = (leadsDoPeriodo || []).filter((l: any) => l.status_atual != null && l.status_atual !== 'No-show').length;
+        const conversaoAproximada = leadsBaseConversao > 0 ? ((vendasTotais / leadsBaseConversao) * 100).toFixed(1) : '0.0';
 
         // ─── Ticket Médio (exclui off_metricas) ──────────────────────────────────
         const ticketMedio = vendasTotaisTicket > 0 ? receitaTicket / vendasTotaisTicket : 0;
@@ -325,10 +324,10 @@ export async function GET(request: Request) {
             value: (allLeads || []).filter((l: any) => l.status_atual === stage || (stage === 'Loss' && l.status_atual === 'Nao prosseguiu')).length
         })).filter(s => s.value > 0);
 
-        // ─── Chargeback: reembolsados sobre os Leads Totais do período ───────────
+        // ─── Chargeback: reembolsados sobre os leads do período, mesma base da conversão (sem No-show) ───
         const reembolsados = (allLeads || []).filter((l: any) => l.status_atual === 'Reembolsado');
-        const chargebackRate = leadsTotais > 0
-            ? ((reembolsados.length / leadsTotais) * 100).toFixed(1)
+        const chargebackRate = leadsBaseConversao > 0
+            ? ((reembolsados.length / leadsBaseConversao) * 100).toFixed(1)
             : '0.0';
         const recentRefundReasons = reembolsados.filter((l: any) => l.motivo_reembolso).slice(0, 5).map((l: any) => l.motivo_reembolso);
 
@@ -413,8 +412,8 @@ export async function GET(request: Request) {
         return NextResponse.json({
             receita,
             caixaLiquido,
-            leadsTotais,
-            noShowsFora,
+            // Todos os leads do período (com No-show, sem OFF): o mesmo total do Status dos Leads
+            leadsTotais: totalLeadsStatus,
             vendasTotais,
             conversaoAproximada,
             ticketMedio,

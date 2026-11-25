@@ -36,7 +36,6 @@ type Metrics = {
     caixaLiquido: number;
     pagamentosPendentes: number;
     leadsTotais: number;
-    noShowsFora?: number;
     vendasTotais: number;
     conversaoAproximada: string;
     receitaPorPagamentoFaturamento?: { name: string; value: number }[];
@@ -366,17 +365,11 @@ export default function Dashboard() {
     const formatBRL = (val: number) =>
         new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
 
-    const noShowsFora = metrics?.noShowsFora || 0;
-    const cards: { title: string; value: string | number; icon: typeof Users; nota?: string; notaTitulo?: string }[] = [
+    const cards = [
         { title: "Receita Bruta", value: formatBRL(metrics?.receita || 0), icon: TrendingUp },
         { title: "Caixa Líquido", value: formatBRL(metrics?.caixaLiquido || 0), icon: DollarSign },
         { title: "Ticket Médio", value: formatBRL(metrics?.ticketMedio || 0), icon: BarChart2 },
-        {
-            title: "Leads Totais", value: metrics?.leadsTotais || 0, icon: Users,
-            // No-show fica fora dos Leads Totais e da conversão; a nota explica a diferença para o quadro de leads
-            nota: noShowsFora > 0 ? `+${noShowsFora} No-show fora da conta` : undefined,
-            notaTitulo: 'No-show não entra nos Leads Totais nem na taxa de conversão. No quadro de leads eles aparecem.',
-        },
+        { title: "Leads Totais", value: metrics?.leadsTotais || 0, icon: Users },
         { title: "Vendas Concluídas", value: metrics?.vendasTotais || 0, icon: BriefcaseBusiness },
         { title: "Taxa de Conversão", value: `${metrics?.conversaoAproximada || 0}%`, icon: Activity },
     ];
@@ -488,9 +481,6 @@ export default function Dashboard() {
                                     <div className="h-7 w-24 rounded animate-pulse" style={{ background: 'var(--bg-surface-3)' }}></div>
                                 ) : (
                                     <p className="text-2xl font-black text-white">{metrics ? card.value : '...'}</p>
-                                )}
-                                {!isLoading && card.nota && (
-                                    <p className="text-[11px] font-medium mt-1" style={{ color: TEXT_SEC }} title={card.notaTitulo}>{card.nota}</p>
                                 )}
                             </div>
                         </div>
