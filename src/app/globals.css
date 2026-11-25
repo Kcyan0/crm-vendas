@@ -186,3 +186,11 @@ button.btn-primary:active { transform: translateY(0); }
   color: #b45309;
   border-color: rgba(180, 83, 9, 0.45);
 }
+
+/* Copiar nomes no topo das colunas do quadro de leads */
+.copiar-nomes { color: var(--text-sec); }
+.copiar-nomes:not(:disabled):hover { color: var(--text-pri); background: var(--bg-app); }
+.copiar-nomes.copiado,
+.copiar-nomes.copiado:hover { color: #22c55e; }
+[data-mode="cinza"] .copiar-nomes.copiado,
+[data-mode="branco"] .copiar-nomes.copiado { color: #15803d; }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown, CalendarClock, SlidersHorizontal } from "lucide-react";
+import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown, CalendarClock, SlidersHorizontal, Copy, Check } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV, COLUNAS_CSV_LEADS } from '@/lib/exportUtils';
 import { MOTIVOS_LOSS, MOTIVO_LOSS_OUTRO, validarMotivoLoss } from '@/lib/motivosLoss';
@@ -151,9 +151,9 @@ export default function KanbanBoard() {
 
   // Export menu state
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [showNamesModal, setShowNamesModal] = useState(false);
-  const [selectedNamesColumns, setSelectedNamesColumns] = useState<string[]>([...KANBAN_COLUMNS]);
-  const [namesCopied, setNamesCopied] = useState(false);
+  // Copiar nomes no topo da coluna: a coluna copiada mostra ✓ por 2 segundos
+  const [colunaCopiada, setColunaCopiada] = useState<string | null>(null);
+  const copiadoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Exportar personalizado: leads do período escolhido no modal (null = carregando)
   const [showExportCustom, setShowExportCustom] = useState(false);
   const [expFiltros, setExpFiltros] = useState<FiltrosExport>(() => filtrosExportIniciais("", ""));
@@ -360,6 +360,32 @@ export default function KanbanBoard() {
     if (filterOff === 'metricas' && l.off_metricas) return false;
     if (searchTerm && !l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && !l.telefone?.includes(searchTerm)) return false;
     return true;
+  };
+
+  // Copia os nomes de uma coluna, um por linha, na ordem do quadro (inclui os escondidos pelo "Ver mais")
+  const copiarNomesDaColuna = async (col: string, nomes: string[]) => {
+    const texto = nomes.join('\n');
+    try {
+      await navigator.clipboard.writeText(texto);
+    } catch {
+      // Navegador sem acesso à área de transferência: copia por um campo escondido
+      const campo = document.createElement('textarea');
+      campo.value = texto;
+      campo.setAttribute('readonly', '');
+      campo.style.position = 'fixed';
+      campo.style.opacity = '0';
+      document.body.appendChild(campo);
+      campo.select();
+      const copiou = document.execCommand('copy');
+      document.body.removeChild(campo);
+      if (!copiou) {
+        alert('Não foi possível copiar os nomes.');
+        return;
+      }
+    }
+    setColunaCopiada(col);
+    if (copiadoTimerRef.current) clearTimeout(copiadoTimerRef.current);
+    copiadoTimerRef.current = setTimeout(() => setColunaCopiada(null), 2000);
   };
 
   // Exporta só os leads que o quadro está mostrando: mesmo período de entrada e mesmos filtros
@@ -1249,15 +1275,6 @@ export default function KanbanBoard() {
                 </button>
                 <div style={{ height: '1px', background: 'var(--border-str)' }} />
                 <button
-                  onClick={() => { setShowExportMenu(false); setSelectedNamesColumns([...KANBAN_COLUMNS]); setNamesCopied(false); setShowNamesModal(true); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/5 text-left"
-                  style={{ color: 'var(--text-pri)' }}
-                >
-                  <span style={{ color: 'var(--accent)', fontSize: 14 }}>📋</span>
-                  Exportar Nomes
-                </button>
-                <div style={{ height: '1px', background: 'var(--border-str)' }} />
-                <button
                   onClick={() => { setShowExportMenu(false); abrirExportPersonalizado(); }}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/5 text-left whitespace-nowrap"
                   style={{ color: 'var(--text-pri)' }}
@@ -1458,6 +1475,7 @@ export default function KanbanBoard() {
             : filteredLeads;
           const limite = limitePorColuna[col] ?? CARDS_POR_COLUNA;
           const restantes = columnLeads.length - limite;
+          const copiada = colunaCopiada === col;
 
           return (
             <div
@@ -1468,9 +1486,21 @@ export default function KanbanBoard() {
             >
               <div className="p-4 border-b border-[#222222] flex justify-between items-center bg-surface/80 rounded-t-xl">
                 <h3 className="font-bold text-white tracking-tight">{col}</h3>
-                <span className="text-xs px-2.5 py-1 rounded-full font-black" style={{ background: 'var(--accent)', color: '#0A0A0A' }}>
-                  {columnLeads.length}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => copiarNomesDaColuna(col, columnLeads.map(l => l.nome))}
+                    disabled={columnLeads.length === 0}
+                    title={copiada ? 'Copiado' : 'Copiar nomes'}
+                    aria-label={copiada ? `Nomes de ${col} copiados` : `Copiar nomes de ${col}`}
+                    className={`copiar-nomes flex items-center gap-1 h-7 px-1.5 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-30 disabled:cursor-default${copiada ? ' copiado' : ''}`}
+                  >
+                    {copiada ? <><Check size={14} strokeWidth={3} />Copiado</> : <Copy size={14} />}
+                  </button>
+                  <span className="text-xs px-2.5 py-1 rounded-full font-black" style={{ background: 'var(--accent)', color: '#0A0A0A' }}>
+                    {columnLeads.length}
+                  </span>
+                </div>
               </div>
 
               <div className="p-3 flex-1 overflow-y-auto space-y-3">
@@ -2666,138 +2696,6 @@ export default function KanbanBoard() {
           </div>
         </div>
       )}
-
-      {/* \u2500\u2500\u2500 Exportar Nomes Modal \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
-      {showNamesModal && (() => {
-        // Nomes das colunas escolhidas, com os mesmos filtros do quadro (como o CSV)
-        const namesByCol: Record<string, string[]> = {};
-        selectedNamesColumns.forEach(col => {
-          namesByCol[col] = leads
-            .filter(l => {
-              if (l.status_atual !== col && !(col === 'Loss' && l.status_atual === 'Nao prosseguiu')) return false;
-              return passaFiltros(l);
-            })
-            .map(l => l.nome);
-        });
-
-        const allNames = selectedNamesColumns.flatMap(col => namesByCol[col] || []);
-        const textToCopy = allNames.join('\n');
-
-        const handleCopy = () => {
-          navigator.clipboard.writeText(textToCopy).then(() => {
-            setNamesCopied(true);
-            setTimeout(() => setNamesCopied(false), 2500);
-          });
-        };
-
-        const toggleCol = (col: string) =>
-          setSelectedNamesColumns(prev =>
-            prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]
-          );
-
-        const COL_COLORS: Record<string, string> = {
-          'Novo': '#3b82f6', 'Follow-up': '#a855f7', 'Remarcado': '#f59e0b',
-          'No-show': '#ef4444', 'Venda': '#22c55e', 'Reembolsado': '#6b7280', 'Loss': '#dc2626',
-        };
-
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4"
-            onClick={() => setShowNamesModal(false)}
-          >
-            <div
-              className="modal-surface glass-panel w-full max-w-md rounded-2xl border border-str shadow-2xl overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-str">
-                <div>
-                  <h3 className="text-lg font-bold text-white">Exportar Nomes</h3>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-sec)' }}>
-                    Selecione as colunas e copie os nomes
-                  </p>
-                </div>
-                <button onClick={() => setShowNamesModal(false)} className="text-sec hover:text-white transition-colors text-xl">✕</button>
-              </div>
-
-              {/* Column checkboxes */}
-              <div className="px-6 py-4 border-b border-str">
-                <p className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-sec)' }}>Colunas</p>
-                <div className="flex flex-wrap gap-2">
-                  {KANBAN_COLUMNS.map(col => {
-                    const active = selectedNamesColumns.includes(col);
-                    const count = (namesByCol[col] || []).length;
-                    return (
-                      <button
-                        key={col}
-                        onClick={() => toggleCol(col)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 border"
-                        style={{
-                          background: active ? `${COL_COLORS[col] || '#888'}22` : 'transparent',
-                          borderColor: active ? COL_COLORS[col] || '#888' : 'var(--border-str)',
-                          color: active ? COL_COLORS[col] || '#fff' : 'var(--text-sec)',
-                        }}
-                      >
-                        {col}
-                        <span
-                          className="px-1.5 py-0.5 rounded-md text-[10px] font-black"
-                          style={{
-                            background: active ? COL_COLORS[col] || '#888' : 'var(--border-str)',
-                            color: active ? '#fff' : 'var(--text-sec)',
-                          }}
-                        >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <button onClick={() => setSelectedNamesColumns([...KANBAN_COLUMNS])} className="text-[11px] font-bold px-2 py-1 rounded-lg transition-all" style={{ color: 'var(--accent)', background: 'var(--bg-surface)', border: '1px solid var(--border-str)' }}>Selecionar todas</button>
-                  <button onClick={() => setSelectedNamesColumns([])} className="text-[11px] font-bold px-2 py-1 rounded-lg transition-all" style={{ color: 'var(--text-sec)', background: 'var(--bg-surface)', border: '1px solid var(--border-str)' }}>Limpar</button>
-                </div>
-              </div>
-
-              {/* Preview */}
-              <div className="px-6 py-4 border-b border-str">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-sec)' }}>
-                    Preview — {allNames.length} nome{allNames.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className="max-h-40 overflow-y-auto rounded-xl p-3 space-y-0.5" style={{ background: 'var(--bg-app)', border: '1px solid var(--border-str)' }}>
-                  {allNames.length === 0 ? (
-                    <p className="text-xs text-center py-4" style={{ color: 'var(--text-sec)' }}>Nenhum lead nas colunas selecionadas</p>
-                  ) : (
-                    allNames.map((nome, i) => (
-                      <p key={i} className="text-sm text-white font-medium py-0.5 border-b border-white/5 last:border-0">{nome}</p>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-3 px-6 py-4">
-                <button onClick={() => setShowNamesModal(false)} className="px-4 py-2 text-sm font-medium transition-colors" style={{ color: 'var(--text-sec)' }}>
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleCopy}
-                  disabled={allNames.length === 0}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all"
-                  style={{
-                    background: namesCopied ? '#22c55e' : 'var(--accent)',
-                    color: '#0A0A0A',
-                    opacity: allNames.length === 0 ? 0.4 : 1,
-                  }}
-                >
-                  {namesCopied ? '✓ Copiado!' : '📋 Copiar nomes'}
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
 
       {/* ─── Exportar personalizado: filtros próprios, sem mexer nos do quadro ─── */}
