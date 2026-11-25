@@ -168,6 +168,8 @@ export async function GET(request: Request) {
         // No-show excluído: closer não teve chance de converter, não deve penalizar a taxa
         // (mesmo critério do antigo .neq('status_atual', 'No-show'), que também deixava de fora status nulo)
         const leadsTotais = (leadsDoPeriodo || []).filter((l: any) => l.status_atual != null && l.status_atual !== 'No-show').length;
+        // No-show que ficaram fora: o card mostra, para o número bater com o quadro de leads
+        const noShowsFora = (leadsDoPeriodo || []).filter((l: { status_atual: string | null }) => l.status_atual === 'No-show').length;
         const conversaoAproximada = leadsTotais > 0 ? ((vendasTotais / leadsTotais) * 100).toFixed(1) : '0.0';
 
         // ─── Ticket Médio (exclui off_metricas) ──────────────────────────────────
@@ -412,6 +414,7 @@ export async function GET(request: Request) {
             receita,
             caixaLiquido,
             leadsTotais,
+            noShowsFora,
             vendasTotais,
             conversaoAproximada,
             ticketMedio,
