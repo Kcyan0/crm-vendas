@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     DndContext,
     closestCenter,
@@ -44,6 +44,10 @@ export function DashboardGrid({
     user, selectedProject, isEditMode
 }: any) {
     const [layoutOrder, setLayoutOrder] = useState<string[]>(DEFAULT_LAYOUT);
+    // Quadros ocultos no modo Layout, por usuário e por projeto, guardados ao lado da ordem (prefs["ocultos:<projeto>"])
+    const [ocultos, setOcultos] = useState<string[]>([]);
+    const key = selectedProject?.id_projeto ? selectedProject.id_projeto.toString() : 'global';
+    const chaveOcultos = `ocultos:${key}`;
 
     useEffect(() => {
         if (user?.email) {
@@ -51,7 +55,7 @@ export function DashboardGrid({
                 .then(r => r.json())
                 .then(data => {
                     const prefs = data.prefs || {};
-                    const key = selectedProject?.id_projeto ? selectedProject.id_projeto.toString() : 'global';
+                    setOcultos(Array.isArray(prefs[chaveOcultos]) ? prefs[chaveOcultos] : []);
                     if (prefs[key] && prefs[key].length > 0) {
                         // Widget novo entra na posição dele no layout padrão (antes ia para o fim da grade)
                         const merged = [...prefs[key]];
@@ -65,27 +69,37 @@ export function DashboardGrid({
                 })
                 .catch(err => console.error("Error fetching prefs:", err));
         }
-    }, [selectedProject?.id_projeto, user?.email]);
+    }, [key, chaveOcultos, user?.email]);
 
-    const saveLayout = async (newOrder: string[]) => {
-        setLayoutOrder(newOrder);
+    // Uma gravação por vez: dois cliques seguidos não podem ler as prefs antes da gravação anterior terminar
+    const filaPrefs = useRef<Promise<void>>(Promise.resolve());
+    const salvarPrefs = (parcial: Record<string, string[]>) => {
         if (!user?.email) return;
+        filaPrefs.current = filaPrefs.current.then(async () => {
+            try {
+                const res = await fetch(`/api/users/preferences?email=${user.email}`);
+                const data = await res.json();
+                const prefs = { ...(data.prefs || {}), ...parcial };
+                await fetch('/api/users/preferences', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: user.email, prefs })
+                });
+            } catch (error) {
+                console.error("Error saving prefs:", error);
+            }
+        });
+    };
 
-        try {
-            const res = await fetch(`/api/users/preferences?email=${user.email}`);
-            const data = await res.json();
-            const prefs = data.prefs || {};
-            const key = selectedProject?.id_projeto ? selectedProject.id_projeto.toString() : 'global';
+    const saveLayout = (newOrder: string[]) => {
+        setLayoutOrder(newOrder);
+        salvarPrefs({ [key]: newOrder });
+    };
 
-            prefs[key] = newOrder;
-            await fetch('/api/users/preferences', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: user.email, prefs })
-            });
-        } catch (error) {
-            console.error("Error saving prefs:", error);
-        }
+    const alternarOculto = (id: string) => {
+        const novos = ocultos.includes(id) ? ocultos.filter(o => o !== id) : [...ocultos, id];
+        setOcultos(novos);
+        salvarPrefs({ [chaveOcultos]: novos });
     };
 
     const sensors = useSensors(
@@ -681,7 +695,8 @@ export function DashboardGrid({
                     {layoutOrder.map(id => {
                         const block = BLOCKS[id];
                         if (!block) return null;
-                        return <SortableItem key={id} id={id} block={block} isEditMode={isEditMode} />;
+                        return <SortableItem key={id} id={id} block={block} isEditMode={isEditMode}
+                            oculto={ocultos.includes(id)} onAlternarOculto={alternarOculto} />;
                     })}
                 </div>
             </SortableContext>

@@ -10,15 +10,18 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Email required' }, { status: 400 });
         }
 
+        // O mesmo email pode ter várias linhas em usuarios (uma por perfil/projeto): .single() dava 500 e o
+        // layout salvo nunca carregava. O POST grava em todas, então junta as prefs de todas as linhas.
         const { data, error } = await supabase
             .from('usuarios')
             .select('dashboard_prefs')
             .eq('email', email)
-            .single();
+            .order('id_usuario', { ascending: true });
 
         if (error) throw error;
-        
-        return NextResponse.json({ prefs: data.dashboard_prefs || {} });
+
+        const prefs = Object.assign({}, ...(data || []).map((u: { dashboard_prefs: Record<string, unknown> | null }) => u.dashboard_prefs || {}));
+        return NextResponse.json({ prefs });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
