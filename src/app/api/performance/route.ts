@@ -148,10 +148,9 @@ export async function GET(request: Request) {
         });
 
         // Accumulate VGV/Caixa per closer
-        // VGV = faturamento: só pagamento Pago (o pendente entra quando for marcado como pago)
+        // VGV = faturamento: pago + pendente (o caixa segue só com o pago)
         (vendasPeriod || []).forEach((v: any) => {
             if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
-            if (v.status_pagamento !== 'pago') return;
 
             // Fallback ao closer do lead quando id_closer não está na venda
             const closerId = v.id_closer ?? leadToCloser[v.id_lead] ?? null;
@@ -162,10 +161,9 @@ export async function GET(request: Request) {
         });
 
 
-        // SDR vgv — mesmas vendas do período, só as pagas, creditadas ao SDR do lead
+        // SDR vgv — mesmas vendas do período (pago + pendente), creditadas ao SDR do lead
         (vendasPeriod || []).forEach((v: any) => {
             if (!validLeadIds.has(v.id_lead)) return; // Ignore refunded/lost sales
-            if (v.status_pagamento !== 'pago') return; // VGV só pago
 
             const sdrId = leadToSdr[v.id_lead];
             if (sdrId && performanceSDR[sdrId]) {

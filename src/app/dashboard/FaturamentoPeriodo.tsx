@@ -58,7 +58,7 @@ export function FaturamentoPeriodo({ serie, formatBRL, tooltipContentStyle, TEXT
                     <p className="text-[10px] text-sec mt-0.5">
                         {agrupamento === 'semana'
                             ? 'Período longo: cada ponto soma uma semana (segunda a domingo).'
-                            : 'Pagamentos pagos, pela data da venda.'}
+                            : 'Pago e pendente, pela data da venda.'}
                     </p>
                 </div>
                 <span className="fat-periodo-legenda shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold">

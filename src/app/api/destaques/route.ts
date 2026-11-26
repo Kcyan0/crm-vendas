@@ -85,8 +85,8 @@ export async function GET(request: Request) {
             if (!porOportunidade[chave]) porOportunidade[chave] = { closer: null, valor: 0 };
             // Closer da venda; sem ele, o closer responsável pelo lead
             porOportunidade[chave].closer ??= v.id_closer ?? lead.closer;
-            // Mais deu resultado = faturamento: só pagamento Pago; mais vendeu conta a venda mesmo pendente
-            if (v.status_pagamento === 'pago') porOportunidade[chave].valor += parseFloat(v.valor_bruto) || 0;
+            // Mais deu resultado = faturamento: pago + pendente, como a Receita Bruta
+            porOportunidade[chave].valor += parseFloat(v.valor_bruto) || 0;
         }
         const vendasPorUsuario: Record<number, number> = {};
         const faturamentoPorUsuario: Record<number, number> = {};

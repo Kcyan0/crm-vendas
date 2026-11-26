@@ -106,8 +106,8 @@ export async function GET(request: Request) {
             const p = porProjeto[pid];
             const chave = String(v.id_oportunidade ?? v.id_lead);
             const valor = parseFloat(String(v.valor_bruto)) || 0;
-            // Faturamento só pago (o pendente entra quando for marcado como pago); a venda conta mesmo pendente
-            if (v.status_pagamento === 'pago') p.receita += valor;
+            // Faturamento: pago + pendente (o caixa segue só com o pago)
+            p.receita += valor;
             p.vendas.add(chave);
             // Ticket médio: só pago e sem leads OFF
             if (v.status_pagamento === 'pago' && !foraDasMetricas[v.id_lead]) p.ticketPorVenda[chave] = (p.ticketPorVenda[chave] || 0) + valor;

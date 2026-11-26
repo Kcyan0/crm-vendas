@@ -2,8 +2,8 @@ import { addDaysToDate, toBrasiliaDate } from './brasilia';
 
 /**
  * Série do gráfico "Faturamento no período" da Dashboard (pedido em 2026-11-25).
- * Mesma regra da Receita Bruta: quem chama passa só os pagamentos Pagos que já entraram
- * na Receita Bruta; aqui eles são somados pelo dia da venda em Brasília.
+ * Mesma regra da Receita Bruta: quem chama passa as mesmas linhas (pago + pendente) que entram
+ * na Receita Bruta; aqui elas são somadas pelo dia da venda em Brasília.
  */
 
 export type PontoFaturamento = { inicio: string; fim: string; valor: number };
@@ -16,7 +16,7 @@ const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 const centavos = (valor: unknown) => Math.round((parseFloat(String(valor)) || 0) * 100);
 
 export function serieFaturamento(
-    vendasPagas: { data_venda: string; valor_bruto: unknown }[],
+    vendas: { data_venda: string; valor_bruto: unknown }[],
     inicio: string,
     fim: string,
 ): SerieFaturamento {
@@ -24,7 +24,7 @@ export function serieFaturamento(
 
     // Soma em centavos: a soma dos pontos bate com a Receita Bruta sem sobra de arredondamento
     const porDia = new Map<string, number>();
-    for (const v of vendasPagas) {
+    for (const v of vendas) {
         if (!v.data_venda) continue;
         const dia = toBrasiliaDate(v.data_venda);
         porDia.set(dia, (porDia.get(dia) || 0) + centavos(v.valor_bruto));

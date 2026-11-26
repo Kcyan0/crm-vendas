@@ -109,15 +109,12 @@ export async function GET(request: Request) {
         const filteredCaixa = (vendasCaixa || []).filter((v: any) => validLeadIds!.has(v.id_lead));
 
         // ─── GROUP Faturamento by id_oportunidade ─────────────────────────────────
-        // Faturamento soma só pagamento Pago: o pendente entra quando for marcado como pago (pedido em 2026-11-11).
-        // A venda com pagamento pendente continua contando em Vendas Concluídas e na conversão.
-        const mapFat: Record<number, { id_lead: number; valor_bruto: number; temPago: boolean }> = {};
+        // Faturamento soma pago + pendente; o caixa segue só com o pago (pedido em 2026-11-26, desfaz o de 2026-11-11).
+        const mapFat: Record<number, { id_lead: number; valor_bruto: number }> = {};
         for (const v of filteredFat) {
             const oportId = v.id_oportunidade ?? v.id_lead;
-            if (!mapFat[oportId]) mapFat[oportId] = { id_lead: v.id_lead, valor_bruto: 0, temPago: false };
-            if (v.status_pagamento !== 'pago') continue;
+            if (!mapFat[oportId]) mapFat[oportId] = { id_lead: v.id_lead, valor_bruto: 0 };
             mapFat[oportId].valor_bruto += parseFloat(v.valor_bruto) || 0;
-            mapFat[oportId].temPago = true;
         }
         const groupedSalesFat = Object.values(mapFat);
 
@@ -130,7 +127,7 @@ export async function GET(request: Request) {
         }
         const groupedSalesCaixa = Object.values(mapCaixa);
 
-        // ─── Faturamento — só pago no período; Vendas — pago + pendente ─────────────
+        // ─── Faturamento e Vendas — pago + pendente no período ───────────────────
         const receita = groupedSalesFat.reduce((sum, s) => sum + s.valor_bruto, 0);
         const vendasTotais = groupedSalesFat.length;
 
@@ -178,7 +175,6 @@ export async function GET(request: Request) {
         // ─── Receita por Forma de Pagamento (Faturamento) ───────────────────
         const byPaymentFat: Record<string, number> = {};
         for (const v of filteredFat) {
-            if (v.status_pagamento !== 'pago') continue; // faturamento só pago
             const gw = baseGateway(v.forma_pagamento);
             byPaymentFat[gw] = (byPaymentFat[gw] || 0) + (parseFloat(v.valor_bruto) || 0);
         }
@@ -216,8 +212,8 @@ export async function GET(request: Request) {
         // ─── Per-person stats keyed by id_usuario (evita colisão de nomes iguais) ──
         const byCloser: Record<number, number> = {};
         const bySdr: Record<number, number> = {};
-        // count = vendas (pago + pendente), base do ticket de caixa; countPago = vendas com pagamento pago, base do ticket de faturamento
-        type Stats = { faturamento: number; caixa: number; count: number; countPago: number };
+        // count = vendas (pago + pendente), base dos tickets de faturamento e de caixa
+        type Stats = { faturamento: number; caixa: number; count: number };
         const closerStats: Record<number, Stats> = {};
         const sdrStats: Record<number, Stats> = {};
 
@@ -226,19 +222,17 @@ export async function GET(request: Request) {
             const owners = leadOwnerMap[sale.id_lead];
             if (owners?.closer) {
                 const cId = owners.closer;
-                if (sale.temPago) byCloser[cId] = (byCloser[cId] || 0) + sale.valor_bruto;
-                if (!closerStats[cId]) closerStats[cId] = { faturamento: 0, caixa: 0, count: 0, countPago: 0 };
+                byCloser[cId] = (byCloser[cId] || 0) + sale.valor_bruto;
+                if (!closerStats[cId]) closerStats[cId] = { faturamento: 0, caixa: 0, count: 0 };
                 closerStats[cId].faturamento += sale.valor_bruto;
                 closerStats[cId].count += 1;
-                if (sale.temPago) closerStats[cId].countPago += 1;
             }
             if (owners?.sdr) {
                 const sId = owners.sdr;
-                if (sale.temPago) bySdr[sId] = (bySdr[sId] || 0) + sale.valor_bruto;
-                if (!sdrStats[sId]) sdrStats[sId] = { faturamento: 0, caixa: 0, count: 0, countPago: 0 };
+                bySdr[sId] = (bySdr[sId] || 0) + sale.valor_bruto;
+                if (!sdrStats[sId]) sdrStats[sId] = { faturamento: 0, caixa: 0, count: 0 };
                 sdrStats[sId].faturamento += sale.valor_bruto;
                 sdrStats[sId].count += 1;
-                if (sale.temPago) sdrStats[sId].countPago += 1;
             }
         }
 
@@ -256,14 +250,14 @@ export async function GET(request: Request) {
             // caso o campo não tenha sido preenchido em vendas antigas.
             const closerIdFromSale = sale.id_closer ?? owners?.closer ?? null;
             if (closerIdFromSale) {
-                if (!closerStats[closerIdFromSale]) closerStats[closerIdFromSale] = { faturamento: 0, caixa: 0, count: 0, countPago: 0 };
+                if (!closerStats[closerIdFromSale]) closerStats[closerIdFromSale] = { faturamento: 0, caixa: 0, count: 0 };
                 closerStats[closerIdFromSale].caixa += saleCaixa;
             }
 
             // SDR: não tem id_sdr na tabela vendas, sempre usa leadOwnerMap
             if (owners?.sdr) {
                 const sId = owners.sdr;
-                if (!sdrStats[sId]) sdrStats[sId] = { faturamento: 0, caixa: 0, count: 0, countPago: 0 };
+                if (!sdrStats[sId]) sdrStats[sId] = { faturamento: 0, caixa: 0, count: 0 };
                 sdrStats[sId].caixa += saleCaixa;
             }
         }
@@ -311,9 +305,9 @@ export async function GET(request: Request) {
             .sort((a, b) => b.valor - a.valor);
 
         // ─── Ticket Médio donuts ──────────────────────────────────────────────────
-        const tmFaturamentoCloser = Object.entries(closerStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.countPago > 0 ? s.faturamento / s.countPago : 0 })).sort((a, b) => b.value - a.value);
+        const tmFaturamentoCloser = Object.entries(closerStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.count > 0 ? s.faturamento / s.count : 0 })).sort((a, b) => b.value - a.value);
         const tmCaixaCloser       = Object.entries(closerStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.count > 0 ? s.caixa / s.count : 0 })).sort((a, b) => b.value - a.value);
-        const tmFaturamentoSdr    = Object.entries(sdrStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.countPago > 0 ? s.faturamento / s.countPago : 0 })).sort((a, b) => b.value - a.value);
+        const tmFaturamentoSdr    = Object.entries(sdrStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.count > 0 ? s.faturamento / s.count : 0 })).sort((a, b) => b.value - a.value);
         const tmCaixaSdr          = Object.entries(sdrStats).map(([id, s]) => ({ name: usersMap[parseInt(id)] || 'Desconhecido', value: s.count > 0 ? s.caixa / s.count : 0 })).sort((a, b) => b.value - a.value);
 
 
@@ -334,11 +328,10 @@ export async function GET(request: Request) {
 
         // ─── Segunda leva, em paralelo: vendas dos reembolsados e produtos das vendas do período ──
         const reembolsadoLeadIds = reembolsados.map((l: any) => l.id_lead).filter(Boolean);
-        // Produtos seguem o faturamento: só linhas com pagamento pago
-        const filteredFatPago = filteredFat.filter((v) => v.status_pagamento === 'pago');
-        const vendasIds = filteredFatPago.map((v: any) => v.id_venda).filter(Boolean);
+        // Produtos seguem o faturamento (pago + pendente)
+        const vendasIds = filteredFat.map((v: any) => v.id_venda).filter(Boolean);
         // Gráfico Faturamento no período: as mesmas linhas da Receita Bruta, somadas pelo dia da venda
-        const faturamentoSerie = serieFaturamento(filteredFatPago, startDate, endDate);
+        const faturamentoSerie = serieFaturamento(filteredFat, startDate, endDate);
         const [reembolsadasRes, vendaProdRes] = await Promise.all([
             reembolsadoLeadIds.length > 0
                 ? supabase.from('vendas').select('id_venda, id_lead, valor_bruto, status_pagamento').in('id_lead', reembolsadoLeadIds)
@@ -391,7 +384,7 @@ export async function GET(request: Request) {
         try {
             if (vendasIds.length > 0) {
                 const vendaProdData = vendaProdRes?.data;
-                const vendaPorId = new Map<number, any>(filteredFatPago.map((v: any) => [v.id_venda, v]));
+                const vendaPorId = new Map<number, any>(filteredFat.map((v: any) => [v.id_venda, v]));
 
                 // Build product stats map
                 const prodMap: Record<number, { nome: string; vendas: number; receita: number }> = {};
