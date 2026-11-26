@@ -3,6 +3,7 @@ import supabase from '@/lib/db';
 
 import { baseGateway, caixaInPeriod } from '@/lib/financial';
 import { filtroCallOuEntrada } from '@/lib/periodoLead';
+import { serieFaturamento } from '@/lib/serieFaturamento';
 
 async function fetchAll(queryBuilder: any) {
     let allData: any[] = [];
@@ -336,6 +337,8 @@ export async function GET(request: Request) {
         // Produtos seguem o faturamento: só linhas com pagamento pago
         const filteredFatPago = filteredFat.filter((v) => v.status_pagamento === 'pago');
         const vendasIds = filteredFatPago.map((v: any) => v.id_venda).filter(Boolean);
+        // Gráfico Faturamento no período: as mesmas linhas da Receita Bruta, somadas pelo dia da venda
+        const faturamentoSerie = serieFaturamento(filteredFatPago, startDate, endDate);
         const [reembolsadasRes, vendaProdRes] = await Promise.all([
             reembolsadoLeadIds.length > 0
                 ? supabase.from('vendas').select('id_venda, id_lead, valor_bruto, status_pagamento').in('id_lead', reembolsadoLeadIds)
@@ -411,6 +414,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
             receita,
+            faturamentoSerie,
             caixaLiquido,
             // Todos os leads do período (com No-show, sem OFF): o mesmo total do Status dos Leads
             leadsTotais: totalLeadsStatus,

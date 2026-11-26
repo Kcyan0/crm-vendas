@@ -16,6 +16,7 @@ import {
     rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { SortableItem } from './SortableItem';
+import { FaturamentoPeriodo } from './FaturamentoPeriodo';
 import {
     BarChart,
     Bar,
@@ -31,7 +32,7 @@ import {
 } from "recharts";
 
 const DEFAULT_LAYOUT = [
-    'statusLeads', 'sdrsPeriodo', 'closersPeriodo', 'conversaoSdr', 'conversaoCloser',
+    'faturamentoPeriodo', 'statusLeads', 'sdrsPeriodo', 'closersPeriodo', 'conversaoSdr', 'conversaoCloser',
     'tmFatCloser', 'tmCaixaCloser', 'tmFatSdr', 'tmCaixaSdr',
     'recFat', 'recCaixa', 'recCloser', 'recSdr', 'reembolsos', 'comissaoCloser', 'comissaoSdr',
     'pagamentosPendentes', 'produtosRanking', 'produtosFaturamento', 'produtosTicket'
@@ -52,10 +53,12 @@ export function DashboardGrid({
                     const prefs = data.prefs || {};
                     const key = selectedProject?.id_projeto ? selectedProject.id_projeto.toString() : 'global';
                     if (prefs[key] && prefs[key].length > 0) {
-                        // Merge with new blocks if they exist
-                        const saved = prefs[key];
-                        const missing = DEFAULT_LAYOUT.filter(id => !saved.includes(id));
-                        setLayoutOrder([...saved, ...missing]);
+                        // Widget novo entra na posição dele no layout padrão (antes ia para o fim da grade)
+                        const merged = [...prefs[key]];
+                        for (const id of DEFAULT_LAYOUT) {
+                            if (!merged.includes(id)) merged.splice(Math.min(DEFAULT_LAYOUT.indexOf(id), merged.length), 0, id);
+                        }
+                        setLayoutOrder(merged);
                     } else {
                         setLayoutOrder(DEFAULT_LAYOUT);
                     }
@@ -102,6 +105,13 @@ export function DashboardGrid({
 
     // --- Component Dictionary ---
     const BLOCKS: Record<string, { colSpan: string; render: () => React.ReactNode }> = {
+        faturamentoPeriodo: {
+            colSpan: "col-span-1 md:col-span-2 xl:col-span-4",
+            render: () => metrics ? (
+                <FaturamentoPeriodo serie={metrics.faturamentoSerie} formatBRL={formatBRL}
+                    tooltipContentStyle={tooltipStyle.contentStyle} TEXT_SEC={TEXT_SEC} />
+            ) : null
+        },
         statusLeads: {
             colSpan: "col-span-1 md:col-span-2 xl:col-span-4",
             render: () => metrics?.statusLeads && metrics.statusLeads.length > 0 ? (

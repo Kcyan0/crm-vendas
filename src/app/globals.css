@@ -194,3 +194,10 @@ button.btn-primary:active { transform: translateY(0); }
 .copiar-nomes.copiado:hover { color: #22c55e; }
 [data-mode="cinza"] .copiar-nomes.copiado,
 [data-mode="branco"] .copiar-nomes.copiado { color: #15803d; }
+
+/* Gráfico Faturamento no período: linha na cor de destaque e ponto laranja no dia do mouse.
+   Nos modos claros a linha escurece para não sumir no fundo branco (ex.: verde neon). */
+.fat-periodo { --fat-linha: var(--accent); --fat-ponto: #FB923C; }
+[data-mode="cinza"] .fat-periodo,
+[data-mode="branco"] .fat-periodo { --fat-linha: color-mix(in srgb, var(--accent) 70%, #000); --fat-ponto: #EA580C; }
+.fat-periodo-legenda { color: var(--text-sec); border: 1px solid var(--border-str); background: var(--bg-app); }
