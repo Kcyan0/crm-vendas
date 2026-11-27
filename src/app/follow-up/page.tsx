@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAoVivo } from "@/lib/useAoVivo";
 import { BellRing, Phone, Instagram, Loader2, X, MessageSquare, AlertTriangle } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { todayBrasilia, addDaysToDate, toBrasiliaDate } from "@/lib/brasilia";
@@ -75,6 +76,9 @@ export default function FollowUpPage() {
       setLoading(false);
     }
   };
+
+  // Tempo real: follow registrado, lead ou venda salvos por outra pessoa atualizam a lista sozinhos
+  useAoVivo(['follow-ups', 'leads', 'vendas'], selectedProject?.id_projeto, () => { fetchLeads(); });
 
   const fetchUsers = async () => {
     if (!selectedProject) return;

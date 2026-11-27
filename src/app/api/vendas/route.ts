@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 import { logActivity } from '@/lib/logger';
 import { pagoComDataFutura } from '@/lib/financial';
+import { comAviso } from '@/lib/avisarMudanca';
 
 export async function GET(request: Request) {
     try {
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
     }
 }
 
-export async function POST(request: Request) {
+async function rotaPOST(request: Request) {
 
     try {
         const body = await request.json();
@@ -266,3 +267,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+// Quem salva avisa as telas abertas, que se atualizam sozinhas (tempo real)
+export const POST = comAviso(['vendas', 'leads'], rotaPOST);

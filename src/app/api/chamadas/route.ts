@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 import { createClient } from '@/lib/supabase/server';
+import { comAviso } from '@/lib/avisarMudanca';
 
 export async function GET(request: Request) {
     try {
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
     }
 }
 
-export async function POST(request: Request) {
+async function rotaPOST(request: Request) {
     try {
         const body = await request.json();
         const { titulo, id_lead, id_sdr, id_closer, status_chamada, data_hora_inicio, duracao_minutos, observacoes, id_projeto } = body;
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
     }
 }
 
-export async function PUT(request: Request) {
+async function rotaPUT(request: Request) {
     try {
         const body = await request.json();
         const { id_chamada, titulo, id_lead, id_sdr, id_closer, status_chamada, data_hora_inicio, duracao_minutos, observacoes } = body;
@@ -164,7 +165,7 @@ export async function PUT(request: Request) {
     }
 }
 
-export async function DELETE(request: Request) {
+async function rotaDELETE(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const id_chamada = searchParams.get('id');
@@ -319,3 +320,8 @@ async function deleteGoogleEvent(userEmail: string, eventId: string) {
         headers: { Authorization: `Bearer ${token}` }
     });
 }
+
+// Quem salva avisa as telas abertas, que se atualizam sozinhas (tempo real)
+export const POST = comAviso(['chamadas'], rotaPOST);
+export const PUT = comAviso(['chamadas'], rotaPUT);
+export const DELETE = comAviso(['chamadas'], rotaDELETE);

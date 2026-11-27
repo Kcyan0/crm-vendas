@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { todayBrasilia } from "@/lib/brasilia";
+import { useAoVivo } from "@/lib/useAoVivo";
 import { Settings } from "lucide-react";
 import { DashboardGrid } from "./DashboardGrid";
 import { Destaques } from "./Destaques";
@@ -70,8 +71,8 @@ const TEXT_SEC = 'var(--text-sec)';
 // ─── MetasPanel component ────────────────────────────────────────────────────
 type MetaUser = { id_usuario: number; nome: string; tipo: string; meta_faturamento: number; meta_caixa: number; };
 
-function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, closers, formatBRL }: {
-    projectId?: string; mes: number; ano: number;
+function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, closers, formatBRL, versao = 0 }: {
+    projectId?: string; mes: number; ano: number; versao?: number;
     receitaBruta: number; caixaLiquido: number;
     sdrs: any[]; closers: any[];
     formatBRL: (v: number) => string;
@@ -95,7 +96,7 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
             .then(r => r.json())
             .then(d => setMetasIndividuais(Array.isArray(d) ? d : []))
             .catch(() => setMetasIndividuais([]));
-    }, [projectId, mes, ano]);
+    }, [projectId, mes, ano, versao]);
 
     if (!metaProjeto) return null;
 
@@ -279,6 +280,8 @@ export default function Dashboard() {
     const [isEditMode, setIsEditMode] = useState(false);
     // Só a resposta do último filtro pedido vale (evita uma resposta atrasada sobrescrever a mais nova)
     const ultimoPedido = useRef(0);
+    // Tempo real: sobe a cada aviso de mudança; Destaques e Metas buscam de novo quando muda
+    const [versaoAoVivo, setVersaoAoVivo] = useState(0);
 
     const aplicarDados = ({ data, perfData, perfTodayData }: DadosDashboard, start?: string, end?: string) => {
         // ─── Single source of truth for Caixa per user ───────────────────────────
@@ -364,6 +367,13 @@ export default function Dashboard() {
         if (!selectedProject) return;
         fetchMetrics(startDate, endDate);
     }, [selectedProject]);
+
+    // Tempo real: lead, venda, follow ou meta salvos por outra pessoa atualizam a Dashboard sozinhos,
+    // no período que já está aplicado (datas digitadas e não filtradas continuam esperando o Filtrar)
+    useAoVivo(['leads', 'vendas', 'follow-ups', 'metas'], selectedProject?.id_projeto, () => {
+        if (periodoAplicado) fetchMetrics(periodoAplicado.startDate, periodoAplicado.endDate);
+        setVersaoAoVivo(v => v + 1);
+    });
 
     const formatBRL = (val: number) =>
         new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
@@ -461,7 +471,7 @@ export default function Dashboard() {
 
             {/* ── Destaques do período filtrado ─────────────────────────── */}
             <Destaques projectId={selectedProject?.id_projeto} startDate={periodoAplicado?.startDate}
-                endDate={periodoAplicado?.endDate} formatBRL={formatBRL} />
+                endDate={periodoAplicado?.endDate} formatBRL={formatBRL} versao={versaoAoVivo} />
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
@@ -502,6 +512,7 @@ export default function Dashboard() {
                 sdrs={sdrs}
                 closers={closers}
                 formatBRL={formatBRL}
+                versao={versaoAoVivo}
             />
 
             {/* ── Main Dashboard Fluid Grid ─────────────────────────────────── */}

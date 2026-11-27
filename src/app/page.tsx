@@ -10,6 +10,7 @@ import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/br
 import { createClient as createBrowserClient } from '@/lib/supabase/browser';
 import { followSituacao, diasDeAtraso } from '@/lib/followUp';
 import { lerCacheLeads, salvarCacheLeads } from '@/lib/leadsCache';
+import { useAoVivo } from '@/lib/useAoVivo';
 
 type Lead = {
   id_lead: number;
@@ -504,12 +505,13 @@ export default function KanbanBoard() {
     }
   };
 
-  const fetchLeads = async () => {
+  // silencioso: atualização por aviso de outra pessoa (tempo real), sem o "Atualizando..." no título
+  const fetchLeads = async (silencioso = false) => {
     // Se outra busca começar antes desta terminar (ex.: troca de data), a resposta antiga é descartada
     const requestId = ++leadsRequestRef.current;
     buscandoLeadsRef.current = true;
     try {
-      setRefreshing(true);
+      if (!silencioso) setRefreshing(true);
       const query = new URLSearchParams();
       if (selectedProject?.id_projeto) query.set('projectId', selectedProject.id_projeto.toString());
       if (startDate) query.set('startDate', startDate);
@@ -534,6 +536,11 @@ export default function KanbanBoard() {
       }
     }
   };
+
+  // Tempo real: quando alguém salva um lead, venda ou follow neste projeto, o quadro se atualiza sozinho.
+  // Espera soltar o card se a pessoa estiver arrastando um.
+  const arrastandoRef = useRef(false);
+  useAoVivo(['leads', 'vendas', 'follow-ups'], selectedProject?.id_projeto, () => fetchLeads(true), () => arrastandoRef.current);
 
   // Uma busca que começou antes de uma alteração pode trazer o lead como era: busca de novo
   const rebuscarSeEmAndamento = () => {
@@ -653,10 +660,12 @@ export default function KanbanBoard() {
   };
 
   const handleDragStart = (e: React.DragEvent, id_lead: number) => {
+    arrastandoRef.current = true;
     e.dataTransfer.setData("id_lead", id_lead.toString());
   };
 
   const handleDrop = async (e: React.DragEvent, status_novo: string) => {
+    arrastandoRef.current = false;
     e.preventDefault();
     const id_lead = parseInt(e.dataTransfer.getData("id_lead"));
 
@@ -1520,6 +1529,7 @@ export default function KanbanBoard() {
                     key={lead.id_lead}
                     draggable
                     onDragStart={(e) => handleDragStart(e, lead.id_lead)}
+                    onDragEnd={() => { arrastandoRef.current = false; }}
                     onDoubleClick={() => handleOpenDetail(lead)}
                     className={`glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 ${followAtrasado ? '' : 'border-str'} hover:border-orange-300 transition-all select-none group relative bg-surface`}
                     style={followAtrasado ? { borderColor: 'rgba(239,68,68,0.6)', boxShadow: 'inset 3px 0 0 #ef4444' } : undefined}

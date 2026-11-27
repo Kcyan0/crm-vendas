@@ -5,6 +5,7 @@ import { fetchAll } from '@/lib/fetchAll';
 import { dataDeReferenciaLocal, filtroCallOuEntrada } from '@/lib/periodoLead';
 import { validarMotivoLoss } from '@/lib/motivosLoss';
 import { createClient } from '@/lib/supabase/server';
+import { comAviso } from '@/lib/avisarMudanca';
 
 // Lotes de 200 ids para a URL do .in() não ficar gigante; os lotes rodam em paralelo
 async function fetchInBatches(ids: number[], buildQuery: (ids: number[]) => Parameters<typeof fetchAll>[0]) {
@@ -152,7 +153,7 @@ export async function GET(request: Request) {
     }
 }
 
-export async function PUT(request: Request) {
+async function rotaPUT(request: Request) {
     try {
         const body = await request.json();
         const {
@@ -258,7 +259,7 @@ export async function PUT(request: Request) {
     }
 }
 
-export async function POST(request: Request) {
+async function rotaPOST(request: Request) {
     try {
         const body = await request.json();
         const { nome, telefone, instagram, email, origem, id_sdr_responsavel, id_closer_responsavel, observacoes_gerais, id_projeto, data_entrada, off_metricas, data_call } = body;
@@ -298,7 +299,7 @@ export async function POST(request: Request) {
     }
 }
 
-export async function DELETE(request: Request) {
+async function rotaDELETE(request: Request) {
     try {
         const url = new URL(request.url);
         const id_lead = url.searchParams.get('id');
@@ -324,3 +325,8 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+// Quem salva avisa as telas abertas, que se atualizam sozinhas (tempo real)
+export const PUT = comAviso(['leads'], rotaPUT);
+export const POST = comAviso(['leads'], rotaPOST);
+export const DELETE = comAviso(['leads'], rotaDELETE);

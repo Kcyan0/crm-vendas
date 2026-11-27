@@ -32,11 +32,12 @@ const formatPeriodo = ({ inicio, fim }: { inicio: string; fim: string }) => {
 };
 
 // Período e projeto do filtro aplicado na Dashboard (o que o botão Filtrar buscou)
-export function Destaques({ projectId, startDate, endDate, formatBRL }: {
+export function Destaques({ projectId, startDate, endDate, formatBRL, versao = 0 }: {
     projectId?: number;
     startDate?: string;
     endDate?: string;
     formatBRL: (v: number) => string;
+    versao?: number; // muda a cada aviso de tempo real: busca de novo mostrando o que já tem
 }) {
     const [data, setData] = useState<DadosDestaques | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -71,7 +72,7 @@ export function Destaques({ projectId, startDate, endDate, formatBRL }: {
         };
         fetchDestaques();
         return () => { atual = false; };
-    }, [projectId, startDate, endDate]);
+    }, [projectId, startDate, endDate, versao]);
 
     const items = [
         { titulo: 'Mais vendeu', icon: BriefcaseBusiness, destaque: data?.maisVendeu, formato: (v: number) => `${v} venda${v > 1 ? 's' : ''}` },

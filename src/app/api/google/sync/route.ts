@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
 import { createClient } from '@/lib/supabase/server';
+import { comAviso } from '@/lib/avisarMudanca';
 
 async function getValidAccessToken(userEmail: string): Promise<string | null> {
     const { data: tokenData } = await supabase.from('google_tokens').select('*').eq('user_email', userEmail).single();
@@ -28,7 +29,7 @@ async function getValidAccessToken(userEmail: string): Promise<string | null> {
     return tokenData.access_token;
 }
 
-export async function POST(request: Request) {
+async function rotaPOST(request: Request) {
     try {
         const body = await request.json();
         const { month } = body; // formato: YYYY-MM
@@ -79,3 +80,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+// Quem salva avisa as telas abertas, que se atualizam sozinhas (tempo real)
+export const POST = comAviso(['chamadas'], rotaPOST);

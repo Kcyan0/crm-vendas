@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
+import { useAoVivo } from "@/lib/useAoVivo";
 import { ChevronLeft, ChevronRight, Plus, Loader2, Calendar as CalendarIcon, Link2, Check, RefreshCw, X, Clock, User } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { createClient } from "@/lib/supabase/browser";
@@ -101,9 +102,10 @@ function CalendarContent() {
     setIsGoogleConnected(data.connected);
   }, []);
 
-  const fetchChamadas = useCallback(async () => {
+  // silencioso: atualização por aviso de outra pessoa (tempo real), sem trocar o calendário pelo carregando
+  const fetchChamadas = useCallback(async (silencioso = false) => {
     if (!selectedProject) return;
-    setLoading(true);
+    if (!silencioso) setLoading(true);
     try {
       const res = await fetch(`/api/chamadas?projectId=${selectedProject.id_projeto}&month=${month}`);
       const data = await res.json();
@@ -123,6 +125,10 @@ function CalendarContent() {
       setPendingVendas(Array.isArray(data) ? data : []);
     } catch { setPendingVendas([]); }
   }, [selectedProject, month]);
+
+  // Tempo real: chamada marcada ou venda salva por outra pessoa aparece sozinha
+  useAoVivo(['chamadas'], selectedProject?.id_projeto, () => { fetchChamadas(true); });
+  useAoVivo(['vendas'], selectedProject?.id_projeto, () => { fetchPendingVendas(); });
 
   const fetchTeamAndLeads = useCallback(async () => {
     if (!selectedProject) return;

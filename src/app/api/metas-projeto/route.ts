@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabase from '@/lib/db';
+import { comAviso } from '@/lib/avisarMudanca';
 
 export async function GET(request: Request) {
     try {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
     }
 }
 
-export async function PUT(request: Request) {
+async function rotaPUT(request: Request) {
     try {
         const body = await request.json();
         const { id_projeto, mes, ano, meta_faturamento, meta_caixa } = body;
@@ -45,3 +46,6 @@ export async function PUT(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+// Quem salva avisa as telas abertas, que se atualizam sozinhas (tempo real)
+export const PUT = comAviso(['metas'], rotaPUT);

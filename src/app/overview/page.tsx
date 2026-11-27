@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useAoVivo } from "@/lib/useAoVivo";
 import {
     DollarSign, TrendingUp, Users, ShoppingCart, Percent, Loader2, Calendar, ChevronDown, RefreshCw
 } from "lucide-react";
@@ -141,8 +142,9 @@ export default function OverviewPage() {
     const [endDate, setEndDate] = useState(lastDay);
     const [presetOpen, setPresetOpen] = useState(false);
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
+    // silencioso: atualização por aviso (tempo real), sem trocar os números pelo esqueleto de carregando
+    const fetchData = useCallback(async (silencioso = false) => {
+        if (!silencioso) setLoading(true);
         try {
             const res = await fetch(`/api/overview?startDate=${startDate}&endDate=${endDate}`);
             const json = await res.json();
@@ -155,6 +157,9 @@ export default function OverviewPage() {
     }, [startDate, endDate]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    // Tempo real: lead ou venda salvos em qualquer projeto atualizam os números sozinhos
+    useAoVivo(['leads', 'vendas'], 'todos', () => { fetchData(true); });
 
     const applyPreset = (s: string, e: string) => {
         setStartDate(s);
@@ -209,7 +214,7 @@ export default function OverviewPage() {
                         )}
                     </div>
 
-                    <button onClick={fetchData} disabled={loading}
+                    <button onClick={() => fetchData()} disabled={loading}
                         className="flex items-center gap-2 bg-accent text-[#0A0A0A] font-bold text-sm rounded-xl px-4 py-2 hover:bg-[#A8E800] transition">
                         {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                         Atualizar

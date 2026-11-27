@@ -5,6 +5,7 @@ import { fetchAll } from '@/lib/fetchAll';
 import { logActivity } from '@/lib/logger';
 import { todayBrasilia, addDaysToDate, startOfDayBrasiliaISO } from '@/lib/brasilia';
 import { FOLLOW_CLOSED_STATUSES, FOLLOW_DEFAULT_DAYS } from '@/lib/followUp';
+import { comAviso } from '@/lib/avisarMudanca';
 
 const CLOSED_FILTER = `(${FOLLOW_CLOSED_STATUSES.map(s => `"${s}"`).join(',')})`;
 
@@ -129,7 +130,7 @@ export async function GET(request: Request) {
 }
 
 // POST { id_lead, data_proximo?: "YYYY-MM-DD", observacao? } → registra o follow feito agora
-export async function POST(request: Request) {
+async function rotaPOST(request: Request) {
     try {
         const supabaseAuth = await createClient();
         const { data: { user } } = await supabaseAuth.auth.getUser();
@@ -198,3 +199,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+// Quem salva avisa as telas abertas, que se atualizam sozinhas (tempo real)
+export const POST = comAviso(['follow-ups', 'leads'], rotaPOST);

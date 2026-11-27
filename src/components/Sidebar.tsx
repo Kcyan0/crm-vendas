@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { FOLLOWUPS_CHANGED_EVENT } from "@/lib/followUp";
 import { limparCacheLeads } from "@/lib/leadsCache";
 import InstalarApp from "@/components/InstalarApp";
+import { useAoVivo } from "@/lib/useAoVivo";
 
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {
     const pathname = usePathname();
@@ -35,6 +36,9 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
         window.addEventListener(FOLLOWUPS_CHANGED_EVENT, fetchAtrasados);
         return () => window.removeEventListener(FOLLOWUPS_CHANGED_EVENT, fetchAtrasados);
     }, [selectedProject, pathname]);
+
+    // Tempo real: follow ou lead salvos por outra pessoa atualizam o contador de atrasados
+    useAoVivo(['follow-ups', 'leads'], selectedProject?.id_projeto, () => window.dispatchEvent(new Event(FOLLOWUPS_CHANGED_EVENT)));
 
     const handleLogout = async () => {
         const supabase = createClient();
