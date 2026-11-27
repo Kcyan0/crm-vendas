@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0A0A0A">
+  <title>Sem conexão · H SALES CRM</title>
+  <style>
+    /* Tela que o app instalado mostra quando cai a internet (servida pelo /sw.js) */
+    :root { --bg: #111111; --card: #1A1A1A; --borda: rgba(255,255,255,0.07); --texto: #FFFFFF; --texto-sec: #888888; --accent: #BEFF00; --accent-texto: #0A0A0A; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: var(--bg); color: var(--texto);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+    }
+    .card {
+      width: 100%; max-width: 380px; text-align: center; padding: 32px 24px;
+      background: var(--card); border: 1px solid var(--borda); border-radius: 16px;
+    }
+    img { width: 72px; height: 72px; border-radius: 18px; display: block; margin: 0 auto 20px; }
+    h1 { font-size: 20px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.01em; }
+    p { font-size: 14px; line-height: 1.5; color: var(--texto-sec); margin: 0 0 24px; }
+    button {
+      width: 100%; border: none; border-radius: 10px; padding: 12px 16px; cursor: pointer;
+      background: var(--accent); color: var(--accent-texto); font: inherit; font-size: 15px; font-weight: 800;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img src="/icons/icon-192.png" alt="H SALES CRM">
+    <h1>Sem conexão com a internet</h1>
+    <p>O CRM precisa de internet para mostrar seus leads e vendas. Confira o Wi-Fi ou os dados móveis e tente de novo.</p>
+    <button type="button" onclick="location.reload()">Tentar de novo</button>
+  </main>
+  <script>
+    // Mesmas cores que a pessoa escolheu em Aparência (o CRM guarda no navegador)
+    try {
+      var cores = { verde: ['#BEFF00', '#0A0A0A'], ciano: ['#22D3EE', '#0A0A0A'], roxo: ['#A78BFA', '#0A0A0A'], laranja: ['#FB923C', '#0A0A0A'], vermelho: ['#EF4444', '#FFFFFF'], branco: ['#FFFFFF', '#0A0A0A'] };
+      var modos = { cinza: ['#C8CDD6', '#D4D9E2', 'rgba(0,0,0,0.15)', '#111111', '#444444'], branco: ['#FFFFFF', '#F4F5F7', 'rgba(0,0,0,0.10)', '#0A0A0A', '#555555'] };
+      var t = localStorage.getItem('feracrm_theme') || 'verde';
+      var m = localStorage.getItem('feracrm_mode') || 'preto';
+      var r = document.documentElement.style;
+      var c = cores[t] || cores.verde;
+      if (m !== 'preto' && t === 'branco') c = ['#1A1A1A', '#FFFFFF'];
+      r.setProperty('--accent', c[0]); r.setProperty('--accent-texto', c[1]);
+      var md = modos[m];
+      if (md) { r.setProperty('--bg', md[0]); r.setProperty('--card', md[1]); r.setProperty('--borda', md[2]); r.setProperty('--texto', md[3]); r.setProperty('--texto-sec', md[4]); }
+    } catch (e) {}
+    // Voltou a internet: recarrega sozinho
+    window.addEventListener('online', function () { location.reload(); });
+  </script>
+</body>
+</html>

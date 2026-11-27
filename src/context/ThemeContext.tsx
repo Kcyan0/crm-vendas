@@ -87,6 +87,9 @@ export function applyThemeToDom(t: ThemeId, m: ModeId) {
     root.style.setProperty("--border",        mod.border);
     root.style.setProperty("--border-str",    mod.borderStr);
     root.style.setProperty("--sidebar-border",mod.sidebarBorder);
+    // Barra do celular (status bar do app instalado e barra do navegador) na cor da barra de cima do CRM
+    const metaCor = document.querySelector('meta[name="theme-color"]');
+    if (metaCor) metaCor.setAttribute("content", mod.bgSidebar);
 }
 
 interface ThemeCtx {

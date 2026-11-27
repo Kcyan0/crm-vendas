@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from 'next/font/google';
 import "./globals.css";
 import ClientLayout from "@/components/ClientLayout";
@@ -10,6 +10,14 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: "H SALES CRM",
   description: "Sistema de Gestão de Vendas para Closers e SDRs",
+  applicationName: "H SALES CRM",
+  // App instalável no iPhone (Adicionar à Tela de Início): nome curto embaixo do ícone e tela cheia
+  appleWebApp: { capable: true, title: "H SALES", statusBarStyle: "default" },
+};
+
+// Cor da barra do celular; o ThemeContext troca conforme o modo (Preto, Cinza, Branco)
+export const viewport: Viewport = {
+  themeColor: "#0A0A0A",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -61,6 +69,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               r.style.setProperty('--sidebar-border',  md[10]);
             } catch(e) {}
           })();
+        `}} />
+        {/* Android e computador: guarda o pedido de instalação do app para o botão "Instalar app" do menu,
+            que pode aparecer depois que o navegador já avisou que o app é instalável */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.addEventListener('beforeinstallprompt', function (e) {
+            window.__pedidoInstalar = e;
+            window.dispatchEvent(new Event('pedido-instalar'));
+          });
         `}} />
       </head>
       <body className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-app)' }}>

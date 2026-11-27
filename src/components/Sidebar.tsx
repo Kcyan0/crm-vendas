@@ -9,6 +9,7 @@ import { useTheme, THEMES, MODES, ThemeId, ModeId } from "@/context/ThemeContext
 import { useState, useEffect } from "react";
 import { FOLLOWUPS_CHANGED_EVENT } from "@/lib/followUp";
 import { limparCacheLeads } from "@/lib/leadsCache";
+import InstalarApp from "@/components/InstalarApp";
 
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {
     const pathname = usePathname();
@@ -61,8 +62,9 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                 <div className="fixed inset-0 bg-black/60 z-40 md:hidden" onClick={() => setIsOpen && setIsOpen(false)} />
             )}
 
+            {/* overflow-y-auto: em celular pequeno o menu passa da altura da tela e o "Sair da Conta" ficava inalcançável */}
             <div
-                className={`fixed inset-y-0 left-0 z-50 w-56 md:w-64 h-full flex flex-col pt-6 pb-4 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+                className={`fixed inset-y-0 left-0 z-50 w-56 md:w-64 h-full flex flex-col pt-6 pb-4 overflow-y-auto transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
                 style={{ background: 'var(--bg-sidebar)', borderRight: '1px solid var(--sidebar-border)' }}
             >
                 {/* Mobile Close */}
@@ -189,6 +191,9 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
 
                 {/* Footer */}
                 <div className="p-4" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
+
+                    {/* ── Instalar como app (some quando já está instalado) ── */}
+                    <InstalarApp />
 
                     {/* ── Aparência ── */}
                     <div className="mb-3">

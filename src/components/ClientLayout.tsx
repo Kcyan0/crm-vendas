@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { Menu } from "lucide-react";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // App instalável: o /sw.js só mostra a tela "Sem conexão" quando cai a internet (não guarda páginas nem dados)
+  useEffect(() => {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }, []);
 
   return (
     <div className="flex flex-col md:flex-row w-full h-full overflow-hidden">
