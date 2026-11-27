@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { SortableItem } from './SortableItem';
 import { FaturamentoPeriodo } from './FaturamentoPeriodo';
+import { CLASSE_LARGURA, larguraPadrao, lerLarguras, type Largura } from './larguraQuadro';
 import {
     BarChart,
     Bar,
@@ -46,8 +47,11 @@ export function DashboardGrid({
     const [layoutOrder, setLayoutOrder] = useState<string[]>(DEFAULT_LAYOUT);
     // Quadros ocultos no modo Layout, por usuário e por projeto, guardados ao lado da ordem (prefs["ocultos:<projeto>"])
     const [ocultos, setOcultos] = useState<string[]>([]);
+    // Largura de cada quadro (1 a 4 colunas), também por usuário e por projeto (prefs["larguras:<projeto>"])
+    const [larguras, setLarguras] = useState<Record<string, Largura>>({});
     const key = selectedProject?.id_projeto ? selectedProject.id_projeto.toString() : 'global';
     const chaveOcultos = `ocultos:${key}`;
+    const chaveLarguras = `larguras:${key}`;
 
     useEffect(() => {
         if (user?.email) {
@@ -56,6 +60,7 @@ export function DashboardGrid({
                 .then(data => {
                     const prefs = data.prefs || {};
                     setOcultos(Array.isArray(prefs[chaveOcultos]) ? prefs[chaveOcultos] : []);
+                    setLarguras(lerLarguras(prefs[chaveLarguras]));
                     if (prefs[key] && prefs[key].length > 0) {
                         // Widget novo entra na posição dele no layout padrão (antes ia para o fim da grade)
                         const merged = [...prefs[key]];
@@ -69,11 +74,11 @@ export function DashboardGrid({
                 })
                 .catch(err => console.error("Error fetching prefs:", err));
         }
-    }, [key, chaveOcultos, user?.email]);
+    }, [key, chaveOcultos, chaveLarguras, user?.email]);
 
     // Uma gravação por vez: dois cliques seguidos não podem ler as prefs antes da gravação anterior terminar
     const filaPrefs = useRef<Promise<void>>(Promise.resolve());
-    const salvarPrefs = (parcial: Record<string, string[]>) => {
+    const salvarPrefs = (parcial: Record<string, unknown>) => {
         if (!user?.email) return;
         filaPrefs.current = filaPrefs.current.then(async () => {
             try {
@@ -100,6 +105,17 @@ export function DashboardGrid({
         const novos = ocultos.includes(id) ? ocultos.filter(o => o !== id) : [...ocultos, id];
         setOcultos(novos);
         salvarPrefs({ [chaveOcultos]: novos });
+    };
+
+    const mudarLargura = (id: string, nova: Largura) => {
+        const novas = { ...larguras, [id]: nova };
+        setLarguras(novas);
+        salvarPrefs({ [chaveLarguras]: novas });
+    };
+
+    const restaurarLarguras = () => {
+        setLarguras({});
+        salvarPrefs({ [chaveLarguras]: {} });
     };
 
     const sensors = useSensors(
@@ -688,16 +704,36 @@ export function DashboardGrid({
         },
     };
 
+    const temLarguraPropria = Object.keys(larguras).length > 0;
+
     return (
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            {isEditMode && (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 text-xs"
+                    style={{ background: 'rgba(var(--accent-rgb),0.06)', border: '1px dashed rgba(var(--accent-rgb),0.35)', color: 'var(--text-sec)' }}>
+                    <span>
+                        Arraste pela alça para mudar a ordem, use <b style={{ color: 'var(--text-pri)' }}>−</b> e <b style={{ color: 'var(--text-pri)' }}>+</b> para a largura e o olho para ocultar. Tudo fica salvo para você.
+                    </span>
+                    {temLarguraPropria && (
+                        <button type="button" onClick={restaurarLarguras}
+                            className="px-3 py-1.5 rounded-lg font-bold border whitespace-nowrap"
+                            style={{ borderColor: 'var(--border-str)', color: 'var(--text-pri)', background: 'var(--bg-surface)' }}>
+                            Restaurar larguras
+                        </button>
+                    )}
+                </div>
+            )}
             <SortableContext items={layoutOrder} strategy={rectSortingStrategy}>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 pb-12 mt-4">
                     {layoutOrder.map(id => {
                         const block = BLOCKS[id];
                         if (!block) return null;
-                        return <SortableItem key={id} id={id} block={block} isEditMode={isEditMode}
-                            oculto={ocultos.includes(id)} onAlternarOculto={alternarOculto} />;
+                        // Largura escolhida no modo Layout; sem escolha, a de fábrica do quadro
+                        const largura = larguras[id] ?? larguraPadrao(block.colSpan);
+                        return <SortableItem key={id} id={id} block={{ ...block, colSpan: CLASSE_LARGURA[largura] }} isEditMode={isEditMode}
+                            oculto={ocultos.includes(id)} onAlternarOculto={alternarOculto}
+                            largura={largura} onMudarLargura={mudarLargura} />;
                     })}
                 </div>
             </SortableContext>
