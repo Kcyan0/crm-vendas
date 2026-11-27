@@ -246,7 +246,7 @@ export function DashboardGrid({
                                             <td className="py-2.5 text-center text-white text-[10px] xl:text-xs">{leads}</td>
                                             <td className="py-2.5 text-center text-white text-[10px] xl:text-xs">{vendas}</td>
                                             <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{taxaConv}%</td>
-                                            <td className="py-2.5 text-center text-red-500 font-bold text-[10px] xl:text-xs">{taxaReemb}%</td>
+                                            <td className={`py-2.5 text-center font-bold text-[10px] xl:text-xs ${reembolsos > 0 ? 'text-red-500' : 'text-muted'}`}>{taxaReemb}%</td>
                                         </tr>
                                     );
                                 })}
@@ -290,7 +290,7 @@ export function DashboardGrid({
                                             <td className="py-2.5 text-center text-white text-[10px] xl:text-xs">{leads}</td>
                                             <td className="py-2.5 text-center text-white text-[10px] xl:text-xs">{vendas}</td>
                                             <td className="py-2.5 text-center text-[#22D3EE] font-bold text-[10px] xl:text-xs">{taxaConv}%</td>
-                                            <td className="py-2.5 text-center text-red-500 font-bold text-[10px] xl:text-xs">{taxaReemb}%</td>
+                                            <td className={`py-2.5 text-center font-bold text-[10px] xl:text-xs ${reembolsos > 0 ? 'text-red-500' : 'text-muted'}`}>{taxaReemb}%</td>
                                         </tr>
                                     );
                                 })}
@@ -416,7 +416,8 @@ export function DashboardGrid({
                     <div className="glass-panel p-4 rounded-xl flex flex-col h-full border border-white/5">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="text-xs sm:text-sm font-bold text-white">Reembolsos & Prejuízo</h3>
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg" style={{ background: '#ef4444', color: '#fff' }}>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg"
+                                style={totalQtd > 0 ? { background: '#ef4444', color: '#fff' } : { background: 'var(--bg-surface-2)', color: 'var(--text-sec)' }}>
                                 {metrics?.chargebackRate || '0.0'}% tx
                             </span>
                         </div>
