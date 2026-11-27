@@ -23,7 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               var t = localStorage.getItem('feracrm_theme') || 'verde';
               var m = localStorage.getItem('feracrm_mode')  || 'preto';
               var themes = {
-                verde:    ['#BEFF00','#A8E800','190,255,0','#0A0A0A','#BEFF00'],
+                verde:    ['#BEFF00','#A8E800','190,255,0','#0A0A0A','#BCD32D'],
                 ciano:    ['#22D3EE','#06B6D4','34,211,238','#0A0A0A','#22D3EE'],
                 roxo:     ['#A78BFA','#8B5CF6','167,139,250','#0A0A0A','#A78BFA'],
                 laranja:  ['#FB923C','#F97316','251,146,60','#0A0A0A','#FB923C'],

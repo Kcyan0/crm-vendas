@@ -9,7 +9,9 @@ export const THEMES: Record<ThemeId, {
     label: string; accent: string; accentHover: string;
     accentRgb: string; accentText: string; logoBg: string;
 }> = {
-    verde:    { label: "Verde Neon", accent: "#BEFF00", accentHover: "#A8E800", accentRgb: "190,255,0",   accentText: "#0A0A0A", logoBg: "#BEFF00" },
+    // logoBg é o fundo da logo: o desenho (/logo-mark.png) é branco e transparente e fica por cima dessa cor.
+    // No verde fica o verde original da marca.
+    verde:    { label: "Verde Neon", accent: "#BEFF00", accentHover: "#A8E800", accentRgb: "190,255,0",   accentText: "#0A0A0A", logoBg: "#BCD32D" },
     ciano:    { label: "Azul Ciano", accent: "#22D3EE", accentHover: "#06B6D4", accentRgb: "34,211,238",  accentText: "#0A0A0A", logoBg: "#22D3EE" },
     roxo:     { label: "Roxo",       accent: "#A78BFA", accentHover: "#8B5CF6", accentRgb: "167,139,250", accentText: "#0A0A0A", logoBg: "#A78BFA" },
     laranja:  { label: "Laranja",    accent: "#FB923C", accentHover: "#F97316", accentRgb: "251,146,60",  accentText: "#0A0A0A", logoBg: "#FB923C" },

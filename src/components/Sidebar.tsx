@@ -77,9 +77,8 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
                             className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center transition-colors duration-300"
                             style={{ background: 'var(--logo-bg)', border: '2px solid rgba(var(--accent-rgb), 0.3)' }}
                         >
-                            {/* /logo-transparent.png nunca existiu: o onError que trocava para /logo.png
-                                às vezes disparava antes de a página ficar interativa e a imagem ficava quebrada */}
-                            <img src="/logo.png" alt="H SALES Logo" className="w-full h-full object-cover" />
+                            {/* Desenho branco com fundo transparente: a cor vem do --logo-bg, que segue a cor escolhida */}
+                            <img src="/logo-mark.png" alt="H SALES Logo" className="w-full h-full object-cover" />
                         </div>
                         <div className="flex flex-col leading-tight">
                             <span className="font-black text-lg tracking-tight leading-none" style={{ color: 'var(--text-pri)' }}>H SALES</span>

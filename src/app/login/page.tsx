@@ -65,8 +65,8 @@ export default function LoginPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-accent rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
         
         <div className="max-w-md w-full flex flex-col items-center text-center z-10">
-          <div className="w-32 h-32 rounded-3xl overflow-hidden mb-8 border-4 border-[rgba(var(--accent-rgb),0.2)] shadow-[0_0_40px_rgba(var(--accent-rgb),0.1)]">
-            <img src="/logo.png" alt="H SALES Logo" className="w-full h-full object-cover" />
+          <div className="w-32 h-32 rounded-3xl overflow-hidden mb-8 border-4 border-[rgba(var(--accent-rgb),0.2)] shadow-[0_0_40px_rgba(var(--accent-rgb),0.1)]" style={{ background: 'var(--logo-bg)' }}>
+            <img src="/logo-mark.png" alt="H SALES Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-4xl font-black mb-4 tracking-tight">
             H SALES <span className="text-accent">CRM</span>

@@ -12,8 +12,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* Mobile Top Bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 sticky top-0 z-40 shrink-0" style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--sidebar-border)' }}>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0" style={{ border: '1px solid rgba(var(--accent-rgb),0.3)' }}>
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 transition-colors duration-300" style={{ background: 'var(--logo-bg)', border: '1px solid rgba(var(--accent-rgb),0.3)' }}>
+            <img src="/logo-mark.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
           <span className="font-black tracking-tight leading-none text-sm" style={{ color: 'var(--text-pri)' }}>H SALES CRM</span>
         </div>
