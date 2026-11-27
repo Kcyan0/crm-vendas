@@ -3,3 +3,6 @@ node_modules/
 .env.local
 *.sqlite
 db/database.sqlite
+
+# SQL com segredo preenchido, só no computador
+*.local.sql

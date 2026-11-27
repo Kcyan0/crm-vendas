@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
+import ConviteAvisosCall from "@/components/ConviteAvisosCall";
 import { Menu } from "lucide-react";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // App instalável: o /sw.js só mostra a tela "Sem conexão" quando cai a internet (não guarda páginas nem dados)
+  // App instalável: o /sw.js mostra a tela "Sem conexão" quando cai a internet e os avisos de call
+  // (não guarda páginas nem dados)
   useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
@@ -35,6 +37,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <main className="flex-1 overflow-y-auto w-full relative h-[calc(100vh-73px)] md:h-full p-4 md:p-8 transition-colors duration-250" style={{ background: 'var(--bg-app)' }}>
         {children}
       </main>
+
+      {/* Convite dos avisos de call, uma vez ao entrar (some depois de responder) */}
+      <ConviteAvisosCall />
     </div>
   );
 }
