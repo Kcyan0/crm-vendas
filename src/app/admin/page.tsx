@@ -267,7 +267,7 @@ export default function AdminPage() {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Buscar atividade ou usuário..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none transition-all"
+                    className="campo-com-icone w-full pr-4 py-3 rounded-xl text-sm outline-none transition-all"
                     style={{
                         background: "var(--bg-surface)",
                         border: "1px solid var(--border-str)",

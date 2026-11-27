@@ -94,6 +94,14 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
 }
 option { background: var(--bg-surface); color: var(--text-pri); }
+/* A regra acima vale para todo campo e passa por cima das classes do Tailwind (padding, fundo, borda).
+   Campo de busca com ícone à esquerda: sem isto o ícone ficava em cima do texto ("🔍uscar lead") */
+.campo-com-icone { padding-left: 2.5rem; }
+/* Campo dentro de uma caixa que já tem fundo e borda (ex.: datas do Quadro de Leads): sem caixa dentro de caixa */
+.campo-limpo,
+.campo-limpo:focus { background: transparent; border: none; box-shadow: none; }
+/* No modo Preto, calendário, seletores e caixas de marcar do navegador também ficam escuros */
+[data-mode="preto"] { color-scheme: dark; }
 
 /* Primary button */
 button.btn-primary {
