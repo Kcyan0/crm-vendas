@@ -72,24 +72,34 @@ function DonutChart({ data, title, subtitle, format }: {
     format: (v: number) => string;
 }) {
     const total = data.reduce((s, d) => s + d.value, 0);
+    // Do maior para o menor e sem os zerados. A cor vai junto com cada projeto: antes a rosca pulava os
+    // zerados e a legenda não, e as cores da rosca não batiam com as da legenda
+    const itens = data.filter(d => d.value > 0).sort((a, b) => b.value - a.value)
+        .map((d, i) => ({ ...d, cor: COLORS[i % COLORS.length] }));
+    const zerados = data.length - itens.length;
     return (
         <div className="glass-panel bg-surface p-5 flex flex-col">
             <div className="mb-4">
                 <h4 className="text-base font-bold text-white">{title}</h4>
                 <p className="text-xs text-sec mt-0.5">{subtitle}</p>
             </div>
+            {itens.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center border-2 border-dashed rounded-xl text-xs text-sec" style={{ minHeight: 180, borderColor: 'var(--border)' }}>
+                    Sem valores no período
+                </div>
+            ) : (
             <div className="flex gap-4 flex-1 min-h-0">
                 <div className="flex-1 min-w-0" style={{ minHeight: 180 }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
-                                data={data.filter(d => d.value > 0)}
+                                data={itens}
                                 cx="50%" cy="50%"
                                 innerRadius="55%" outerRadius="80%"
                                 paddingAngle={2}
                                 dataKey="value"
                             >
-                                {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                {itens.map(d => <Cell key={d.name} fill={d.cor} />)}
                             </Pie>
                             <Tooltip formatter={(v: any) => format(v)} contentStyle={{ background: 'var(--bg-surface)', border: '1px solid #333', borderRadius: 10 }} />
                         </PieChart>
@@ -99,21 +109,27 @@ function DonutChart({ data, title, subtitle, format }: {
                     <div className="flex justify-between text-[10px] font-bold text-muted uppercase mb-1 px-1">
                         <span>Projeto</span><span>Valor</span>
                     </div>
-                    {data.map((d, i) => (
+                    {itens.map(d => (
                         <div key={d.name} className="flex items-center justify-between gap-2 px-1">
                             <div className="flex items-center gap-2 min-w-0">
-                                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                                <span className="text-xs text-[#aaa] truncate">{d.name}</span>
+                                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.cor }} />
+                                <span className="text-xs text-sec truncate">{d.name}</span>
                             </div>
                             <span className="text-xs font-bold text-white shrink-0">{format(d.value)}</span>
                         </div>
                     ))}
+                    {zerados > 0 && (
+                        <p className="text-[10px] px-1" style={{ color: 'var(--text-muted)' }}>
+                            + {zerados} {zerados === 1 ? 'projeto' : 'projetos'} sem valor no período
+                        </p>
+                    )}
                     <div className="border-t border-str mt-1 pt-1 flex justify-between px-1">
                         <span className="text-[10px] font-bold text-muted uppercase">Total</span>
                         <span className="text-xs font-black text-accent">{format(total)}</span>
                     </div>
                 </div>
             </div>
+            )}
         </div>
     );
 }
@@ -194,8 +210,30 @@ export default function OverviewPage() {
             </div>
 
             {loading && !data ? (
-                <div className="flex items-center justify-center h-64">
-                    <Loader2 size={36} className="animate-spin text-accent" />
+                <div className="space-y-5" aria-busy="true" aria-label="Carregando a Visão Geral">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="glass-panel bg-surface p-5 flex flex-col gap-4">
+                                <div className="h-3 w-24 rounded animate-pulse" style={{ background: 'var(--bg-surface-3)' }} />
+                                <div className="h-7 w-28 rounded animate-pulse" style={{ background: 'var(--bg-surface-3)' }} />
+                                <div className="h-2.5 w-32 rounded animate-pulse" style={{ background: 'var(--bg-surface-2)' }} />
+                            </div>
+                        ))}
+                    </div>
+                    {Array.from({ length: 2 }).map((_, linha) => (
+                        <div key={linha} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                            {Array.from({ length: 2 }).map((_, i) => (
+                                <div key={i} className="glass-panel bg-surface p-5 flex gap-6 items-center" style={{ minHeight: 260 }}>
+                                    <div className="w-40 h-40 rounded-full animate-pulse shrink-0" style={{ background: 'var(--bg-surface-2)' }} />
+                                    <div className="flex-1 space-y-3">
+                                        {Array.from({ length: 5 }).map((_, j) => (
+                                            <div key={j} className="h-3 rounded animate-pulse" style={{ background: 'var(--bg-surface-3)', width: `${85 - j * 12}%` }} />
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
                 </div>
             ) : (
                 <>
