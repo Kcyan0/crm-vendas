@@ -174,14 +174,22 @@ export default function OverviewPage() {
                 </div>
 
                 {/* Period picker */}
-                <div className="flex items-center gap-3 flex-wrap">
-                    <div className="flex items-center gap-2 bg-surface border border-str rounded-xl px-3 py-2">
-                        <Calendar size={14} className="text-accent" />
-                        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                            className="bg-transparent text-white text-sm outline-none w-32" />
-                        <span className="text-muted text-sm">–</span>
-                        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                            className="bg-transparent text-white text-sm outline-none w-32" />
+                <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto">
+                    {/* No celular a caixa ocupa a linha e as datas ficam uma embaixo da outra, com "De" e "Até"
+                        (lado a lado o "27 de nov. de 2026" do iPhone não cabia) */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-surface border border-str rounded-xl px-3 py-2 w-full sm:w-auto">
+                        <Calendar size={14} className="text-accent hidden sm:block" />
+                        <label className="flex items-center gap-2 min-w-0">
+                            <span className="sm:hidden text-xs font-bold text-muted w-8 shrink-0">De</span>
+                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                                className="bg-transparent text-white text-sm outline-none flex-1 min-w-0 sm:flex-none sm:w-32" />
+                        </label>
+                        <span className="text-muted text-sm hidden sm:inline">–</span>
+                        <label className="flex items-center gap-2 min-w-0">
+                            <span className="sm:hidden text-xs font-bold text-muted w-8 shrink-0">Até</span>
+                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                                className="bg-transparent text-white text-sm outline-none flex-1 min-w-0 sm:flex-none sm:w-32" />
+                        </label>
                     </div>
 
                     <div className="relative">

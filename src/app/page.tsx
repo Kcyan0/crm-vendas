@@ -1242,11 +1242,18 @@ export default function KanbanBoard() {
               className="campo-com-icone pr-4 py-2 bg-surface border border-str rounded-xl text-white focus:outline-none w-full"
             />
           </div>
-          {/* No celular a caixa ocupa a linha e as datas dividem o espaço (com a letra de 16px do celular passavam da tela) */}
-          <div className="flex items-center gap-1 bg-surface border border-str rounded-xl px-1.5 w-full sm:w-auto">
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="campo-limpo text-sm text-sec p-2 min-w-0 flex-1 sm:flex-none" title="Data Inicial" />
-            <span className="text-sec">–</span>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="campo-limpo text-sm text-sec p-2 min-w-0 flex-1 sm:flex-none" title="Data Final" />
+          {/* No celular a caixa ocupa a linha e as datas ficam uma embaixo da outra, com "De" e "Até":
+              o iPhone escreve "27 de nov. de 2026" e lado a lado não cabia */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1 bg-surface border border-str rounded-xl px-1.5 w-full sm:w-auto">
+            <label className="flex items-center min-w-0">
+              <span className="sm:hidden text-xs font-bold text-muted w-9 shrink-0 pl-1.5">De</span>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="campo-limpo text-sm text-sec p-2 min-w-0 flex-1 sm:flex-none" title="Data Inicial" />
+            </label>
+            <span className="text-sec hidden sm:inline">–</span>
+            <label className="flex items-center min-w-0 border-t border-str sm:border-t-0">
+              <span className="sm:hidden text-xs font-bold text-muted w-9 shrink-0 pl-1.5">Até</span>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="campo-limpo text-sm text-sec p-2 min-w-0 flex-1 sm:flex-none" title="Data Final" />
+            </label>
           </div>
           {/* ─── Export dropdown ──────────────────────────────────── */}
           {/* Botões de ação à direita; só o "Novo" fica na cor de destaque */}
@@ -2051,7 +2058,7 @@ export default function KanbanBoard() {
 
                       {/* Pago — data real de recebimento, nunca futura (dinheiro que ainda vai entrar é Pendente) */}
                       {p.status_pagamento === 'pago' && (
-                        <div className="mt-2 flex items-center gap-2">
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span className="text-[10px] text-sec">Data de recebimento:</span>
                           <input
                             type="date"
@@ -2066,7 +2073,7 @@ export default function KanbanBoard() {
 
                       {/* Pendente — data prevista (nao entra no caixa) */}
                       {p.status_pagamento === 'pendente' && (
-                        <div className="mt-2 flex items-center gap-2">
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span className="text-[10px] text-sec">Previsao de recebimento:</span>
                           <input
                             type="date"
@@ -2762,7 +2769,8 @@ export default function KanbanBoard() {
               <div className="px-5 py-4 space-y-4 overflow-y-auto">
                 <div>
                   <span className={rotulo} style={{ color: 'var(--text-sec)' }}>Período</span>
-                  <div className="flex items-center gap-2">
+                  {/* No celular uma data embaixo da outra (lado a lado o "27 de nov. de 2026" do iPhone não cabia) */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <input
                       type="date"
                       aria-label="Data inicial"
@@ -2771,7 +2779,7 @@ export default function KanbanBoard() {
                       className="flex-1 min-w-0 bg-app border border-str text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--accent)]"
                       style={{ color: 'var(--text-pri)' }}
                     />
-                    <span style={{ color: 'var(--text-sec)' }}>a</span>
+                    <span className="hidden sm:inline" style={{ color: 'var(--text-sec)' }}>a</span>
                     <input
                       type="date"
                       aria-label="Data final"

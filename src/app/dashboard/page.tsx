@@ -432,23 +432,24 @@ export default function Dashboard() {
                     <p className="mt-1 text-sm" style={{ color: TEXT_SEC }}>Visão geral financeira e de performance da operação.</p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-end gap-3">
+                {/* No celular o filtro ocupa a largura toda (encostado à direita, a data do iPhone passava da caixa) */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
                     <button 
                         onClick={() => setIsEditMode(!isEditMode)}
-                        className={`flex items-center gap-2 px-4 py-2 font-bold rounded-lg border transition-all ${isEditMode ? 'bg-accent text-black border-accent' : 'bg-app text-sec border-str hover:text-white hover:border-[#444]'}`}
+                        className={`self-end sm:self-auto flex items-center gap-2 px-4 py-2 font-bold rounded-lg border transition-all ${isEditMode ? 'bg-accent text-black border-accent' : 'bg-app text-sec border-str hover:text-white hover:border-[#444]'}`}
                         style={{ height: '42px' }}
                     >
                         <Settings size={16} />
                         {isEditMode ? 'Salvar Layout' : 'Layout'}
                     </button>
-                    <div className="flex flex-col sm:flex-row items-center gap-3 p-2 rounded-xl" style={{ background: DARK, border: `1px solid ${BORDER}` }}>
-                    <div className="flex flex-col w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 p-2 rounded-xl w-full sm:w-auto" style={{ background: DARK, border: `1px solid ${BORDER}` }}>
+                    <div className="flex flex-col w-full sm:w-auto min-w-0">
                         <span className="text-[10px] uppercase font-bold px-2" style={{ color: TEXT_SEC }}>Data Inicial</span>
                         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
                             className="bg-transparent border-none text-sm font-medium text-white outline-none focus:ring-0 p-1 w-full" />
                     </div>
                     <span className="hidden sm:inline" style={{ color: '#333' }}>–</span>
-                    <div className="flex flex-col w-full sm:w-auto">
+                    <div className="flex flex-col w-full sm:w-auto min-w-0">
                         <span className="text-[10px] uppercase font-bold px-2" style={{ color: TEXT_SEC }}>Data Final</span>
                         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
                             className="bg-transparent border-none text-sm font-medium text-white outline-none focus:ring-0 p-1 w-full" />

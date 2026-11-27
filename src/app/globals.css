@@ -106,6 +106,10 @@ option { background: var(--bg-surface); color: var(--text-pri); }
 @media (pointer: coarse) {
   input, select, textarea { font-size: 16px; }
 }
+/* Datas no iPhone: o Safari escreve "27 de nov. de 2026" e o campo tem largura mínima própria,
+   que passava da caixa. Assim o campo respeita a largura de onde está; vazio, não encolhe de altura */
+input[type="date"], input[type="datetime-local"], input[type="time"] { min-width: 0; max-width: 100%; }
+input::-webkit-date-and-time-value { text-align: left; min-height: 1.5em; }
 
 /* Primary button */
 button.btn-primary {
