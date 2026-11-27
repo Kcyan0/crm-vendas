@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIcon, BellRing, Loader2, ChevronDown, CalendarClock, SlidersHorizontal, Copy, Check } from "lucide-react";
 import { useProject } from '@/context/ProjectContext';
@@ -106,6 +106,12 @@ const KANBAN_COLUMNS = [
   "Reembolsado",
   "Loss"
 ];
+
+// Tela de toque: o arrastar e soltar do navegador não funciona com o dedo (Android). Lá, segurar o card
+// abre o "Mover para" (pedido em 2026-11-27). No servidor não há tela: começa como mouse.
+const ehToque = () => window.matchMedia('(pointer: coarse)').matches;
+const semAssinatura = () => () => {};
+const SEGURAR_MS = 450;
 
 export default function KanbanBoard() {
   const { selectedProject, userName, isLoading: carregandoProjeto } = useProject();
@@ -701,8 +707,40 @@ export default function KanbanBoard() {
     arrastandoRef.current = false;
     e.preventDefault();
     const id_lead = parseInt(e.dataTransfer.getData("id_lead"));
-
     if (!id_lead) return;
+    await moverLead(id_lead, status_novo);
+  };
+
+  // ── Celular: segurar o card abre o "Mover para" ─────────────────────────────
+  const telaDeToque = useSyncExternalStore(semAssinatura, ehToque, () => false);
+  const [leadAMover, setLeadAMover] = useState<Lead | null>(null);
+  const segurarRef = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null);
+  const cancelarSegurar = () => {
+    if (segurarRef.current) clearTimeout(segurarRef.current.timer);
+    segurarRef.current = null;
+  };
+  const comecarSegurar = (e: React.TouchEvent, lead: Lead) => {
+    cancelarSegurar();
+    const toque = e.touches[0];
+    segurarRef.current = {
+      x: toque.clientX, y: toque.clientY,
+      timer: setTimeout(() => {
+        segurarRef.current = null;
+        navigator.vibrate?.(15);
+        setLeadAMover(lead);
+      }, SEGURAR_MS),
+    };
+  };
+  // Rolou a tela em vez de segurar parado: não é para abrir o menu
+  const moverDedo = (e: React.TouchEvent) => {
+    const inicio = segurarRef.current;
+    if (!inicio) return;
+    const toque = e.touches[0];
+    if (Math.abs(toque.clientX - inicio.x) > 10 || Math.abs(toque.clientY - inicio.y) > 10) cancelarSegurar();
+  };
+
+  // Mesmo caminho do soltar na coluna: Venda abre a venda, Remarcado pede a data, Loss pede o motivo...
+  const moverLead = async (id_lead: number, status_novo: string) => {
 
     // Intercept when dropping on "Venda"
     if (status_novo === "Venda") {
@@ -1560,12 +1598,21 @@ export default function KanbanBoard() {
                   return (
                   <div
                     key={lead.id_lead}
-                    draggable
+                    draggable={!telaDeToque}
                     onDragStart={(e) => handleDragStart(e, lead.id_lead)}
                     onDragEnd={() => { arrastandoRef.current = false; }}
                     onDoubleClick={() => handleOpenDetail(lead)}
+                    onTouchStart={telaDeToque ? (e) => comecarSegurar(e, lead) : undefined}
+                    onTouchMove={telaDeToque ? moverDedo : undefined}
+                    onTouchEnd={telaDeToque ? cancelarSegurar : undefined}
+                    onTouchCancel={telaDeToque ? cancelarSegurar : undefined}
+                    // No celular o "segurar" é nosso: sem o menu de copiar/compartilhar do navegador
+                    onContextMenu={telaDeToque ? (e) => e.preventDefault() : undefined}
                     className={`glass-panel p-4 cursor-grab active:cursor-grabbing hover:-translate-y-1 ${followAtrasado ? '' : 'border-str'} hover:border-orange-300 transition-all select-none group relative bg-surface`}
-                    style={followAtrasado ? { borderColor: 'rgba(239,68,68,0.6)', boxShadow: 'inset 3px 0 0 #ef4444' } : undefined}
+                    style={{
+                      ...(followAtrasado ? { borderColor: 'rgba(239,68,68,0.6)', boxShadow: 'inset 3px 0 0 #ef4444' } : {}),
+                      WebkitTouchCallout: 'none', // iPhone: segurar não abre o menu de copiar/compartilhar
+                    }}
                   >
                     <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                       <button
@@ -2383,6 +2430,42 @@ export default function KanbanBoard() {
       )}
 
       {/* Remarcar: nova data da call */}
+      {/* ── Celular: "Mover para" ao segurar o card ───────────────────────────── */}
+      {leadAMover && (
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60" onClick={() => setLeadAMover(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="mover-titulo"
+            className="modal-surface w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-4"
+            style={{ border: '1px solid var(--border-str)', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+            onClick={(e) => e.stopPropagation()}>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-sec)' }}>Mover para</p>
+            <p id="mover-titulo" className="font-bold text-base truncate mb-3" style={{ color: 'var(--text-pri)' }}>{leadAMover.nome}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {KANBAN_COLUMNS.map((col) => {
+                const atual = leadAMover.status_atual === col || (col === 'Loss' && leadAMover.status_atual === 'Nao prosseguiu');
+                return (
+                  <button key={col} type="button" disabled={atual}
+                    onClick={() => { const lead = leadAMover; setLeadAMover(null); moverLead(lead.id_lead, col); }}
+                    className="px-3 py-3 rounded-xl text-sm font-semibold text-left transition-colors disabled:opacity-40 bg-surface-2 border border-str"
+                    style={{ color: 'var(--text-pri)' }}>
+                    {col}{atual ? ' · atual' : ''}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button type="button" onClick={() => { const lead = leadAMover; setLeadAMover(null); handleOpenDetail(lead); }}
+                className="flex-1 px-3 py-2.5 rounded-xl text-sm font-semibold border border-str" style={{ color: 'var(--text-pri)' }}>
+                Abrir lead
+              </button>
+              <button type="button" onClick={() => setLeadAMover(null)}
+                className="flex-1 px-3 py-2.5 rounded-xl text-sm font-semibold" style={{ color: 'var(--text-sec)' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {remarcarLead && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
           <div className="modal-surface glass-panel w-full max-w-md p-6 border border-amber-400/30 rounded-2xl shadow-[0_0_60px_rgba(245,158,11,0.12)]">
