@@ -42,7 +42,7 @@ export async function POST(request: Request) {
         // Na primeira vez, confirma na hora que o caminho inteiro funciona (chave, banco, celular)
         const chegou = primeiraVez && await enviarPush(
             { endpoint, p256dh, auth: authChave },
-            { titulo: 'Avisos de call ativados', corpo: 'Você vai receber um aviso 15 minutos antes de cada call sua.', tag: 'avisos-ativados' },
+            { titulo: 'Avisos ativados', corpo: 'Resumo das calls às 9h, aviso 1 hora antes de cada call e as vendas do time.', tag: 'avisos-ativados' },
         );
         return NextResponse.json({ success: true, primeiraVez, confirmacaoEnviada: chegou });
     } catch (erro) {

@@ -25,7 +25,7 @@ export async function enviarPush(inscricao: Inscricao, aviso: AvisoPush): Promis
         await webpush.sendNotification(
             { endpoint: inscricao.endpoint, keys: { p256dh: inscricao.p256dh, auth: inscricao.auth } },
             JSON.stringify(aviso),
-            { TTL: 15 * 60, urgency: 'high' }, // aviso de call não serve depois de 15 min
+            { TTL: 60 * 60, urgency: 'high' }, // celular desligado: aviso com mais de 1 hora já não serve
         );
         return true;
     } catch (erro: unknown) {

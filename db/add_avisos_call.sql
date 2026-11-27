@@ -1,7 +1,8 @@
 -- ============================================================
 -- MIGRAÇÃO: Avisos de call no celular (2026-11-27)
--- Notificação "Call em 15 min" para o closer e o SDR do lead, no app
--- instalado (iPhone com iOS 16.4+ e Android). Execute no SQL Editor
+-- Avisos no app instalado (iPhone com iOS 16.4+ e Android): resumo das
+-- calls às 9h, aviso 1 hora antes de cada call e vendas do time
+-- (regras em src/lib/avisosPush.ts). Execute no SQL Editor
 -- do Supabase. A versão pronta, com o segredo do relógio já preenchido,
 -- fica só no computador: db/add_avisos_call.local.sql (fora do Git).
 -- ============================================================
@@ -30,8 +31,8 @@ CREATE TABLE IF NOT EXISTS avisos_call_enviados (
 ALTER TABLE push_inscricoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE avisos_call_enviados ENABLE ROW LEVEL SECURITY;
 
--- 3. Relógio: a cada minuto o banco chama o CRM, que manda os avisos das
---    calls dos próximos 15 minutos. Troque COLE_AQUI_O_CRON_SECRET pelo
+-- 3. Relógio: a cada minuto o banco chama o CRM, que manda os avisos que
+--    estiverem na hora. Troque COLE_AQUI_O_CRON_SECRET pelo
 --    mesmo CRON_SECRET cadastrado na Vercel.
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;

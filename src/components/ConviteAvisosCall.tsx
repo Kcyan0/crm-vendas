@@ -7,8 +7,9 @@ import { useProject } from "@/context/ProjectContext";
 import { VAPID_CHAVE_PUBLICA } from "@/lib/pushChave";
 
 /**
- * Convite dos avisos de call (2026-11-27): ao entrar no CRM, pergunta uma vez se a pessoa quer
- * receber um aviso 15 min antes de cada call dela. Sem item novo no menu (pedido em 2026-11-27).
+ * Convite dos avisos no celular (2026-11-27): ao entrar no CRM, pergunta uma vez se a pessoa quer
+ * receber os avisos (resumo das calls às 9h, 1 hora antes de cada call e vendas do time; regras em
+ * src/lib/avisosPush.ts). Sem item novo no menu (pedido em 2026-11-27).
  * O pedido de permissão do celular sai do toque em "Ativar": o iPhone só deixa pedir depois de um toque.
  * - "Agora não": pergunta de novo em 7 dias.
  * - Já permitiu: confere a cada abertura que o aparelho está guardado no e-mail de quem está logado.
@@ -111,9 +112,9 @@ export default function ConviteAvisosCall() {
                     <BellRing size={20} className="text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p id="convite-avisos-titulo" className="font-bold text-sm" style={{ color: "var(--text-pri)" }}>Avisos de call</p>
+                    <p id="convite-avisos-titulo" className="font-bold text-sm" style={{ color: "var(--text-pri)" }}>Avisos no celular</p>
                     <p className="text-sm mt-0.5" style={{ color: "var(--text-sec)" }}>
-                        Quer receber um aviso 15 minutos antes de cada call sua?
+                        Quer receber o resumo das suas calls às 9h, um aviso 1 hora antes de cada call e as vendas do time?
                     </p>
                     {erro && <p className="text-xs mt-2" style={{ color: "#ef4444" }}>{erro}</p>}
                 </div>

@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import supabase from '@/lib/db';
 import { logActivity } from '@/lib/logger';
 import { pagoComDataFutura } from '@/lib/financial';
 import { comAviso } from '@/lib/avisarMudanca';
+import { avisarVenda } from '@/lib/avisosPush';
 
 export async function GET(request: Request) {
     try {
@@ -261,6 +262,13 @@ async function rotaPOST(request: Request) {
         if (observacoes) leadUpdate.observacoes_gerais = observacoes;
         const { error: leadErr } = await supabase.from('leads').update(leadUpdate).eq('id_lead', id_lead);
         if (leadErr) throw leadErr;
+
+        // Venda nova (não edição): aviso no celular para todo o projeto com o VGV, depois da resposta
+        const vendaNova = !existing || existing.length === 0;
+        if (vendaNova) {
+            after(() => avisarVenda({ idLead: id_lead, valor: totalVendaBruta, idCloser: id_closer ?? null })
+                .catch((e) => console.error('Falha no aviso de venda', e?.message)));
+        }
 
         return NextResponse.json({ success: true, id_oportunidade });
     } catch (error: any) {
