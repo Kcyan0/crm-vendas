@@ -127,8 +127,8 @@ function CalendarContent() {
   }, [selectedProject, month]);
 
   // Tempo real: chamada marcada ou venda salva por outra pessoa aparece sozinha
-  useAoVivo(['chamadas'], selectedProject?.id_projeto, () => { fetchChamadas(true); });
-  useAoVivo(['vendas'], selectedProject?.id_projeto, () => { fetchPendingVendas(); });
+  useAoVivo(['chamadas'], selectedProject?.id_projeto, () => { fetchChamadas(true); }, { intervaloMinimoMs: 15_000 });
+  useAoVivo(['vendas'], selectedProject?.id_projeto, () => { fetchPendingVendas(); }, { intervaloMinimoMs: 15_000 });
 
   const fetchTeamAndLeads = useCallback(async () => {
     if (!selectedProject) return;

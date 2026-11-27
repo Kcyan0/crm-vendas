@@ -78,7 +78,7 @@ export default function FollowUpPage() {
   };
 
   // Tempo real: follow registrado, lead ou venda salvos por outra pessoa atualizam a lista sozinhos
-  useAoVivo(['follow-ups', 'leads', 'vendas'], selectedProject?.id_projeto, () => { fetchLeads(); });
+  useAoVivo(['follow-ups', 'leads', 'vendas'], selectedProject?.id_projeto, () => { fetchLeads(); }, { intervaloMinimoMs: 15_000 });
 
   const fetchUsers = async () => {
     if (!selectedProject) return;

@@ -38,7 +38,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIs
     }, [selectedProject, pathname]);
 
     // Tempo real: follow ou lead salvos por outra pessoa atualizam o contador de atrasados
-    useAoVivo(['follow-ups', 'leads'], selectedProject?.id_projeto, () => window.dispatchEvent(new Event(FOLLOWUPS_CHANGED_EVENT)));
+    useAoVivo(['follow-ups', 'leads'], selectedProject?.id_projeto, () => window.dispatchEvent(new Event(FOLLOWUPS_CHANGED_EVENT)), { intervaloMinimoMs: 60_000 });
 
     const handleLogout = async () => {
         const supabase = createClient();

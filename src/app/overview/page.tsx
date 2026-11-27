@@ -158,8 +158,8 @@ export default function OverviewPage() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    // Tempo real: lead ou venda salvos em qualquer projeto atualizam os números sozinhos
-    useAoVivo(['leads', 'vendas'], 'todos', () => { fetchData(true); });
+    // Tempo real: lead ou venda salvos em qualquer projeto atualizam os números sozinhos (no máximo 1x por minuto)
+    useAoVivo(['leads', 'vendas'], 'todos', () => { fetchData(true); }, { intervaloMinimoMs: 60_000 });
 
     const applyPreset = (s: string, e: string) => {
         setStartDate(s);

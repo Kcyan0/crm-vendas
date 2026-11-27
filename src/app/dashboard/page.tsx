@@ -368,12 +368,12 @@ export default function Dashboard() {
         fetchMetrics(startDate, endDate);
     }, [selectedProject]);
 
-    // Tempo real: lead, venda, follow ou meta salvos por outra pessoa atualizam a Dashboard sozinhos,
-    // no período que já está aplicado (datas digitadas e não filtradas continuam esperando o Filtrar)
+    // Tempo real: lead, venda, follow ou meta salvos por outra pessoa atualizam a Dashboard sozinhos
+    // (no máximo uma vez por minuto), no período que já está aplicado (datas digitadas e não filtradas continuam esperando o Filtrar)
     useAoVivo(['leads', 'vendas', 'follow-ups', 'metas'], selectedProject?.id_projeto, () => {
         if (periodoAplicado) fetchMetrics(periodoAplicado.startDate, periodoAplicado.endDate);
         setVersaoAoVivo(v => v + 1);
-    });
+    }, { intervaloMinimoMs: 60_000 }); // pesada: no máximo uma vez por minuto
 
     const formatBRL = (val: number) =>
         new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);

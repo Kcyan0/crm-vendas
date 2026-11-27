@@ -8,7 +8,10 @@ import { CANAL_MUDANCAS, EVENTO_MUDANCA, type AvisoMudanca, type TipoMudanca } f
  * Lado das telas dos avisos em tempo real (ver src/lib/mudancas.ts): quando alguém salva,
  * a tela busca os dados de novo, sem F5.
  * - Uma conexão só para o CRM inteiro, dividida entre as telas que estão abertas.
- * - Vários avisos seguidos viram uma busca só (espera 1 s de calma).
+ * - Vários avisos seguidos viram uma busca só, juntando os leads que mudaram.
+ * - Cada tela espera um tempo um pouco diferente (até 2 s a mais), para as telas da equipe
+ *   não caírem todas no banco no mesmo segundo (2026-11-27, banco sobrecarregado).
+ * - Telas pesadas (Dashboard, Visão Geral) pedem um intervalo mínimo entre buscas.
  * - Aba escondida não busca: guarda que mudou e atualiza quando a pessoa volta.
  * - Se a conexão caiu e voltou (celular que dormiu, Wi-Fi que piscou), atualiza para não perder nada.
  */
@@ -37,27 +40,37 @@ function ligarCanal() {
 }
 
 const ESPERA_MS = 1000;
+const ESPALHAR_MS = 2000;
 // Aba escondida por mais que isso: ao voltar, atualiza mesmo sem aviso (o celular pode ter cortado a conexão)
 const ESCONDIDA_MS = 60_000;
+// Mais que isso de leads mudados de uma vez: busca a lista inteira
+const MAX_LEADS = 30;
+
+type Opcoes = {
+    /** Enquanto devolver true, espera (ex.: card sendo arrastado). */
+    pausar?: () => boolean;
+    /** Tempo mínimo entre duas buscas desta tela (telas pesadas). */
+    intervaloMinimoMs?: number;
+};
 
 /**
  * @param tipos     quais mudanças interessam a esta tela
  * @param projeto   projeto da tela; "todos" para telas que juntam todos os projetos (Visão Geral)
- * @param atualizar busca os dados de novo, sem tela de carregando
- * @param pausar    enquanto devolver true, espera (ex.: card sendo arrastado)
+ * @param atualizar busca os dados de novo, sem tela de carregando. Recebe os ids dos leads que mudaram,
+ *                  ou null quando não se sabe quais (aí busca tudo)
  */
 export function useAoVivo(
     tipos: TipoMudanca[],
     projeto: number | "todos" | null | undefined,
-    atualizar: () => void,
-    pausar?: () => boolean,
+    atualizar: (leads: number[] | null) => void,
+    opcoes: Opcoes = {},
 ) {
     // Sempre a versão mais nova das funções, sem religar a escuta a cada render
     const atualizarRef = useRef(atualizar);
-    const pausarRef = useRef(pausar);
+    const opcoesRef = useRef(opcoes);
     useEffect(() => {
         atualizarRef.current = atualizar;
-        pausarRef.current = pausar;
+        opcoesRef.current = opcoes;
     });
     const chaveTipos = tipos.join(",");
 
@@ -66,18 +79,29 @@ export function useAoVivo(
         const meusTipos = chaveTipos.split(",");
         let timer: ReturnType<typeof setTimeout> | undefined;
         let pendente = false;
+        let leadsMudados: Set<number> | null = new Set(); // null = buscar tudo
+        let ultimaBusca = 0;
         let escondidaDesde: number | null = document.hidden ? Date.now() : null;
 
         const rodar = () => {
             timer = undefined;
             if (document.hidden) { pendente = true; return; }
-            if (pausarRef.current?.()) { timer = setTimeout(rodar, ESPERA_MS); return; }
+            if (opcoesRef.current.pausar?.()) { timer = setTimeout(rodar, ESPERA_MS); return; }
+            const leads = leadsMudados && leadsMudados.size > 0 && leadsMudados.size <= MAX_LEADS ? [...leadsMudados] : null;
             pendente = false;
-            atualizarRef.current();
+            leadsMudados = new Set();
+            ultimaBusca = Date.now();
+            atualizarRef.current(leads);
         };
         const agendar = () => {
             if (timer) clearTimeout(timer);
-            timer = setTimeout(rodar, ESPERA_MS);
+            const minimo = opcoesRef.current.intervaloMinimoMs ?? 0;
+            const espera = Math.max(ESPERA_MS + Math.random() * ESPALHAR_MS, ultimaBusca + minimo - Date.now());
+            timer = setTimeout(rodar, espera);
+        };
+        const anotar = (aviso: AvisoMudanca | null) => {
+            if (!aviso || !aviso.leads?.length) leadsMudados = null;
+            else if (leadsMudados) aviso.leads.forEach((id) => leadsMudados!.add(id));
         };
 
         const ouvir: Ouvinte = (aviso) => {
@@ -85,6 +109,7 @@ export function useAoVivo(
                 if (!aviso.tipos.some((t) => meusTipos.includes(t))) return;
                 if (projeto !== "todos" && aviso.projeto !== null && aviso.projeto !== projeto) return;
             }
+            anotar(aviso);
             agendar();
         };
 
@@ -92,6 +117,7 @@ export function useAoVivo(
             if (document.hidden) { escondidaDesde = Date.now(); return; }
             const ficouMuitoTempo = escondidaDesde !== null && Date.now() - escondidaDesde > ESCONDIDA_MS;
             escondidaDesde = null;
+            if (ficouMuitoTempo) anotar(null);
             if (pendente || ficouMuitoTempo) agendar();
         };
 

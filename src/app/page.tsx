@@ -6,11 +6,16 @@ import { Search, Plus, Phone, Instagram, Clock, Download, Paperclip, X, ImageIco
 import { useProject } from '@/context/ProjectContext';
 import { exportLeadsToCSV, COLUNAS_CSV_LEADS } from '@/lib/exportUtils';
 import { MOTIVOS_LOSS, MOTIVO_LOSS_OUTRO, validarMotivoLoss } from '@/lib/motivosLoss';
-import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal } from '@/lib/brasilia';
+import { todayBrasilia, nowBrasiliaLocal, dbDateToBrasiliaLocal, addDaysToDate } from '@/lib/brasilia';
+import { dataDeReferenciaLocal } from '@/lib/periodoLead';
 import { createClient as createBrowserClient } from '@/lib/supabase/browser';
 import { followSituacao, diasDeAtraso } from '@/lib/followUp';
 import { lerCacheLeads, salvarCacheLeads } from '@/lib/leadsCache';
 import { useAoVivo } from '@/lib/useAoVivo';
+
+// O Quadro abre nos últimos 7 dias (hoje e os 6 anteriores), sem data final para as calls marcadas
+// para os próximos dias continuarem aparecendo (pedido em 2026-11-27: abrir com o banco inteiro pesava)
+const inicioPadraoQuadro = () => addDaysToDate(todayBrasilia(), -6);
 
 type Lead = {
   id_lead: number;
@@ -123,7 +128,7 @@ export default function KanbanBoard() {
   // Kanban filter state
   const [filterSdr, setFilterSdr] = useState("");
   const [filterCloser, setFilterCloser] = useState("");
-  const [startDate, setStartDate] = useState("");
+  const [startDate, setStartDate] = useState(inicioPadraoQuadro);
   const [endDate, setEndDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   // Payment method filter (multi-select)
@@ -521,8 +526,8 @@ export default function KanbanBoard() {
       if (requestId !== leadsRequestRef.current) return;
       if (Array.isArray(data)) {
         setLeads(data);
-        // Só a lista sem filtro de data é a que o painel mostra ao abrir
-        if (selectedProject && !startDate && !endDate) salvarCacheLeads(selectedProject.id_projeto, data);
+        // Só a lista do filtro padrão (últimos 7 dias) é a que o painel mostra ao abrir
+        if (selectedProject && startDate === inicioPadraoQuadro() && !endDate) salvarCacheLeads(selectedProject.id_projeto, data);
       } else {
         console.error('Erro ao carregar leads', data);
       }
@@ -540,7 +545,35 @@ export default function KanbanBoard() {
   // Tempo real: quando alguém salva um lead, venda ou follow neste projeto, o quadro se atualiza sozinho.
   // Espera soltar o card se a pessoa estiver arrastando um.
   const arrastandoRef = useRef(false);
-  useAoVivo(['leads', 'vendas', 'follow-ups'], selectedProject?.id_projeto, () => fetchLeads(true), () => arrastandoRef.current);
+  useAoVivo(['leads', 'vendas', 'follow-ups'], selectedProject?.id_projeto,
+    (ids) => (ids ? atualizarLeads(ids) : fetchLeads(true)),
+    { pausar: () => arrastandoRef.current });
+
+  // Troca só os cards que mudaram (busca leve) em vez de baixar a lista inteira de novo.
+  // Lead que saiu do projeto ou do período do filtro sai do quadro.
+  const atualizarLeads = async (ids: number[]) => {
+    if (!selectedProject) return;
+    // Uma busca completa em andamento traria o lead como era: busca tudo de novo
+    if (buscandoLeadsRef.current) { fetchLeads(true); return; }
+    try {
+      const query = new URLSearchParams({ projectId: String(selectedProject.id_projeto), ids: ids.join(',') });
+      const res = await fetch(`/api/leads?${query.toString()}`);
+      const novos = await res.json();
+      if (!Array.isArray(novos)) return;
+      const noPeriodo = (l: Lead) => {
+        const dia = dataDeReferenciaLocal(l).slice(0, 10);
+        return (!startDate || dia >= startDate) && (!endDate || dia <= endDate);
+      };
+      const trocar = new Set(ids);
+      setLeads((atuais) => {
+        const lista = [...atuais.filter((l) => !trocar.has(l.id_lead)), ...(novos as Lead[]).filter(noPeriodo)];
+        lista.sort((a, b) => dataDeReferenciaLocal(b).localeCompare(dataDeReferenciaLocal(a)) || b.id_lead - a.id_lead);
+        return lista;
+      });
+    } catch {
+      // Sem problema: a próxima mudança, ou a volta para a aba, traz tudo
+    }
+  };
 
   // Uma busca que começou antes de uma alteração pode trazer o lead como era: busca de novo
   const rebuscarSeEmAndamento = () => {

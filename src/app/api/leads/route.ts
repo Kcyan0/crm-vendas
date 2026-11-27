@@ -49,6 +49,9 @@ export async function GET(request: Request) {
             .order('data_entrada', { ascending: false });
 
         if (projectId) query = query.eq('id_projeto', projectId);
+        // ?ids=1,2 → só esses leads, no mesmo formato da lista (o Quadro troca só o card que mudou, tempo real)
+        const ids = (searchParams.get('ids') || '').split(',').filter((x) => /^\d+$/.test(x)).slice(0, 50).map(Number);
+        if (ids.length > 0) query = query.in('id_lead', ids);
         // Período pela data da call; lead sem call, pela data de entrada (hora de Brasília como foi digitada)
         if (startDate || endDate) query = query.or(filtroCallOuEntrada(startDate, endDate, {
             gte: startDate ? `${startDate}T00:00:00` : undefined,
@@ -329,4 +332,4 @@ async function rotaDELETE(request: Request) {
 // Quem salva avisa as telas abertas, que se atualizam sozinhas (tempo real)
 export const PUT = comAviso(['leads'], rotaPUT);
 export const POST = comAviso(['leads'], rotaPOST);
-export const DELETE = comAviso(['leads'], rotaDELETE);
+export const DELETE = comAviso(['leads'], rotaDELETE, { leadNaUrl: 'id' });
