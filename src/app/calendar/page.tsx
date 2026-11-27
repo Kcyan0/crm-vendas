@@ -277,18 +277,19 @@ function CalendarContent() {
   const upcomingChamadas = displayedChamadas.filter(c => new Date(c.data_hora_inicio) >= today).slice(0, 5);
 
   return (
-    <div className="h-full flex flex-col gap-0">
+    <div className="md:h-full flex flex-col gap-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* No celular o título fica em cima e os botões quebram linha embaixo (antes saíam da tela) */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Calendário</h2>
           <p className="text-sec mt-1">Agende e gerencie chamadas sincronizadas com o Google Calendar.</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap justify-end">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap md:justify-end">
           <select 
             value={filterMemberId} 
             onChange={(e) => setFilterMemberId(e.target.value)}
-            className="bg-surface border border-str text-white text-sm rounded-xl px-3 py-2 outline-none"
+            className="bg-surface border border-str text-white text-sm rounded-xl px-3 py-2 outline-none w-full md:w-auto"
           >
             <option value="all">Visão Geral (Todos)</option>
             {team.map(m => (
@@ -330,9 +331,9 @@ function CalendarContent() {
         </div>
       </div>
 
-      <div className="flex gap-5 flex-1 min-h-0">
+      <div className="flex flex-col md:flex-row gap-5 flex-1 min-h-0">
         {/* Calendário principal */}
-        <div className="flex-1 flex flex-col glass-panel bg-surface p-5">
+        <div className="flex-1 flex flex-col glass-panel bg-surface p-3 md:p-5">
           {/* Navegação de mês */}
           <div className="flex items-center justify-between mb-5">
             <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-2 rounded-xl hover:bg-surface-3 text-white transition">
@@ -361,15 +362,32 @@ function CalendarContent() {
               {days.map((day, idx) => {
                 if (!day) return <div key={idx} />;
                 const dayChamadas = getChamadasForDay(day);
+                const diaPendentes = getPendingForDay(day);
                 const isToday = day.toDateString() === today.toDateString();
                 return (
                   <div
                     key={idx}
-                    onClick={() => handleDayClick(day)}
-                    className={`rounded-xl p-2 cursor-pointer transition-all flex flex-col min-h-[80px] border ${isToday ? "border-accent/50 bg-accent-5" : "border-transparent hover:border-str hover:bg-surface-2"}`}
+                    onClick={() => {
+                      // Celular: a célula mostra só pontinhos, então o toque num dia com itens abre a lista do dia
+                      // (que tem o botão de novo agendamento); no computador segue abrindo a nova chamada
+                      if ((dayChamadas.length + diaPendentes.length) > 0 && window.matchMedia('(max-width: 767px)').matches) setDayPopup(day);
+                      else handleDayClick(day);
+                    }}
+                    className={`rounded-xl p-1 md:p-2 cursor-pointer transition-all flex flex-col min-h-[52px] md:min-h-[80px] border ${isToday ? "border-accent/50 bg-accent-5" : "border-transparent hover:border-str hover:bg-surface-2"}`}
                   >
                     <span className={`text-sm font-bold mb-1 self-end ${isToday ? "text-accent" : "text-sec"}`}>{day.getDate()}</span>
-                    <div className="flex flex-col gap-0.5">
+                    {/* Celular: a célula é estreita demais para o texto; um pontinho por item, na cor do status */}
+                    {(dayChamadas.length + diaPendentes.length) > 0 && (
+                      <div className="md:hidden flex flex-wrap justify-end gap-0.5 mt-auto">
+                        {dayChamadas.slice(0, 6).map((c) => (
+                          <span key={c.id_chamada} className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[c.status_chamada] || "bg-blue-500"}`} />
+                        ))}
+                        {diaPendentes.slice(0, 6).map((v) => (
+                          <span key={`pv-${v.id_venda}`} className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        ))}
+                      </div>
+                    )}
+                    <div className="hidden md:flex flex-col gap-0.5">
                       {dayChamadas.slice(0, 2).map((c) => (
                         <div
                           key={c.id_chamada}
@@ -477,8 +495,8 @@ function CalendarContent() {
           );
         })()}
 
-        {/* Sidebar de próximos eventos */}
-        <div className="w-72 flex flex-col gap-4">
+        {/* Sidebar de próximos eventos (no celular, embaixo do calendário) */}
+        <div className="w-full md:w-72 md:shrink-0 flex flex-col gap-4">
           <div className="glass-panel bg-surface p-4 flex-1">
             <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
               <CalendarIcon size={16} className="text-accent" />

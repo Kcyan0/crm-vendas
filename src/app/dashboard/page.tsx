@@ -153,19 +153,22 @@ function MetasPanel({ projectId, mes, ano, receitaBruta, caixaLiquido, sdrs, clo
 
     return (
         <div className="glass-panel p-4 sm:p-5 mb-6 border border-white/5 bg-[#151515] rounded-2xl">
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg" style={{ background: 'rgba(var(--accent-rgb),0.12)' }}>
+            <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-lg shrink-0" style={{ background: 'rgba(var(--accent-rgb),0.12)' }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
                         </svg>
                     </div>
-                    <span className="font-bold text-white text-sm">Acompanhamento de Metas</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full text-sec bg-white/5">Meta Geral do Time</span>
+                    {/* No celular o selo desce para baixo do título em vez de espremer em quatro linhas */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+                        <span className="font-bold text-white text-sm">Acompanhamento de Metas</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full text-sec bg-white/5 whitespace-nowrap">Meta Geral do Time</span>
+                    </div>
                 </div>
                 <button
                     onClick={() => setExpanded(v => !v)}
-                    className="text-xs px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white transition flex items-center gap-1"
+                    className="text-xs px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white transition flex items-center gap-1 whitespace-nowrap shrink-0"
                 >
                     {expanded ? 'Fechar' : 'Metas Individuais'}
                     <svg className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>

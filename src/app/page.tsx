@@ -1242,10 +1242,11 @@ export default function KanbanBoard() {
               className="campo-com-icone pr-4 py-2 bg-surface border border-str rounded-xl text-white focus:outline-none w-full"
             />
           </div>
-          <div className="flex items-center gap-1 bg-surface border border-str rounded-xl px-1.5">
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="campo-limpo text-sm text-sec p-2" title="Data Inicial" />
+          {/* No celular a caixa ocupa a linha e as datas dividem o espaço (com a letra de 16px do celular passavam da tela) */}
+          <div className="flex items-center gap-1 bg-surface border border-str rounded-xl px-1.5 w-full sm:w-auto">
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="campo-limpo text-sm text-sec p-2 min-w-0 flex-1 sm:flex-none" title="Data Inicial" />
             <span className="text-sec">–</span>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="campo-limpo text-sm text-sec p-2" title="Data Final" />
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="campo-limpo text-sm text-sec p-2 min-w-0 flex-1 sm:flex-none" title="Data Final" />
           </div>
           {/* ─── Export dropdown ──────────────────────────────────── */}
           {/* Botões de ação à direita; só o "Novo" fica na cor de destaque */}
