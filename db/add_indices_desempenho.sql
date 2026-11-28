@@ -12,6 +12,8 @@ CREATE INDEX IF NOT EXISTS idx_leads_projeto_call ON leads (id_projeto, data_cal
 CREATE INDEX IF NOT EXISTS idx_leads_projeto_entrada ON leads (id_projeto, data_entrada);
 CREATE INDEX IF NOT EXISTS idx_leads_closer ON leads (id_closer_responsavel);
 CREATE INDEX IF NOT EXISTS idx_leads_sdr ON leads (id_sdr_responsavel);
+-- Relógio dos avisos (a cada minuto): calls da próxima hora, de todos os projetos
+CREATE INDEX IF NOT EXISTS idx_leads_call ON leads (data_call);
 
 -- Ligações com o lead
 CREATE INDEX IF NOT EXISTS idx_oportunidades_lead ON oportunidades (id_lead);
