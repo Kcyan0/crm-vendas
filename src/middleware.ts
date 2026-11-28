@@ -14,8 +14,11 @@ export const config = {
      * - favicon.ico (favicon file)
      * - manifest.webmanifest, sw.js e offline.html: arquivos do app instalável, que o celular
      *   busca sem estar logado (sem isto iriam para /login e a instalação quebrava)
+     * - api: o middleware deixava toda rota de API passar e só gastava uma consulta ao login
+     *   do Supabase (que lê o banco) a cada chamada; as rotas que exigem login já conferem
+     *   sozinhas (2026-11-27, banco no limite de disco do plano grátis)
      * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
