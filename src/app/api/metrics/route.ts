@@ -44,50 +44,53 @@ export async function GET(request: Request) {
         startDateObj.setFullYear(startDateObj.getFullYear() - 2); // 24 months back
         const caixaStartBoundary = startDateObj.toISOString().split('T')[0];
 
-        const CAIXA_SELECT_M = 'id_venda, id_oportunidade, id_closer, valor_bruto, valor_liquido_caixa, numero_parcelas, data_venda, data_recebimento, forma_pagamento, id_lead';
-        // Leads do projeto: vendas válidas, ticket (sem OFF) e dono de cada lead
-        let leadsDoProjetoQuery = supabase.from('leads').select('id_lead, status_atual, off_metricas, id_sdr_responsavel, id_closer_responsavel');
-        if (projectId) leadsDoProjetoQuery = leadsDoProjetoQuery.eq('id_projeto', projectId);
+        // O lead de cada venda vem junto dela (status, OFF e donos): vendas válidas, ticket e comissões.
+        // Antes eram todos os leads do projeto numa consulta à parte, a mais pesada da Dashboard (2026-11-27).
+        const LEAD_DA_VENDA = 'leads!inner(status_atual, off_metricas, id_sdr_responsavel, id_closer_responsavel)';
+        const doProjeto = <Q,>(q: Q): Q => (projectId ? (q as unknown as { eq(coluna: string, valor: string): Q }).eq('leads.id_projeto', projectId) : q);
+        const CAIXA_SELECT_M = `id_venda, id_oportunidade, id_closer, valor_bruto, valor_liquido_caixa, numero_parcelas, data_venda, data_recebimento, forma_pagamento, id_lead, ${LEAD_DA_VENDA}`;
         // Leads no período (call; sem call, entrada), sem OFF: Leads Totais, funil, chargeback e status
         let leadsDoPeriodoQuery = supabase.from('leads').select('id_lead, nome, status_atual, motivo_reembolso').or(leadNoPeriodo).eq('off_metricas', false);
         if (projectId) leadsDoPeriodoQuery = leadsDoPeriodoQuery.eq('id_projeto', projectId);
 
         // Todas as consultas independentes saem juntas (antes eram ~10 idas ao banco, uma depois da outra).
         // Cada fetchAll tem .order estável para a paginação de 1000 em 1000 não repetir nem pular linhas.
-        const [vendasFat, caixaWithDate, caixaNoDate, leadsDoProjeto, usersRes, leadsDoPeriodo] = await Promise.all([
+        const [vendasFat, caixaWithDate, caixaNoDate, usersRes, leadsDoPeriodo] = await Promise.all([
             // ─── 1. FATURAMENTO: vendas do período (pago + pendente) pela data da venda
             fetchAll(
-                supabase
+                doProjeto(supabase
                     .from('vendas')
-                    .select('id_venda, id_oportunidade, valor_bruto, data_venda, id_lead, forma_pagamento, status_pagamento')
+                    .select(`id_venda, id_oportunidade, valor_bruto, data_venda, id_lead, forma_pagamento, status_pagamento, ${LEAD_DA_VENDA}`)
                     .in('status_pagamento', ['pago', 'pendente'])
                     .gte('data_venda', startVendaFilter)
-                    .lt('data_venda', endFilter)
+                    .lt('data_venda', endFilter))
                     .order('id_venda', { ascending: true })
             ),
             // ─── 2. CAIXA LÍQUIDO: pagamentos recebidos no período (só pago) pela data de recebimento.
             // Duas consultas porque .lte('data_recebimento') descarta as linhas com data_recebimento NULL;
             // para essas, caixaInPeriod usa a data da venda.
+            // Recebido antes do período só cai nele se for parcelado: os pagamentos à vista antigos ficam no banco
+            // (dão zero no caixaInPeriod), e a consulta cai de ~1100 linhas para ~140.
             fetchAll(
-                supabase
+                doProjeto(supabase
                     .from('vendas')
                     .select(CAIXA_SELECT_M)
                     .eq('status_pagamento', 'pago')
                     .gte('data_recebimento', caixaStartBoundary)
                     .lte('data_recebimento', endDate)
+                    .or(`data_recebimento.gte.${startDate},numero_parcelas.gt.1`))
                     .order('id_venda', { ascending: true })
             ),
             fetchAll(
-                supabase
+                doProjeto(supabase
                     .from('vendas')
                     .select(CAIXA_SELECT_M)
                     .eq('status_pagamento', 'pago')
                     .is('data_recebimento', null)
                     .gte('data_venda', startVendaFilter)
-                    .lt('data_venda', endFilter)
+                    .lt('data_venda', endFilter))
                     .order('id_venda', { ascending: true })
             ),
-            fetchAll(leadsDoProjetoQuery.order('id_lead', { ascending: true })),
             // ─── Usuários: nomes e % de comissão
             supabase
                 .from('usuarios')
@@ -97,13 +100,17 @@ export async function GET(request: Request) {
         ]);
         const vendasCaixa = [...(caixaWithDate || []), ...(caixaNoDate || [])];
 
-        // ─── Filter by project (inclui off_metricas → caixa e faturamento completos) ──
+        // ─── Leads das vendas, já filtrados pelo projeto (inclui off_metricas → caixa e faturamento completos) ──
+        type LeadDaVenda = { status_atual: string | null; off_metricas: boolean | null; id_sdr_responsavel: number | null; id_closer_responsavel: number | null };
+        const leadDaVenda = new Map<number, LeadDaVenda>();
+        for (const v of [...(vendasFat || []), ...vendasCaixa]) if (v.leads) leadDaVenda.set(v.id_lead, v.leads);
         // Mesmo critério do antigo .not('status_atual', 'in', '("Reembolsado","Loss")'), que também deixava de fora status nulo
-        const leadsValidos = (leadsDoProjeto || []).filter((l: any) =>
-            l.status_atual != null && l.status_atual !== 'Reembolsado' && l.status_atual !== 'Loss');
-        const validLeadIds = new Set<number>(leadsValidos.map((l: any) => l.id_lead));
+        const leadsValidos = [...leadDaVenda]
+            .map(([id_lead, l]) => ({ id_lead, ...l }))
+            .filter((l) => l.status_atual != null && l.status_atual !== 'Reembolsado' && l.status_atual !== 'Loss');
+        const validLeadIds = new Set<number>(leadsValidos.map((l) => l.id_lead));
         // ─── Filter sem off_metricas → usado APENAS para Ticket Médio ─────────────
-        const validLeadIdsTicket = new Set<number>(leadsValidos.filter((l: any) => l.off_metricas === false).map((l: any) => l.id_lead));
+        const validLeadIdsTicket = new Set<number>(leadsValidos.filter((l) => l.off_metricas === false).map((l) => l.id_lead));
 
         const filteredFat = (vendasFat || []).filter((v: any) => validLeadIds!.has(v.id_lead));
         const filteredCaixa = (vendasCaixa || []).filter((v: any) => validLeadIds!.has(v.id_lead));

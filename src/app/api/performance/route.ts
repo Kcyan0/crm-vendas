@@ -35,7 +35,11 @@ export async function GET(request: Request) {
         const caixaStartObj = new Date(`${startDate}T00:00:00Z`);
         caixaStartObj.setFullYear(caixaStartObj.getFullYear() - 2);
         const caixaStartBoundary = caixaStartObj.toISOString().split('T')[0];
-        const CAIXA_SELECT = 'id_lead, id_closer, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_recebimento, data_venda';
+        // O lead de cada venda vem junto dela (status e donos), já filtrado pelo projeto.
+        // Antes eram todos os leads do projeto numa consulta à parte, a mais pesada da tela (2026-11-27).
+        const LEAD_DA_VENDA = 'leads!inner(status_atual, id_sdr_responsavel, id_closer_responsavel)';
+        const doProjeto = <Q,>(q: Q): Q => (projectId ? (q as unknown as { eq(coluna: string, valor: string): Q }).eq('leads.id_projeto', projectId) : q);
+        const CAIXA_SELECT = `id_venda, id_lead, id_closer, id_oportunidade, valor_bruto, valor_liquido_caixa, numero_parcelas, data_recebimento, data_venda, ${LEAD_DA_VENDA}`;
 
         // Active users
         let usersQuery = supabase.from('usuarios').select('id_usuario, nome, tipo').eq('ativo', true).in('tipo', ['SDR', 'CLOSER']);
@@ -49,32 +53,31 @@ export async function GET(request: Request) {
         if (projectId) leadsQuery = leadsQuery.eq('id_projeto', projectId);
 
         // Sales in the selected period (pago + pendente); o VGV soma só as pagas
-        const vendasQuery = supabase
+        const vendasQuery = doProjeto(supabase
             .from('vendas')
-            .select('id_lead, id_closer, valor_bruto, valor_liquido_caixa, id_oportunidade, forma_pagamento, status_pagamento')
+            .select(`id_venda, id_lead, id_closer, valor_bruto, valor_liquido_caixa, id_oportunidade, forma_pagamento, status_pagamento, ${LEAD_DA_VENDA}`)
             .in('status_pagamento', ['pago', 'pendente'])
             .gte('data_venda', `${startDate}T00:00:00`)
-            .lte('data_venda', `${endDate}T23:59:59`);
-
-        // ALL leads of the project, to cover sales outside the start/end window for SDR attribution & filtering
-        let allLeadsQuery = supabase.from('leads').select('id_lead, id_sdr_responsavel, id_closer_responsavel, status_atual');
-        if (projectId) allLeadsQuery = allLeadsQuery.eq('id_projeto', projectId);
+            .lte('data_venda', `${endDate}T23:59:59`));
 
         // Caixa — two queries because .lte('data_recebimento', endDate) drops rows where data_recebimento IS NULL;
         // for those rows caixaInPeriod falls back to data_venda.
-        const caixaQueryA = supabase
+        // Recebido antes do período só cai nele se for parcelado: os pagamentos à vista antigos dão zero no
+        // caixaInPeriod e ficam de fora da consulta (~1100 linhas → ~140).
+        const caixaQueryA = doProjeto(supabase
             .from('vendas')
             .select(CAIXA_SELECT)
             .eq('status_pagamento', 'pago')
             .gte('data_recebimento', caixaStartBoundary)
-            .lte('data_recebimento', endDate);
-        const caixaQueryB = supabase
+            .lte('data_recebimento', endDate)
+            .or(`data_recebimento.gte.${startDate},numero_parcelas.gt.1`));
+        const caixaQueryB = doProjeto(supabase
             .from('vendas')
             .select(CAIXA_SELECT)
             .eq('status_pagamento', 'pago')
             .is('data_recebimento', null)
             .gte('data_venda', `${startDate}T00:00:00`)
-            .lte('data_venda', `${endDate}T23:59:59`);
+            .lte('data_venda', `${endDate}T23:59:59`));
 
         // Reembolsos per user — leads no período (mesmo critério dos leads acima)
         let reembolsadosQuery = supabase
@@ -87,11 +90,10 @@ export async function GET(request: Request) {
 
         // Todas as consultas são independentes e saem juntas (antes eram ~8 idas ao banco, uma depois da outra).
         // Cada fetchAll tem .order estável para a paginação de 1000 em 1000 não repetir nem pular linhas.
-        const [users, leads, vendasPeriod, allLeads, caixaWithDate, caixaNoDate, reembolsados, overridesRes] = await Promise.all([
+        const [users, leads, vendasPeriod, caixaWithDate, caixaNoDate, reembolsados, overridesRes] = await Promise.all([
             fetchAll(usersQuery.order('id_usuario', { ascending: true })),
             fetchAll(leadsQuery.order('id_lead', { ascending: true })),
             fetchAll(vendasQuery.order('id_venda', { ascending: true })),
-            fetchAll(allLeadsQuery.order('id_lead', { ascending: true })),
             fetchAll(caixaQueryA.order('id_venda', { ascending: true })),
             fetchAll(caixaQueryB.order('id_venda', { ascending: true })),
             fetchAll(reembolsadosQuery.order('id_lead', { ascending: true })),
@@ -138,8 +140,14 @@ export async function GET(request: Request) {
         const validLeadIds = new Set<number>();
         const leadToSdr: Record<number, number> = {};
         const leadToCloser: Record<number, number> = {};
-        
-        (allLeads || []).forEach((l: any) => {
+
+        // Leads das vendas e dos pagamentos (vieram junto de cada linha, já do projeto)
+        type LeadDaVenda = { id_lead: number; status_atual: string | null; id_sdr_responsavel: number | null; id_closer_responsavel: number | null };
+        const leadDaVenda = new Map<number, LeadDaVenda>();
+        for (const v of [...(vendasPeriod || []), ...(caixaWithDate || []), ...(caixaNoDate || [])]) {
+            if (v.leads) leadDaVenda.set(v.id_lead, { id_lead: v.id_lead, ...v.leads });
+        }
+        leadDaVenda.forEach((l) => {
             if (l.status_atual !== 'Reembolsado' && l.status_atual !== 'Loss') {
                 validLeadIds.add(l.id_lead);
                 if (l.id_sdr_responsavel) leadToSdr[l.id_lead] = l.id_sdr_responsavel;

@@ -71,7 +71,8 @@ export async function GET(request: Request) {
         const [leads, vendasFat, caixaComData, caixaSemData] = await Promise.all([
             fetchAll(supabase.from('leads').select('id_lead, id_projeto, status_atual, off_metricas, data_entrada, data_call').in('id_projeto', pids).order('id_lead', { ascending: true })) as Promise<LeadRow[]>,
             fetchAll(supabase.from('vendas').select(VENDA_SELECT).in('status_pagamento', ['pago', 'pendente']).gte('data_venda', inicio).lt('data_venda', fim).order('id_venda', { ascending: true })) as Promise<VendaRow[]>,
-            fetchAll(supabase.from('vendas').select(VENDA_SELECT).eq('status_pagamento', 'pago').gte('data_recebimento', caixaStartBoundary).lte('data_recebimento', endDate).order('id_venda', { ascending: true })) as Promise<VendaRow[]>,
+            // Recebido antes do período só cai nele se for parcelado (à vista antigo dá zero no caixaInPeriod)
+            fetchAll(supabase.from('vendas').select(VENDA_SELECT).eq('status_pagamento', 'pago').gte('data_recebimento', caixaStartBoundary).lte('data_recebimento', endDate).or(`data_recebimento.gte.${startDate},numero_parcelas.gt.1`).order('id_venda', { ascending: true })) as Promise<VendaRow[]>,
             // Sem data de recebimento: o caixa usa a data da venda
             fetchAll(supabase.from('vendas').select(VENDA_SELECT).eq('status_pagamento', 'pago').is('data_recebimento', null).gte('data_venda', inicio).lt('data_venda', fim).order('id_venda', { ascending: true })) as Promise<VendaRow[]>,
         ]);
